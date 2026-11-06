@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Kage" />
+  <meta name="theme-color" content="#07091a" />
+  <meta name="description" content="Kage: La Sombra del Ninja. Un plataformas nocturno de tres noches y un oni." />
+  <title>Kage: La Sombra del Ninja</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" href="icons/favicon-32.png" />
+  <link rel="stylesheet" href="css/game.css" />
+</head>
+<body data-mode="title">
+  <div id="safe-probe" aria-hidden="true"></div>
+  <canvas id="game" width="480" height="270" aria-label="Kage: La Sombra del Ninja"></canvas>
+  <p id="rotate-hint">Gira el teléfono para ver más tejado</p>
+  <div class="top-controls">
+    <button type="button" class="icon-btn" id="btn-mute" aria-label="Silenciar">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path class="wave" fill="currentColor" d="M3 9h4l5-4v14l-5-4H3V9zm13.5 3a4.5 4.5 0 0 0-2.5-4.03v8.06A4.5 4.5 0 0 0 16.5 12z"/>
+        <path class="cross" fill="currentColor" d="M16 9.5 18.5 12 16 14.5 17.5 16 20 13.5 22.5 16 24 14.5 21.5 12 24 9.5 22.5 8 20 10.5 17.5 8z"/>
+      </svg>
+    </button>
+    <button type="button" class="icon-btn" id="btn-pause" aria-label="Pausa">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="currentColor" d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+      </svg>
+    </button>
+  </div>
+  <div id="menu" hidden>
+    <button type="button" id="btn-resume">SEGUIR</button>
+    <button type="button" id="btn-retry">REINTENTAR</button>
+    <button type="button" id="btn-again">JUGAR DE NUEVO</button>
+  </div>
+  <div class="play-controls" id="controls">
+    <div class="left-cluster">
+      <button type="button" class="btn" id="btn-left" data-hold="left" aria-label="Izquierda">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.5 4 7 12l8.5 8 1.8-1.8L10.6 12l6.7-6.2z"/></svg>
+        <span class="lbl">IZQ</span>
+      </button>
+      <button type="button" class="btn" id="btn-right" data-hold="right" aria-label="Derecha">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m8.5 4 8.5 8-8.5 8-1.8-1.8L13.4 12 6.7 5.8z"/></svg>
+        <span class="lbl">DER</span>
+      </button>
+    </div>
+    <div class="right-cluster">
+      <button type="button" class="btn star" id="btn-star" data-hold="shuriken" aria-label="Estrella">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11 2h2l.6 6.2L19 6l1 2-5.2 2.8L20 14l-2 1.2-4.2-3.2L13 22h-2l-.8-9.9L6 15.2 4 14l5.2-3.2L4 8l1-2 5.4 2.2z"/></svg>
+        <span class="lbl">ESTRELLA</span>
+        <span id="ammo" class="badge">8</span>
+      </button>
+      <button type="button" class="btn attack" id="btn-attack" data-hold="attack" aria-label="Espada">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14.2 3.2 20.8 9.8l-1.4 1.4-1.2-1.2-8.7 8.7-2.2.4-1.6 1.6-1.4-1.4 1.6-1.6.4-2.2 8.7-8.7-1.2-1.2z"/></svg>
+        <span class="lbl">ESPADA</span>
+      </button>
+      <button type="button" class="btn jump" id="btn-jump" data-hold="jump" aria-label="Salto">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 4 5 12h4v8h6v-8h4z"/></svg>
+        <span class="lbl">SALTO</span>
+      </button>
+    </div>
+  </div>
+  <noscript>Kage necesita JavaScript para jugar.</noscript>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

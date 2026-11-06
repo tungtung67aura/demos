@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="es-UY">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Dulce Aroma · Café y pastelería · Pocitos</title>
+  <meta name="description" content="Café de especialidad y pastelería artesanal en Pocitos. Gabriel Pereira 3210. Pedí por WhatsApp." />
+  <meta name="robots" content="noindex, nofollow" />
+  <style>
+    :root {
+      --bg: #1a120e;
+      --surface: #2a1f18;
+      --surface2: #3a2c22;
+      --text: #fff8f0;
+      --muted: #c4b0a0;
+      --cream: #f3e6d4;
+      --accent: #c4783a;
+      --accent2: #e8b86d;
+      --wa: #25d366;
+      --radius: 18px;
+      --shadow: 0 14px 40px rgba(0,0,0,.35);
+      --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+    .wrap { width: min(720px, 100%); margin: 0 auto; padding: 0 20px; }
+
+    .top {
+      position: sticky; top: 0; z-index: 20;
+      backdrop-filter: blur(14px);
+      background: rgba(26,18,14,.88);
+      border-bottom: 1px solid rgba(255,248,240,.07);
+    }
+    .top-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 0; gap: 12px;
+    }
+    .brand {
+      display: flex; align-items: center; gap: 10px; font-weight: 700;
+    }
+    .logo {
+      width: 38px; height: 38px; border-radius: 50%;
+      background:
+        radial-gradient(circle at 35% 30%, #f3e6d4 0 18%, transparent 19%),
+        linear-gradient(145deg, #c4783a, #6b3a1e 70%);
+      box-shadow: 0 0 0 2px rgba(232,184,109,.35);
+      display: grid; place-items: center; font-size: 16px;
+    }
+    .nav { display: flex; gap: 14px; font-size: 13px; color: var(--muted); }
+    .nav a:hover { color: var(--accent2); }
+
+    .hero {
+      position: relative;
+      padding: 44px 0 36px;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: "";
+      position: absolute; inset: -10% -20% auto;
+      height: 460px;
+      background:
+        radial-gradient(ellipse 65% 55% at 15% 40%, rgba(196,120,58,.35), transparent 60%),
+        radial-gradient(ellipse 50% 45% at 90% 15%, rgba(232,184,109,.18), transparent 55%),
+        linear-gradient(180deg, #241912, transparent);
+      pointer-events: none;
+    }
+    .hero-inner { position: relative; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(196,120,58,.18); color: var(--accent2);
+      border: 1px solid rgba(232,184,109,.35);
+      padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
+      margin-bottom: 14px;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 7.5vw, 2.85rem);
+      line-height: 1.08; letter-spacing: -0.03em; margin-bottom: 12px;
+    }
+    .hero h1 em {
+      font-style: normal; color: var(--accent2);
+    }
+    .tagline {
+      color: var(--muted); font-size: 1.05rem; max-width: 36ch; margin-bottom: 22px;
+    }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 14px 20px; border-radius: 999px; font-weight: 700; font-size: 15px;
+      transition: transform .15s ease, filter .15s;
+    }
+    .btn:active { transform: scale(.98); }
+    .btn-wa {
+      background: var(--wa); color: #053b1f;
+      box-shadow: 0 8px 24px rgba(37,211,102,.35);
+      flex: 1 1 220px;
+    }
+    .btn-ghost {
+      background: transparent; color: var(--cream);
+      border: 1px solid rgba(255,248,240,.18);
+    }
+    .btn-ghost:hover { border-color: var(--accent2); color: var(--accent2); }
+    .meta {
+      display: flex; flex-wrap: wrap; gap: 8px 16px;
+      font-size: 13px; color: var(--muted);
+    }
+    .meta strong { color: var(--cream); font-weight: 600; }
+    .stars { color: var(--accent2); letter-spacing: 1px; }
+
+    section { padding: 34px 0; }
+    .sec-title { font-size: 1.35rem; letter-spacing: -0.02em; margin-bottom: 6px; }
+    .sec-sub { color: var(--muted); font-size: 14px; margin-bottom: 18px; }
+
+    .cards {
+      display: grid; gap: 12px;
+      grid-template-columns: 1fr 1fr;
+    }
+    @media (max-width: 420px) { .cards { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--surface);
+      border: 1px solid rgba(255,248,240,.07);
+      border-radius: var(--radius);
+      padding: 18px 16px;
+      box-shadow: var(--shadow);
+    }
+    .card .ico {
+      width: 42px; height: 42px; border-radius: 14px;
+      display: grid; place-items: center; margin-bottom: 12px;
+      background: rgba(196,120,58,.2); font-size: 18px;
+    }
+    .card h3 { font-size: 15px; margin-bottom: 6px; }
+    .card p { font-size: 13px; color: var(--muted); }
+    .price {
+      margin-top: 10px; font-size: 12px; color: var(--accent2); font-weight: 600;
+    }
+
+    .hours {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid rgba(255,248,240,.07);
+      overflow: hidden;
+    }
+    .hours li {
+      display: flex; justify-content: space-between; gap: 12px;
+      padding: 12px 16px; font-size: 14px; list-style: none;
+      border-bottom: 1px solid rgba(255,248,240,.05);
+    }
+    .hours li:last-child { border-bottom: 0; }
+    .hours .day { color: var(--muted); }
+    .note {
+      margin-top: 12px; font-size: 12px; color: var(--muted);
+      padding: 10px 12px; background: var(--surface2); border-radius: 12px;
+    }
+
+    .map-wrap {
+      border-radius: var(--radius); overflow: hidden;
+      border: 1px solid rgba(255,248,240,.1);
+      aspect-ratio: 16 / 11; background: var(--surface);
+    }
+    .map-wrap { position: relative; }
+    .map-wrap iframe { width: 100%; height: 100%; border: 0; display: block; position: relative; z-index: 1; background: transparent; }
+    .map-fallback {
+      position: absolute; inset: 0; z-index: 0;
+      display: grid; place-content: center; gap: 10px; text-align: center;
+      background:
+        radial-gradient(circle at 30% 40%, rgba(196,120,58,.35), transparent 50%),
+        linear-gradient(160deg, #3a2c22, #1a120e);
+      color: var(--cream); font-size: 14px; padding: 20px;
+    }
+    .map-fallback .pin { font-size: 28px; }
+    .btn-map {
+      display: inline-flex; margin: 0 auto; margin-top: 4px;
+      background: var(--accent); color: #1a120e; font-weight: 700;
+      padding: 10px 14px; border-radius: 999px; font-size: 13px;
+    }
+    .addr { margin-top: 12px; font-size: 14px; color: var(--muted); }
+    .addr strong { color: var(--cream); }
+
+    .trust {
+      display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+      background: var(--surface);
+      border: 1px solid rgba(255,248,240,.07);
+      border-radius: var(--radius);
+      padding: 18px 16px;
+    }
+    .trust .big {
+      font-size: 2rem; font-weight: 800; color: var(--accent2); line-height: 1;
+    }
+    .trust p { font-size: 14px; color: var(--muted); }
+    .trust p strong { color: var(--cream); }
+
+    .ig-banner {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      flex-wrap: wrap;
+      background: linear-gradient(120deg, #833ab4, #fd1d1d 55%, #fcb045);
+      padding: 18px 20px; border-radius: var(--radius);
+    }
+    .ig-banner strong { display: block; font-size: 15px; }
+    .ig-banner span { font-size: 13px; opacity: .92; }
+    .btn-light {
+      background: #fff; color: #1a120e; padding: 10px 16px; border-radius: 999px;
+      font-weight: 700; font-size: 13px; white-space: nowrap;
+    }
+
+    footer {
+      padding: 28px 0 100px;
+      border-top: 1px solid rgba(255,248,240,.07);
+      color: var(--muted); font-size: 12px; text-align: center;
+    }
+    footer .demo { margin-top: 8px; color: var(--accent2); font-weight: 600; }
+
+    .fab {
+      position: fixed; right: 16px; bottom: 16px; z-index: 30;
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--wa); color: #053b1f; font-weight: 800;
+      padding: 14px 18px; border-radius: 999px;
+      box-shadow: 0 10px 30px rgba(37,211,102,.4);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-inner">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">☕</div>
+        <span>Dulce Aroma</span>
+      </div>
+      <nav class="nav" aria-label="Secciones">
+        <a href="#carta">Carta</a>
+        <a href="#horarios">Horarios</a>
+        <a href="#ubicacion">Dónde</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap hero-inner">
+        <div class="pill">Café de especialidad · Pocitos</div>
+        <h1>Café y pastelería <em>con aroma propio</em></h1>
+        <p class="tagline">Un rincón en Gabriel Pereira para desayunar, merendar o llevar algo rico. Escribinos por WhatsApp.</p>
+        <div class="cta-row">
+          <a class="btn btn-wa"
+             href="https://wa.me/59898948887?text=Hola%20Dulce%20Aroma%2C%20quiero%20consultar%20por%20WhatsApp"
+             target="_blank" rel="noopener">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            Escribir por WhatsApp
+          </a>
+          <a class="btn btn-ghost" href="https://www.instagram.com/dulcearomacoffeetime/" target="_blank" rel="noopener">Ver Instagram</a>
+        </div>
+        <div class="meta">
+          <span><strong class="stars">★★★★★</strong> <strong>4,8</strong> · ~400 reseñas públicas</span>
+          <span>Gabriel Pereira 3210, Pocitos</span>
+          <span>098 948 887</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="carta">
+      <div class="wrap">
+        <h2 class="sec-title">Qué vas a encontrar</h2>
+        <p class="sec-sub">Según su ficha pública. Precios: consultá por WhatsApp o en el local.</p>
+        <div class="cards">
+          <article class="card">
+            <div class="ico" aria-hidden="true">☕</div>
+            <h3>Cafés</h3>
+            <p>Bebidas calientes y frías de especialidad.</p>
+            <div class="price">[consultar precio]</div>
+          </article>
+          <article class="card">
+            <div class="ico" aria-hidden="true">🥐</div>
+            <h3>Facturas y croissants</h3>
+            <p>Medialunas, croissants clásicos y rellenos.</p>
+            <div class="price">[consultar precio]</div>
+          </article>
+          <article class="card">
+            <div class="ico" aria-hidden="true">🍰</div>
+            <h3>Pastelería</h3>
+            <p>Scones, cookies, brownies y dulces artesanales.</p>
+            <div class="price">[consultar precio]</div>
+          </article>
+          <article class="card">
+            <div class="ico" aria-hidden="true">🥑</div>
+            <h3>Salado</h3>
+            <p>Tostados, avocados y opciones para desayuno o merienda.</p>
+            <div class="price">[consultar precio]</div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="horarios">
+      <div class="wrap">
+        <h2 class="sec-title">Horarios</h2>
+        <p class="sec-sub">Según ficha pública (pueden variar en feriados).</p>
+        <ul class="hours">
+          <li><span class="day">Lunes a sábado</span><span>9:00 – 20:00</span></li>
+          <li><span class="day">Domingo</span><span>15:00 – 20:00</span></li>
+        </ul>
+        <p class="note">Antes de ir especialmente, confirmá por WhatsApp: 098 948 887.</p>
+      </div>
+    </section>
+
+    <section id="ubicacion">
+      <div class="wrap">
+        <h2 class="sec-title">Dónde estamos</h2>
+        <p class="sec-sub">Pocitos, a pasos de Berro.</p>
+        <div class="map-wrap">
+          <iframe
+            title="Mapa Dulce Aroma"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            src="https://maps.google.com/maps?q=Gabriel%20Pereira%203210%2C%20Pocitos%2C%20Montevideo%2C%20Uruguay&z=16&output=embed">
+          </iframe>
+          <div class="map-fallback" aria-hidden="true">
+            <div class="pin">📍</div>
+            <p>Gabriel Pereira 3210<br>Pocitos, Montevideo</p>
+            <a class="btn-map" href="https://www.google.com/maps/search/?api=1&amp;query=Gabriel%20Pereira%203210%2C%20Pocitos%2C%20Montevideo" target="_blank" rel="noopener">Abrir en Google Maps</a>
+          </div>
+        </div>
+        <p class="addr"><strong>Gabriel Pereira 3210</strong>, Pocitos, Montevideo · 11300</p>
+      </div>
+    </section>
+
+    <section id="confianza">
+      <div class="wrap">
+        <h2 class="sec-title">Confianza</h2>
+        <p class="sec-sub">Calificación pública del local.</p>
+        <div class="trust">
+          <div class="big">4,8</div>
+          <p><strong>sobre 5</strong><br />Alrededor de 400 reseñas en Google / fichas públicas.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <div class="ig-banner">
+          <div>
+            <strong>@dulcearomacoffeetime</strong>
+            <span>Seguilos en Instagram para novedades y la carta del día</span>
+          </div>
+          <a class="btn-light" href="https://www.instagram.com/dulcearomacoffeetime/" target="_blank" rel="noopener">Abrir Instagram</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p>Dulce Aroma Cafetería · 098 948 887 · Gabriel Pereira 3210, Pocitos</p>
+      <p class="demo">Sitio de muestra — no es el sitio oficial del local</p>
+    </div>
+  </footer>
+
+  <a class="fab"
+     href="https://wa.me/59898948887?text=Hola%20Dulce%20Aroma%2C%20quiero%20consultar%20por%20WhatsApp"
+     target="_blank" rel="noopener" aria-label="WhatsApp">WhatsApp</a>
+</body>
+</html>
