@@ -1,17 +1,97 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bulka · Pastelería rusa y catering en Montevideo</title><meta name="description" content="Pastelería rusa y catering en el Cordón. También Bento en 2 horas y café en @bulka.cafe."><style>
-*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,sans-serif;color:#222;background:#faf8f5}
-header{background:linear-gradient(135deg,#c45c26,#111);color:#fff;padding:56px 20px 40px;text-align:center}
-.e{font-size:56px}h1{margin:8px 0 4px;font-size:2.1rem}.r{opacity:.85;margin:0}
-.tag{margin:10px auto 0;max-width:320px;font-size:.95rem;opacity:.9}
-.btn{display:inline-block;margin-top:22px;background:#25d366;color:#fff;padding:14px 22px;border-radius:30px;text-decoration:none;font-weight:600}
-main{max-width:640px;margin:auto;padding:20px}section{background:#fff;border-radius:14px;padding:18px 20px;margin:16px 0;box-shadow:0 2px 8px #0001}
-h2{margin:0 0 10px;font-size:1.15rem;color:#c45c26}table{width:100%;border-collapse:collapse}td{padding:6px 0;border-bottom:1px solid #eee}td:last-child{text-align:right}
-ul{margin:0;padding-left:1.2em}li{margin:6px 0}
-a{color:#c45c26}footer{text-align:center;font-size:.8rem;color:#888;padding:24px}</style></head><body>
-<header><div class="e">🥧</div><h1>Bulka</h1><p class="r">Pastelería rusa y catering · Montevideo</p><a class="btn" href="https://wa.me/59898721320">Pedí por WhatsApp</a></header>
-<main><section><h2>Quiénes somos</h2><p>Pastelería rusa y catering en el Cordón. También Bento en 2 horas y café en @bulka.cafe.</p></section>
-<section><h2>Qué ofrecemos</h2><ul><li>Pastelería rusa</li><li>Catering</li><li>Bento en 2 horas</li><li>Café en @bulka.cafe</li></ul></section>
-<section><h2>Horarios</h2><table><tr><td>Lunes a viernes (retiro)</td><td>14:00 a 18:30</td></tr></table></section>
-<section><h2>Dónde estamos</h2><p>📍 Gaboto 1227, Cordón, Montevideo</p><p><a href="https://www.google.com/maps/search/?api=1&query=Bulka+Gaboto+1227,+Cordón+Montevideo">Ver en Google Maps</a></p></section>
-<section><h2>Contacto</h2><p>📞 <a href="tel:+59898721320">098721320</a></p><p>💬 <a href="https://wa.me/59898721320">WhatsApp</a></p><p>📸 <a href="https://instagram.com/bulka.sabor">@bulka.sabor</a></p></section></main>
-<footer>Demo hecha por EasyWeb · @easyweb_uy</footer></body></html>
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bulka · Pastelería rusa y catering · Cordón, Montevideo</title><meta name="description" content="Pastelería rusa y catering en el Cordón. Bento en 2 horas. Retiro lunes a viernes 14:00 a 18:30 en Gaboto 1227.">
+<meta property="og:title" content="Bulka · Pastelería rusa y catering · Cordón, Montevideo"><meta property="og:image" content="https://images.unsplash.com/photo-1702742136600-cfb044826d84?w=1200&q=70&auto=format&fit=crop">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,700;1,500&family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{-webkit-font-smoothing:antialiased;line-height:1.6;overflow-x:hidden}
+img{display:block;max-width:100%}a{color:inherit}
+.wrap{width:min(1120px,100% - 40px);margin-inline:auto}
+nav.top{position:fixed;inset:0 0 auto 0;z-index:50;transition:background .35s,box-shadow .35s,padding .35s;padding:18px 0}
+nav.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px}
+nav.top .links{display:flex;gap:26px;list-style:none}
+nav.top .links a{text-decoration:none;color:inherit}
+.burger{display:none;background:none;border:0;cursor:pointer;width:40px;height:40px;position:relative}
+.burger span,.burger span:before,.burger span:after{content:"";position:absolute;left:8px;width:24px;height:2px;background:currentColor;transition:.3s}
+.burger span{top:19px}.burger span:before{top:-7px;left:0}.burger span:after{top:7px;left:0}
+@media(max-width:820px){.burger{display:block}nav.top .links{position:fixed;inset:64px 0 auto 0;flex-direction:column;gap:0;padding:8px 20px 20px;transform:translateY(-130%);transition:transform .35s}
+nav.top.open .links{transform:none}nav.top .links a{display:block;padding:14px 0}}
+.hero{position:relative;min-height:100svh;display:flex;align-items:flex-end;color:#fff;overflow:hidden}
+.hero .bg{position:absolute;inset:0;background-size:cover;background-position:center;transform:scale(1.06);animation:heroZoom 14s ease-out forwards}
+@keyframes heroZoom{to{transform:scale(1)}}
+.hero .in{position:relative;z-index:2;width:100%;padding-bottom:12vh}
+section.s{padding:96px 0}
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .9s ease,transform .9s ease}
+.reveal.on{opacity:1;transform:none}
+.grid-cards{display:grid;gap:22px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.card .ph{aspect-ratio:4/3;overflow:hidden}.card .ph img{width:100%;height:100%;object-fit:cover;transition:transform .8s}
+.card:hover .ph img{transform:scale(1.06)}
+.gal{display:grid;gap:10px;grid-template-columns:repeat(2,1fr)}
+@media(min-width:760px){.gal{grid-template-columns:repeat(3,1fr)}}
+.gal figure{overflow:hidden;aspect-ratio:1}.gal img{width:100%;height:100%;object-fit:cover;transition:transform .8s}.gal figure:hover img{transform:scale(1.07)}
+.ilus{font-size:.75rem;opacity:.6;margin-top:12px;letter-spacing:.04em}
+.map{width:100%;height:380px;border:0;display:block}
+.btn{display:inline-flex;align-items:center;gap:10px;text-decoration:none;font-weight:600;transition:transform .25s,box-shadow .25s,background .25s}
+.btn:hover{transform:translateY(-2px)}
+footer.f{padding:34px 0;text-align:center;font-size:.85rem}
+.wa{position:fixed;right:18px;bottom:18px;z-index:60;width:60px;height:60px;border-radius:50%;background:#25d366;display:grid;place-items:center;box-shadow:0 8px 24px #0005;animation:waPulse 2.4s infinite}
+@keyframes waPulse{0%,100%{box-shadow:0 8px 24px #0005,0 0 0 0 #25d36688}50%{box-shadow:0 8px 24px #0005,0 0 0 14px #25d36600}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
+body{font-family:Rubik,sans-serif;background:#fbf3e6;color:#3a2318}
+h1,h2,h3,.logo{font-family:Lora,serif}
+.logo{font-size:1.8rem;font-weight:700;text-decoration:none;color:#fff}.logo small{font-size:.9rem;color:#e0a526;font-weight:500;margin-left:4px}
+nav.top{color:#fff}nav.top .links{gap:20px}nav.top .links a{font-weight:500}
+nav.top.solid{background:#9b2226;padding:8px 0;box-shadow:0 6px 20px #0003}
+@media(max-width:820px){nav.top .links{background:#9b2226}}
+.hero .bg{background-position:center 60%}.hero:after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,#2a120cf0 0%,#2a120c99 45%,#2a120c33 100%)}
+.kick{color:#e0a526;font-weight:500;letter-spacing:.18em;text-transform:uppercase;font-size:.8rem;margin-bottom:14px}
+.hero h1{font-size:clamp(2.6rem,8vw,5.2rem);line-height:1.02;font-weight:700}.hero h1 em{color:#f4c96b;font-weight:500}
+.hb{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}.hb.c{justify-content:center}
+.btn{padding:14px 24px;border-radius:14px;font-weight:700}.btn svg{width:22px;height:22px}
+.wa-b{background:#25d366;color:#fff}.cream{background:#fbf3e6;color:#9b2226}.red{background:#9b2226;color:#fff;margin-top:16px}
+.orn{height:22px;background:repeating-linear-gradient(90deg,#9b2226 0 14px,transparent 14px 20px,#e0a526 20px 34px,transparent 34px 40px);opacity:.9;
+-webkit-mask:radial-gradient(circle at 10px 11px,#000 7px,transparent 8px) 0 0/20px 22px;mask:radial-gradient(circle at 10px 11px,#000 7px,transparent 8px) 0 0/20px 22px}
+.eyebrow{color:#9b2226;font-weight:700;letter-spacing:.16em;text-transform:uppercase;font-size:.8rem;margin-bottom:8px}.c{text-align:center}
+h2{font-size:clamp(2.1rem,6vw,3.3rem);line-height:1.08;margin-bottom:24px;color:#9b2226}
+.lead{font-size:1.18rem;margin-bottom:12px}a{color:#9b2226}
+.two{display:grid;gap:44px}@media(min-width:860px){.two{grid-template-columns:1fr 1fr;align-items:center}}
+.round img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:50% 50% 24px 24px;border:6px solid #e0a526}
+.cream-bg{background:#f3e3c8}
+.card{background:#fff;border-radius:20px;overflow:hidden;border:2px solid #e0a52655}.card .tx{padding:20px 22px 26px}.card h3{color:#9b2226;font-size:1.4rem;margin-bottom:4px}
+.bento{background:#9b2226;color:#fbf3e6;padding:90px 0}.bento h2{color:#fff}.bento .ph img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:24px;transform:rotate(-2deg);box-shadow:0 20px 40px #0005}
+.big2{font-family:Lora;font-size:5rem;font-weight:700;color:#f4c96b;line-height:1}
+.gal figure{border-radius:16px}.ilus{text-align:center}
+.hours{background:#fff;border-radius:16px;padding:18px 22px;margin-bottom:18px;border-left:6px solid #e0a526}.hours div{display:flex;justify-content:space-between;gap:10px;font-size:1.1rem}
+.mapw .map{border-radius:20px}
+.cta{text-align:center;padding:0 0 90px;background:#3a2318;color:#fbf3e6}.cta .wrap{padding-top:80px}.cta h2{color:#f4c96b}.cta p{margin-bottom:26px;font-size:1.15rem}
+footer.f{background:#2a120c;color:#d9c3a5}footer a{color:#f4c96b}</style></head><body>
+<nav class="top"><div class="wrap"><a href="#inicio" class="logo">Bulka <small>Булка</small></a><button class="burger" aria-label="Menú"><span></span></button><ul class="links"><li><a href="#nosotros">Nosotros</a></li><li><a href="#carta">Qué hacemos</a></li><li><a href="#bento">Bento 2 h</a></li><li><a href="#galeria">Galería</a></li><li><a href="#ubicacion">Retiro</a></li><li><a href="#contacto">Pedidos</a></li></ul></div></nav>
+<header class="hero" id="inicio"><div class="bg" style="background-image:url('https://images.unsplash.com/photo-1702742136600-cfb044826d84?w=1600&q=70&auto=format&fit=crop')"></div><div class="in"><div class="wrap"><p class="kick">Pastelería rusa · Catering · Cordón</p><h1>El sabor de la<br><em>pastelería rusa,</em><br>en Montevideo.</h1>
+<div class="hb"><a class="btn wa-b" href="https://wa.me/59898721320"><svg viewBox="0 0 32 32" width="30" height="30" fill="#fff" aria-hidden="true"><path d="M16 3C9 3 3.4 8.6 3.4 15.6c0 2.5.7 4.9 2 6.9L3 29l6.7-2.2c1.9 1.1 4.1 1.6 6.3 1.6 7 0 12.6-5.6 12.6-12.6S23 3 16 3zm0 23c-2 0-3.9-.6-5.6-1.6l-.4-.2-4 1.3 1.3-3.9-.3-.4c-1.1-1.7-1.7-3.7-1.7-5.7C5.3 9.8 10.1 5 16 5s10.7 4.8 10.7 10.6S21.9 26 16 26zm5.9-7.9c-.3-.2-1.9-.9-2.2-1s-.5-.2-.7.2-.8 1-1 1.2-.4.2-.7.1c-.3-.2-1.4-.5-2.6-1.6-1-.9-1.6-1.9-1.8-2.2s0-.5.1-.6l.5-.6c.2-.2.2-.4.3-.6s0-.4 0-.6l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4s-1.2 1.1-1.2 2.8 1.2 3.2 1.4 3.4 2.4 3.6 5.7 5c.8.3 1.4.5 1.9.7.8.3 1.5.2 2.1.1.6-.1 1.9-.8 2.2-1.5s.3-1.3.2-1.5c-.1-.1-.3-.2-.6-.3z"/></svg> Pedí por WhatsApp</a><a class="btn cream" href="#bento">Bento en 2 horas</a></div></div></div></header>
+<div class="orn" aria-hidden="true"></div><section class="s" id="nosotros"><div class="wrap two"><div class="reveal"><p class="eyebrow">Nosotros · О нас</p><h2>Recetas rusas, horneadas en el Cordón.</h2>
+<p class="lead">Bulka es pastelería rusa y catering en Gaboto 1227. Recetas rusas con el gusto de casa, para tu mesa o para tu evento.</p>
+<p>¿Ganas de un café? Visitá también <a href="https://instagram.com/bulka.cafe">@bulka.cafe</a>.</p></div>
+<div class="reveal round" data-d="120"><img loading="lazy" src="https://images.unsplash.com/photo-1624000961428-eeece184988b?w=900&q=70&auto=format&fit=crop" alt="Torta de capas"></div></div></section>
+<section class="s cream-bg" id="carta"><div class="wrap"><p class="eyebrow reveal c">Qué hacemos</p><h2 class="reveal c">Hecho por Bulka</h2>
+<div class="grid-cards"><article class="card reveal" data-d="0"><div class="ph"><img loading="lazy" src="https://images.unsplash.com/photo-1651604017121-9afaa05dfd8e?w=800&q=70&auto=format&fit=crop" alt="Pastelería rusa"></div><div class="tx"><h3>Pastelería rusa</h3><p>Nuestra especialidad: recetas rusas tradicionales.</p></div></article><article class="card reveal" data-d="90"><div class="ph"><img loading="lazy" src="https://images.unsplash.com/photo-1702742322469-36315505728f?w=800&q=70&auto=format&fit=crop" alt="Catering"></div><div class="tx"><h3>Catering</h3><p>Para cumpleaños, reuniones y eventos.</p></div></article><article class="card reveal" data-d="180"><div class="ph"><img loading="lazy" src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=800&q=70&auto=format&fit=crop" alt="Café en @bulka.cafe"></div><div class="tx"><h3>Café en @bulka.cafe</h3><p>Para acompañar con algo rico. Seguinos en @bulka.cafe.</p></div></article></div></div></section>
+<section class="bento" id="bento"><div class="wrap two"><div class="reveal ph"><img loading="lazy" src="https://images.unsplash.com/photo-1659679120544-1a968f3003f6?w=900&q=70&auto=format&fit=crop" alt="Bento cake en su cajita"></div>
+<div class="reveal" data-d="120"><span class="big2">2 h</span><h2>Bento en 2 horas</h2><p class="lead">¿Te olvidaste del cumple? Tranqui: pedí tu bento y en 2 horas lo tenés.</p>
+<a class="btn wa-b" href="https://wa.me/59898721320?text=Hola%20Bulka%21%20Quiero%20encargar%20un%20bento"><svg viewBox="0 0 32 32" width="30" height="30" fill="#fff" aria-hidden="true"><path d="M16 3C9 3 3.4 8.6 3.4 15.6c0 2.5.7 4.9 2 6.9L3 29l6.7-2.2c1.9 1.1 4.1 1.6 6.3 1.6 7 0 12.6-5.6 12.6-12.6S23 3 16 3zm0 23c-2 0-3.9-.6-5.6-1.6l-.4-.2-4 1.3 1.3-3.9-.3-.4c-1.1-1.7-1.7-3.7-1.7-5.7C5.3 9.8 10.1 5 16 5s10.7 4.8 10.7 10.6S21.9 26 16 26zm5.9-7.9c-.3-.2-1.9-.9-2.2-1s-.5-.2-.7.2-.8 1-1 1.2-.4.2-.7.1c-.3-.2-1.4-.5-2.6-1.6-1-.9-1.6-1.9-1.8-2.2s0-.5.1-.6l.5-.6c.2-.2.2-.4.3-.6s0-.4 0-.6l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4s-1.2 1.1-1.2 2.8 1.2 3.2 1.4 3.4 2.4 3.6 5.7 5c.8.3 1.4.5 1.9.7.8.3 1.5.2 2.1.1.6-.1 1.9-.8 2.2-1.5s.3-1.3.2-1.5c-.1-.1-.3-.2-.6-.3z"/></svg> Encargar bento</a></div></div></section>
+<section class="s" id="galeria"><div class="wrap"><p class="eyebrow reveal c">Galería</p><h2 class="reveal c">Recién salido del horno</h2>
+<div class="gal"><figure class="reveal" data-d="0"><img loading="lazy" src="https://images.unsplash.com/photo-1530006261244-0ae043004358?w=800&q=70&auto=format&fit=crop" alt="Pastelería"></figure><figure class="reveal" data-d="80"><img loading="lazy" src="https://images.unsplash.com/photo-1664288377707-11d804369c5e?w=800&q=70&auto=format&fit=crop" alt="Pastelería"></figure><figure class="reveal" data-d="160"><img loading="lazy" src="https://images.unsplash.com/photo-1597990566967-a0cffc700e1a?w=800&q=70&auto=format&fit=crop" alt="Pastelería"></figure><figure class="reveal" data-d="0"><img loading="lazy" src="https://images.unsplash.com/photo-1624000937155-cb8a719eaf89?w=800&q=70&auto=format&fit=crop" alt="Pastelería"></figure><figure class="reveal" data-d="80"><img loading="lazy" src="https://images.unsplash.com/photo-1702742400971-10b0c41a11a7?w=800&q=70&auto=format&fit=crop" alt="Pastelería"></figure><figure class="reveal" data-d="160"><img loading="lazy" src="https://images.unsplash.com/photo-1702742136650-339afaec9817?w=800&q=70&auto=format&fit=crop" alt="Pastelería"></figure></div><p class="ilus">Fotos ilustrativas</p></div></section>
+<section class="s cream-bg" id="ubicacion"><div class="wrap two"><div class="reveal"><p class="eyebrow">Retiro</p><h2>Pasá a buscar tu pedido</h2>
+<div class="hours"><div><span>Lunes a viernes</span><b>14:00 a 18:30</b></div></div>
+<p class="lead">Gaboto 1227, Cordón, Montevideo</p>
+<a class="btn red" href="https://www.google.com/maps/search/?api=1&query=Bulka%20Gaboto%201227%20Montevideo">Cómo llegar</a></div>
+<div class="reveal mapw" data-d="120"><iframe class="map" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Mapa" src="https://www.google.com/maps?q=Gaboto%201227%2C%20Montevideo%2C%20Uruguay&z=16&output=embed"></iframe></div></div></section>
+<section class="cta" id="contacto"><div class="orn" aria-hidden="true"></div><div class="wrap reveal"><h2>¿Encargamos algo rico?</h2><p>Hacé tu pedido por WhatsApp o llamanos.</p>
+<div class="hb c"><a class="btn wa-b" href="https://wa.me/59898721320"><svg viewBox="0 0 32 32" width="30" height="30" fill="#fff" aria-hidden="true"><path d="M16 3C9 3 3.4 8.6 3.4 15.6c0 2.5.7 4.9 2 6.9L3 29l6.7-2.2c1.9 1.1 4.1 1.6 6.3 1.6 7 0 12.6-5.6 12.6-12.6S23 3 16 3zm0 23c-2 0-3.9-.6-5.6-1.6l-.4-.2-4 1.3 1.3-3.9-.3-.4c-1.1-1.7-1.7-3.7-1.7-5.7C5.3 9.8 10.1 5 16 5s10.7 4.8 10.7 10.6S21.9 26 16 26zm5.9-7.9c-.3-.2-1.9-.9-2.2-1s-.5-.2-.7.2-.8 1-1 1.2-.4.2-.7.1c-.3-.2-1.4-.5-2.6-1.6-1-.9-1.6-1.9-1.8-2.2s0-.5.1-.6l.5-.6c.2-.2.2-.4.3-.6s0-.4 0-.6l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4s-1.2 1.1-1.2 2.8 1.2 3.2 1.4 3.4 2.4 3.6 5.7 5c.8.3 1.4.5 1.9.7.8.3 1.5.2 2.1.1.6-.1 1.9-.8 2.2-1.5s.3-1.3.2-1.5c-.1-.1-.3-.2-.6-.3z"/></svg> 098 721 320</a><a class="btn cream" href="tel:+59898721320">📞 Llamar</a><a class="btn cream" href="https://instagram.com/bulka.sabor"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg> @bulka.sabor</a></div></div></section>
+<footer class="f"><p>Demo hecha por EasyWeb · <a href="https://instagram.com/easyweb_uy">@easyweb_uy</a></p></footer>
+<a class="wa" href="https://wa.me/59898721320" aria-label="WhatsApp"><svg viewBox="0 0 32 32" width="30" height="30" fill="#fff" aria-hidden="true"><path d="M16 3C9 3 3.4 8.6 3.4 15.6c0 2.5.7 4.9 2 6.9L3 29l6.7-2.2c1.9 1.1 4.1 1.6 6.3 1.6 7 0 12.6-5.6 12.6-12.6S23 3 16 3zm0 23c-2 0-3.9-.6-5.6-1.6l-.4-.2-4 1.3 1.3-3.9-.3-.4c-1.1-1.7-1.7-3.7-1.7-5.7C5.3 9.8 10.1 5 16 5s10.7 4.8 10.7 10.6S21.9 26 16 26zm5.9-7.9c-.3-.2-1.9-.9-2.2-1s-.5-.2-.7.2-.8 1-1 1.2-.4.2-.7.1c-.3-.2-1.4-.5-2.6-1.6-1-.9-1.6-1.9-1.8-2.2s0-.5.1-.6l.5-.6c.2-.2.2-.4.3-.6s0-.4 0-.6l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4s-1.2 1.1-1.2 2.8 1.2 3.2 1.4 3.4 2.4 3.6 5.7 5c.8.3 1.4.5 1.9.7.8.3 1.5.2 2.1.1.6-.1 1.9-.8 2.2-1.5s.3-1.3.2-1.5c-.1-.1-.3-.2-.6-.3z"/></svg></a><script>
+const n=document.querySelector('nav.top');const sc=()=>n.classList.toggle('solid',scrollY>40);addEventListener('scroll',sc,{passive:true});sc();
+document.querySelector('.burger').onclick=()=>n.classList.toggle('open');
+document.querySelectorAll('nav.top .links a').forEach(a=>a.onclick=()=>n.classList.remove('open'));
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('on');io.unobserve(e.target)}}),{threshold:.12});
+document.querySelectorAll('.reveal').forEach((el,i)=>{el.style.transitionDelay=(el.dataset.d||0)+'ms';io.observe(el)});
+</script></body></html>

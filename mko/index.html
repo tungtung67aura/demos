@@ -1,17 +1,89 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gimnasio MKO · Deportes de combate en Montevideo</title><meta name="description" content="¡Entrená con emoción! Deportes de combate y preparación física general. Escuela de Jiu-Jitsu @rataojiujitsu_mko. También MKO Store."><style>
-*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,sans-serif;color:#222;background:#faf8f5}
-header{background:linear-gradient(135deg,#d32f2f,#111);color:#fff;padding:56px 20px 40px;text-align:center}
-.e{font-size:56px}h1{margin:8px 0 4px;font-size:2.1rem}.r{opacity:.85;margin:0}
-.tag{margin:10px auto 0;max-width:320px;font-size:.95rem;opacity:.9}
-.btn{display:inline-block;margin-top:22px;background:#d32f2f;color:#fff;padding:14px 22px;border-radius:30px;text-decoration:none;font-weight:600}
-main{max-width:640px;margin:auto;padding:20px}section{background:#fff;border-radius:14px;padding:18px 20px;margin:16px 0;box-shadow:0 2px 8px #0001}
-h2{margin:0 0 10px;font-size:1.15rem;color:#d32f2f}table{width:100%;border-collapse:collapse}td{padding:6px 0;border-bottom:1px solid #eee}td:last-child{text-align:right}
-ul{margin:0;padding-left:1.2em}li{margin:6px 0}
-a{color:#d32f2f}footer{text-align:center;font-size:.8rem;color:#888;padding:24px}</style></head><body>
-<header><div class="e">🥊</div><h1>Gimnasio MKO</h1><p class="r">Deportes de combate · Montevideo</p><a class="btn" href="https://instagram.com/montevideoknockout">Escribinos por Instagram</a></header>
-<main><section><h2>Quiénes somos</h2><p>¡Entrená con emoción! Deportes de combate y preparación física general. Escuela de Jiu-Jitsu @rataojiujitsu_mko. También MKO Store.</p></section>
-<section><h2>Qué ofrecemos</h2><ul><li>Deportes de combate</li><li>Preparación física general</li><li>Escuela de Jiu-Jitsu @rataojiujitsu_mko</li><li>MKO Store</li></ul></section>
-
-<section><h2>Dónde estamos</h2><p>📍 Luis de la Torre 581 planta alta, Centro, Montevideo</p><p><a href="https://www.google.com/maps/search/?api=1&query=Gimnasio+MKO+Luis+de+la+Torre+581+planta+alta,+Centro+Montevideo">Ver en Google Maps</a></p></section>
-<section><h2>Contacto</h2><p>📸 <a href="https://instagram.com/montevideoknockout">@montevideoknockout</a></p></section></main>
-<footer>Demo hecha por EasyWeb · @easyweb_uy</footer></body></html>
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gimnasio MKO · Deportes de combate · Centro, Montevideo</title><meta name="description" content="¡Entrená con emoción! Deportes de combate, preparación física general, escuela de Jiu-Jitsu y MKO Store. Luis de la Torre 581.">
+<meta property="og:title" content="Gimnasio MKO · Deportes de combate · Centro, Montevideo"><meta property="og:image" content="https://images.unsplash.com/photo-1636581563867-1ecab574858f?w=1200&q=70&auto=format&fit=crop">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:ital,wght@0,400;0,600;0,800;1,800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{-webkit-font-smoothing:antialiased;line-height:1.6;overflow-x:hidden}
+img{display:block;max-width:100%}a{color:inherit}
+.wrap{width:min(1120px,100% - 40px);margin-inline:auto}
+nav.top{position:fixed;inset:0 0 auto 0;z-index:50;transition:background .35s,box-shadow .35s,padding .35s;padding:18px 0}
+nav.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px}
+nav.top .links{display:flex;gap:26px;list-style:none}
+nav.top .links a{text-decoration:none;color:inherit}
+.burger{display:none;background:none;border:0;cursor:pointer;width:40px;height:40px;position:relative}
+.burger span,.burger span:before,.burger span:after{content:"";position:absolute;left:8px;width:24px;height:2px;background:currentColor;transition:.3s}
+.burger span{top:19px}.burger span:before{top:-7px;left:0}.burger span:after{top:7px;left:0}
+@media(max-width:820px){.burger{display:block}nav.top .links{position:fixed;inset:64px 0 auto 0;flex-direction:column;gap:0;padding:8px 20px 20px;transform:translateY(-130%);transition:transform .35s}
+nav.top.open .links{transform:none}nav.top .links a{display:block;padding:14px 0}}
+.hero{position:relative;min-height:100svh;display:flex;align-items:flex-end;color:#fff;overflow:hidden}
+.hero .bg{position:absolute;inset:0;background-size:cover;background-position:center;transform:scale(1.06);animation:heroZoom 14s ease-out forwards}
+@keyframes heroZoom{to{transform:scale(1)}}
+.hero .in{position:relative;z-index:2;width:100%;padding-bottom:12vh}
+section.s{padding:96px 0}
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .9s ease,transform .9s ease}
+.reveal.on{opacity:1;transform:none}
+.grid-cards{display:grid;gap:22px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.card .ph{aspect-ratio:4/3;overflow:hidden}.card .ph img{width:100%;height:100%;object-fit:cover;transition:transform .8s}
+.card:hover .ph img{transform:scale(1.06)}
+.gal{display:grid;gap:10px;grid-template-columns:repeat(2,1fr)}
+@media(min-width:760px){.gal{grid-template-columns:repeat(3,1fr)}}
+.gal figure{overflow:hidden;aspect-ratio:1}.gal img{width:100%;height:100%;object-fit:cover;transition:transform .8s}.gal figure:hover img{transform:scale(1.07)}
+.ilus{font-size:.75rem;opacity:.6;margin-top:12px;letter-spacing:.04em}
+.map{width:100%;height:380px;border:0;display:block}
+.btn{display:inline-flex;align-items:center;gap:10px;text-decoration:none;font-weight:600;transition:transform .25s,box-shadow .25s,background .25s}
+.btn:hover{transform:translateY(-2px)}
+footer.f{padding:34px 0;text-align:center;font-size:.85rem}
+.wa{position:fixed;right:18px;bottom:18px;z-index:60;width:60px;height:60px;border-radius:50%;background:#25d366;display:grid;place-items:center;box-shadow:0 8px 24px #0005;animation:waPulse 2.4s infinite}
+@keyframes waPulse{0%,100%{box-shadow:0 8px 24px #0005,0 0 0 0 #25d36688}50%{box-shadow:0 8px 24px #0005,0 0 0 14px #25d36600}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
+body{font-family:Barlow,sans-serif;background:#f2f2f2;color:#0a0a0a}
+h1,h2,h3,.logo,.strip{font-family:Anton,sans-serif;font-weight:400;text-transform:uppercase}
+.logo{font-size:2.2rem;text-decoration:none;color:#fff;font-style:italic;background:#e10600;padding:0 12px;transform:skew(-10deg);display:inline-block;line-height:1.2}
+nav.top{color:#fff}nav.top .links a{font-weight:800;text-transform:uppercase;font-size:.85rem;letter-spacing:.06em}
+nav.top.solid{background:#0a0a0a;padding:8px 0}
+@media(max-width:820px){nav.top .links{background:#0a0a0a}}
+.hero .bg{filter:grayscale(.6) contrast(1.15)}.hero:after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,#0a0a0a 0%,#0a0a0a99 50%,#e1060033 100%)}
+.kick{font-weight:800;text-transform:uppercase;letter-spacing:.2em;font-size:.8rem;color:#ff5a4f;margin-bottom:10px}
+.hero h1{font-size:clamp(3.6rem,14vw,9rem);line-height:.9;font-style:italic}.hero h1 span{color:#e10600}
+.sub{font-size:1.15rem;margin:18px 0 28px;max-width:36ch}
+.hb{display:flex;flex-wrap:wrap;gap:12px}.hb.c{justify-content:center}
+.btn{padding:15px 28px;font-weight:800;text-transform:uppercase;font-style:italic;letter-spacing:.05em;clip-path:polygon(8% 0,100% 0,92% 100%,0 100%)}
+.red{background:#e10600;color:#fff}.red:hover{background:#ff1a12}.out{background:#fff;color:#0a0a0a}.dark{background:#0a0a0a;color:#fff}
+.strip{display:flex;justify-content:space-around;flex-wrap:wrap;background:#e10600;color:#fff;font-size:clamp(1.4rem,4vw,2.4rem);padding:14px 10px;transform:skewY(-2deg);margin-top:-20px;position:relative;z-index:3;font-style:italic}
+.eyebrow{font-weight:800;color:#e10600;text-transform:uppercase;letter-spacing:.2em;font-size:.8rem;margin-bottom:6px}
+h2{font-size:clamp(2.6rem,8vw,4.6rem);line-height:.95;margin-bottom:24px;font-style:italic}
+.lead{font-size:1.2rem;font-weight:600;margin-bottom:12px}
+.two{display:grid;gap:44px}@media(min-width:860px){.two{grid-template-columns:1fr 1fr;align-items:center}}
+.slash img{width:100%;aspect-ratio:4/3;object-fit:cover;clip-path:polygon(10% 0,100% 0,90% 100%,0 100%)}
+.black{background:#0a0a0a;color:#f2f2f2}
+.card{background:#151515;position:relative}.card .ph img{filter:grayscale(.7)}.card:hover .ph img{filter:none}.card .tx{padding:20px 22px 26px;border-top:4px solid #e10600}.card h3{font-size:1.6rem;margin-bottom:6px;font-style:italic}
+.gal img{filter:grayscale(.5) contrast(1.1)}
+.map{filter:grayscale(1) invert(.9) contrast(1.1)}
+.cta{text-align:center;padding:100px 0;background:#e10600;color:#fff}.cta p{margin-bottom:26px;font-size:1.2rem;font-weight:600}
+footer.f{background:#0a0a0a;color:#999}footer a{color:#e10600}</style></head><body>
+<nav class="top"><div class="wrap"><a href="#inicio" class="logo">MKO</a><button class="burger" aria-label="Menú"><span></span></button><ul class="links"><li><a href="#gimnasio">Gimnasio</a></li><li><a href="#disciplinas">Disciplinas</a></li><li><a href="#galeria">Galería</a></li><li><a href="#ubicacion">Ubicación</a></li><li><a href="#contacto">Contacto</a></li></ul></div></nav>
+<header class="hero" id="inicio"><div class="bg" style="background-image:url('https://images.unsplash.com/photo-1636581563867-1ecab574858f?w=1600&q=70&auto=format&fit=crop')"></div><div class="in"><div class="wrap"><p class="kick">Gimnasio MKO · Montevideo Knockout</p><h1>¡Entrená<br><span>con emoción!</span></h1>
+<p class="sub">Deportes de combate, preparación física y Jiu-Jitsu en el Centro.</p><div class="hb"><a class="btn red" href="https://instagram.com/montevideoknockout">Empezá a entrenar</a><a class="btn out" href="#disciplinas">Disciplinas</a></div></div></div></header>
+<div class="strip" aria-hidden="true"><span>COMBATE</span><span>FÍSICO</span><span>JIU-JITSU</span><span>STORE</span></div>
+<section class="s" id="gimnasio"><div class="wrap two"><div class="reveal"><p class="eyebrow">El gimnasio</p><h2>Acá se viene<br>a dejar todo.</h2>
+<p class="lead">En MKO entrenás deportes de combate y preparación física general, en Luis de la Torre 581, planta alta.</p><p>Tenemos escuela de Jiu-Jitsu propia y la MKO Store para que entrenes equipado.</p></div>
+<div class="reveal slash" data-d="120"><img loading="lazy" src="https://images.unsplash.com/photo-1517438322307-e67111335449?w=900&q=70&auto=format&fit=crop" alt="Entrenamiento con guantes y manoplas"></div></div></section>
+<section class="s black" id="disciplinas"><div class="wrap"><p class="eyebrow reveal">Disciplinas</p><h2 class="reveal">Elegí tu pelea</h2>
+<div class="grid-cards"><article class="card reveal" data-d="0"><div class="ph"><img loading="lazy" src="https://images.unsplash.com/photo-1611816153165-fed23698666d?w=800&q=70&auto=format&fit=crop" alt="Deportes de combate"></div><div class="tx"><h3>Deportes de combate</h3><p>Técnica, guantes y contacto, con la energía del grupo.</p></div></article><article class="card reveal" data-d="90"><div class="ph"><img loading="lazy" src="https://images.unsplash.com/photo-1599058917212-d750089bc07e?w=800&q=70&auto=format&fit=crop" alt="Preparación física general"></div><div class="tx"><h3>Preparación física general</h3><p>Fuerza, resistencia y condición para cualquier objetivo.</p></div></article><article class="card reveal" data-d="180"><div class="ph"><img loading="lazy" src="https://images.unsplash.com/photo-1515025617920-e1e674b5033c?w=800&q=70&auto=format&fit=crop" alt="Escuela de Jiu-Jitsu"></div><div class="tx"><h3>Escuela de Jiu-Jitsu</h3><p>Nuestra escuela @rataojiujitsu_mko.</p></div></article><article class="card reveal" data-d="270"><div class="ph"><img loading="lazy" src="https://images.unsplash.com/photo-1612179736716-d643f0bdcf4e?w=800&q=70&auto=format&fit=crop" alt="MKO Store"></div><div class="tx"><h3>MKO Store</h3><p>Equipate para entrenar en nuestra tienda.</p></div></article></div></div></section>
+<section class="s" id="galeria"><div class="wrap"><p class="eyebrow reveal">Galería</p><h2 class="reveal">Sangre, sudor y técnica</h2>
+<div class="gal"><figure class="reveal" data-d="0"><img loading="lazy" src="https://images.unsplash.com/photo-1601039834076-c41cf1766d4b?w=800&q=70&auto=format&fit=crop" alt="Entrenamiento de combate"></figure><figure class="reveal" data-d="80"><img loading="lazy" src="https://images.unsplash.com/photo-1564415315949-7a0c4c73aab4?w=800&q=70&auto=format&fit=crop" alt="Entrenamiento de combate"></figure><figure class="reveal" data-d="160"><img loading="lazy" src="https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?w=800&q=70&auto=format&fit=crop" alt="Entrenamiento de combate"></figure><figure class="reveal" data-d="0"><img loading="lazy" src="https://images.unsplash.com/photo-1611824916173-508ca2931d4d?w=800&q=70&auto=format&fit=crop" alt="Entrenamiento de combate"></figure><figure class="reveal" data-d="80"><img loading="lazy" src="https://images.unsplash.com/photo-1656653121475-e33829581294?w=800&q=70&auto=format&fit=crop" alt="Entrenamiento de combate"></figure><figure class="reveal" data-d="160"><img loading="lazy" src="https://images.unsplash.com/photo-1607702713064-0143212236ae?w=800&q=70&auto=format&fit=crop" alt="Entrenamiento de combate"></figure></div><p class="ilus">Fotos ilustrativas</p></div></section>
+<section class="s black" id="ubicacion"><div class="wrap two"><div class="reveal"><p class="eyebrow">Ubicación</p><h2>Luis de la Torre 581</h2><p class="lead">Planta alta · Centro, Montevideo</p>
+<a class="btn red" href="https://www.google.com/maps/search/?api=1&query=Gimnasio%20MKO%20Luis%20de%20la%20Torre%20581%20Montevideo">Cómo llegar</a></div>
+<div class="reveal" data-d="120"><iframe class="map" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Mapa" src="https://www.google.com/maps?q=Luis%20de%20la%20Torre%20581%2C%20Montevideo%2C%20Uruguay&z=16&output=embed"></iframe></div></div></section>
+<section class="cta" id="contacto"><div class="wrap reveal"><h2>Tu primera clase te está esperando</h2><p>Escribinos y vení a probar.</p>
+<div class="hb c"><a class="btn dark" href="https://instagram.com/montevideoknockout"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg> @montevideoknockout</a><a class="btn dark" href="https://instagram.com/rataojiujitsu_mko"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg> @rataojiujitsu_mko</a></div></div></section>
+<footer class="f"><p>Demo hecha por EasyWeb · <a href="https://instagram.com/easyweb_uy">@easyweb_uy</a></p></footer>
+<script>
+const n=document.querySelector('nav.top');const sc=()=>n.classList.toggle('solid',scrollY>40);addEventListener('scroll',sc,{passive:true});sc();
+document.querySelector('.burger').onclick=()=>n.classList.toggle('open');
+document.querySelectorAll('nav.top .links a').forEach(a=>a.onclick=()=>n.classList.remove('open'));
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('on');io.unobserve(e.target)}}),{threshold:.12});
+document.querySelectorAll('.reveal').forEach((el,i)=>{el.style.transitionDelay=(el.dataset.d||0)+'ms';io.observe(el)});
+</script></body></html>

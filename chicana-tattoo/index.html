@@ -1,17 +1,86 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CHICANA Tattoo Studio · Estudio de tatuajes en Montevideo</title><meta name="description" content="Estudio de tatuajes en Montevideo. Artista @paulifp_. Pagos en efectivo o transferencia. Sin acompañantes."><style>
-*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,sans-serif;color:#222;background:#faf8f5}
-header{background:linear-gradient(135deg,#1a1a1a,#111);color:#fff;padding:56px 20px 40px;text-align:center}
-.e{font-size:56px}h1{margin:8px 0 4px;font-size:2.1rem}.r{opacity:.85;margin:0}
-.tag{margin:10px auto 0;max-width:320px;font-size:.95rem;opacity:.9}
-.btn{display:inline-block;margin-top:22px;background:#1a1a1a;color:#fff;padding:14px 22px;border-radius:30px;text-decoration:none;font-weight:600}
-main{max-width:640px;margin:auto;padding:20px}section{background:#fff;border-radius:14px;padding:18px 20px;margin:16px 0;box-shadow:0 2px 8px #0001}
-h2{margin:0 0 10px;font-size:1.15rem;color:#1a1a1a}table{width:100%;border-collapse:collapse}td{padding:6px 0;border-bottom:1px solid #eee}td:last-child{text-align:right}
-ul{margin:0;padding-left:1.2em}li{margin:6px 0}
-a{color:#1a1a1a}footer{text-align:center;font-size:.8rem;color:#888;padding:24px}</style></head><body>
-<header><div class="e">🖤</div><h1>CHICANA Tattoo Studio</h1><p class="r">Estudio de tatuajes · Montevideo</p><a class="btn" href="https://instagram.com/chicana_tattoo">Escribinos por Instagram</a></header>
-<main><section><h2>Quiénes somos</h2><p>Estudio de tatuajes en Montevideo. Artista @paulifp_. Pagos en efectivo o transferencia. Sin acompañantes.</p></section>
-<section><h2>Qué ofrecemos</h2><ul><li>Tatuajes a cargo de @paulifp_</li><li>Pago en efectivo o transferencia</li><li>Sin acompañantes en el estudio</li></ul></section>
-
-
-<section><h2>Contacto</h2><p>📸 <a href="https://instagram.com/chicana_tattoo">@chicana_tattoo</a></p></section></main>
-<footer>Demo hecha por EasyWeb · @easyweb_uy</footer></body></html>
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CHICANA Tattoo Studio · Tatuajes en Montevideo</title><meta name="description" content="Estudio de tatuajes en Montevideo. Artista @paulifp_. Pagos en efectivo o transferencia.">
+<meta property="og:title" content="CHICANA Tattoo Studio · Tatuajes en Montevideo"><meta property="og:image" content="https://images.unsplash.com/photo-1573208425302-e94dd243fa91?w=1200&q=70&auto=format&fit=crop">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Manrope:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{-webkit-font-smoothing:antialiased;line-height:1.6;overflow-x:hidden}
+img{display:block;max-width:100%}a{color:inherit}
+.wrap{width:min(1120px,100% - 40px);margin-inline:auto}
+nav.top{position:fixed;inset:0 0 auto 0;z-index:50;transition:background .35s,box-shadow .35s,padding .35s;padding:18px 0}
+nav.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px}
+nav.top .links{display:flex;gap:26px;list-style:none}
+nav.top .links a{text-decoration:none;color:inherit}
+.burger{display:none;background:none;border:0;cursor:pointer;width:40px;height:40px;position:relative}
+.burger span,.burger span:before,.burger span:after{content:"";position:absolute;left:8px;width:24px;height:2px;background:currentColor;transition:.3s}
+.burger span{top:19px}.burger span:before{top:-7px;left:0}.burger span:after{top:7px;left:0}
+@media(max-width:820px){.burger{display:block}nav.top .links{position:fixed;inset:64px 0 auto 0;flex-direction:column;gap:0;padding:8px 20px 20px;transform:translateY(-130%);transition:transform .35s}
+nav.top.open .links{transform:none}nav.top .links a{display:block;padding:14px 0}}
+.hero{position:relative;min-height:100svh;display:flex;align-items:flex-end;color:#fff;overflow:hidden}
+.hero .bg{position:absolute;inset:0;background-size:cover;background-position:center;transform:scale(1.06);animation:heroZoom 14s ease-out forwards}
+@keyframes heroZoom{to{transform:scale(1)}}
+.hero .in{position:relative;z-index:2;width:100%;padding-bottom:12vh}
+section.s{padding:96px 0}
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .9s ease,transform .9s ease}
+.reveal.on{opacity:1;transform:none}
+.grid-cards{display:grid;gap:22px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.card .ph{aspect-ratio:4/3;overflow:hidden}.card .ph img{width:100%;height:100%;object-fit:cover;transition:transform .8s}
+.card:hover .ph img{transform:scale(1.06)}
+.gal{display:grid;gap:10px;grid-template-columns:repeat(2,1fr)}
+@media(min-width:760px){.gal{grid-template-columns:repeat(3,1fr)}}
+.gal figure{overflow:hidden;aspect-ratio:1}.gal img{width:100%;height:100%;object-fit:cover;transition:transform .8s}.gal figure:hover img{transform:scale(1.07)}
+.ilus{font-size:.75rem;opacity:.6;margin-top:12px;letter-spacing:.04em}
+.map{width:100%;height:380px;border:0;display:block}
+.btn{display:inline-flex;align-items:center;gap:10px;text-decoration:none;font-weight:600;transition:transform .25s,box-shadow .25s,background .25s}
+.btn:hover{transform:translateY(-2px)}
+footer.f{padding:34px 0;text-align:center;font-size:.85rem}
+.wa{position:fixed;right:18px;bottom:18px;z-index:60;width:60px;height:60px;border-radius:50%;background:#25d366;display:grid;place-items:center;box-shadow:0 8px 24px #0005;animation:waPulse 2.4s infinite}
+@keyframes waPulse{0%,100%{box-shadow:0 8px 24px #0005,0 0 0 0 #25d36688}50%{box-shadow:0 8px 24px #0005,0 0 0 14px #25d36600}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
+body{font-family:Manrope,sans-serif;background:#0e0c0c;color:#efe6dd}
+.logo{font-family:"Pirata One",cursive;font-size:2rem;text-decoration:none;color:#e8b4b8}
+nav.top .links a{font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600}
+nav.top.solid{background:#0e0c0cf0;padding:8px 0;box-shadow:0 1px 0 #e8b4b822}
+@media(max-width:820px){nav.top .links{background:#0e0c0c}}
+.hero{align-items:center;text-align:center}.hero .bg{filter:grayscale(1) contrast(1.1);background-position:center 65%}
+.hero:after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at center,#0e0c0c66 0%,#0e0c0cee 75%)}
+.hero .in{padding:0}.kick{letter-spacing:.4em;text-transform:uppercase;font-size:.75rem;color:#e8b4b8}
+.hero h1{font-family:"Pirata One",cursive;font-weight:400;font-size:clamp(5rem,22vw,13rem);line-height:.9;color:#efe6dd;text-shadow:0 6px 40px #000}
+.sub{font-size:1.15rem;margin:8px 0 30px;opacity:.9}
+.btn{padding:15px 28px;border-radius:2px;letter-spacing:.08em;text-transform:uppercase;font-size:.82rem;font-weight:800}
+.rose{background:#e8b4b8;color:#0e0c0c}.rose:hover{background:#f3cdd0}.ghost{border:1px solid #e8b4b8;color:#e8b4b8;margin-top:20px}
+.num{font-family:"Pirata One";font-size:3.5rem;color:#e8b4b8;display:block;line-height:1}
+h2{font-family:"Pirata One",cursive;font-weight:400;font-size:clamp(2.8rem,8vw,4.6rem);line-height:1;margin:4px 0 24px}
+.lead{font-size:1.25rem;margin-bottom:12px}.lead a{color:#e8b4b8}
+.split{display:grid;gap:40px}@media(min-width:860px){.split{grid-template-columns:1fr 1fr;align-items:center}.split.rev>div:first-child{order:2}}
+.img-tall img{width:100%;aspect-ratio:4/5;object-fit:cover;filter:grayscale(.3)}
+.band{background:#171313}
+.card{border:1px solid #e8b4b833}.card .ph img{filter:grayscale(1)}.card:hover .ph img{filter:none}.card .tx{padding:22px}.card h3{font-size:1.15rem;color:#e8b4b8;margin-bottom:6px}
+.gal img{filter:grayscale(.85)}.gal figure:hover img{filter:none}
+.cta{text-align:center;padding:110px 0;background:linear-gradient(#0e0c0ccc,#0e0c0ccc),url(https://images.unsplash.com/photo-1769485016772-c5a4234a6be3?w=1200&q=70&auto=format&fit=crop) center/cover}.cta p{margin-bottom:26px;font-size:1.1rem}
+footer.f{border-top:1px solid #e8b4b822;color:#a99}footer a{color:#e8b4b8}</style></head><body>
+<nav class="top"><div class="wrap"><a href="#inicio" class="logo">Chicana</a><button class="burger" aria-label="Menú"><span></span></button><ul class="links"><li><a href="#estudio">El estudio</a></li><li><a href="#artista">La artista</a></li><li><a href="#antes">Antes de venir</a></li><li><a href="#galeria">Trabajos</a></li><li><a href="#contacto">Turnos</a></li></ul></div></nav>
+<header class="hero" id="inicio"><div class="bg" style="background-image:url('https://images.unsplash.com/photo-1573208425302-e94dd243fa91?w=1600&q=70&auto=format&fit=crop')"></div><div class="in"><div class="wrap"><p class="kick">Tattoo Studio · Montevideo</p><h1>Chicana</h1>
+<p class="sub">Tinta con identidad. Tatuajes a cargo de <b>@paulifp_</b>.</p>
+<a class="btn rose" href="https://instagram.com/chicana_tattoo">Pedí tu turno por Instagram</a></div></div></header>
+<section class="s" id="estudio"><div class="wrap split"><div class="reveal"><span class="num">01</span><h2>El estudio</h2>
+<p class="lead">CHICANA es un estudio de tatuajes en Montevideo donde cada pieza la hace @paulifp_.</p><p>Traé tu idea: la charlamos por Instagram y la convertimos en tu próximo tatuaje.</p></div>
+<div class="reveal img-tall" data-d="120"><img loading="lazy" src="https://images.unsplash.com/photo-1604449325317-4967c715538a?w=900&q=70&auto=format&fit=crop" alt="Tatuando en el estudio"></div></div></section>
+<section class="s band" id="artista"><div class="wrap split rev"><div class="reveal img-tall"><img loading="lazy" src="https://images.unsplash.com/photo-1736596041184-8c09f694ac02?w=900&q=70&auto=format&fit=crop" alt="Tatuadora trabajando"></div>
+<div class="reveal" data-d="120"><span class="num">02</span><h2>La artista</h2><p class="lead">Detrás de cada pieza está <a href="https://instagram.com/paulifp_">@paulifp_</a>.</p><p>Mirá su trabajo en Instagram y escribinos con tu idea: la charlamos y la llevamos a tu piel.</p>
+<a class="btn ghost" href="https://instagram.com/paulifp_"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg> Ver a @paulifp_</a></div></div></section>
+<section class="s" id="antes"><div class="wrap"><span class="num reveal">03</span><h2 class="reveal">Antes de venir</h2>
+<div class="grid-cards"><article class="card reveal" data-d="0"><div class="ph"><img loading="lazy" src="https://images.unsplash.com/photo-1626678134859-971090910e73?w=800&q=70&auto=format&fit=crop" alt="Tu idea, tu tatuaje"></div><div class="tx"><h3>Tu idea, tu tatuaje</h3><p>Escribinos por Instagram y coordinamos con @paulifp_.</p></div></article><article class="card reveal" data-d="90"><div class="ph"><img loading="lazy" src="https://images.unsplash.com/photo-1785061384163-5047331060fd?w=800&q=70&auto=format&fit=crop" alt="Efectivo o transferencia"></div><div class="tx"><h3>Efectivo o transferencia</h3><p>Esas son las formas de pago que aceptamos.</p></div></article><article class="card reveal" data-d="180"><div class="ph"><img loading="lazy" src="https://images.unsplash.com/photo-1643670872298-b4faf939ec26?w=800&q=70&auto=format&fit=crop" alt="Sin acompañantes"></div><div class="tx"><h3>Sin acompañantes</h3><p>Al estudio se viene sin acompañantes. ¡Gracias por entender!</p></div></article></div></div></section>
+<section class="s band" id="galeria"><div class="wrap"><span class="num reveal">04</span><h2 class="reveal">Trabajos</h2>
+<div class="gal"><figure class="reveal" data-d="0"><img loading="lazy" src="https://images.unsplash.com/photo-1547754145-ef9ff306e3f3?w=800&q=70&auto=format&fit=crop" alt="Tatuaje"></figure><figure class="reveal" data-d="80"><img loading="lazy" src="https://images.unsplash.com/photo-1589299784109-62eec2521302?w=800&q=70&auto=format&fit=crop" alt="Tatuaje"></figure><figure class="reveal" data-d="160"><img loading="lazy" src="https://images.unsplash.com/photo-1570168983832-8989dae1522e?w=800&q=70&auto=format&fit=crop" alt="Tatuaje"></figure><figure class="reveal" data-d="0"><img loading="lazy" src="https://images.unsplash.com/photo-1627458514257-41d0ea46e326?w=800&q=70&auto=format&fit=crop" alt="Tatuaje"></figure><figure class="reveal" data-d="80"><img loading="lazy" src="https://images.unsplash.com/photo-1595862645152-2f32bd80ce1d?w=800&q=70&auto=format&fit=crop" alt="Tatuaje"></figure><figure class="reveal" data-d="160"><img loading="lazy" src="https://images.unsplash.com/photo-1475695752828-6d2b0a83cf8a?w=800&q=70&auto=format&fit=crop" alt="Tatuaje"></figure></div><p class="ilus">Fotos ilustrativas</p></div></section>
+<section class="cta" id="contacto"><div class="wrap reveal"><h2>¿Tenés una idea?</h2><p>Mandala por Instagram y armamos tu turno.</p>
+<a class="btn rose" href="https://instagram.com/chicana_tattoo"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg> @chicana_tattoo</a></div></section>
+<footer class="f"><p>Demo hecha por EasyWeb · <a href="https://instagram.com/easyweb_uy">@easyweb_uy</a></p></footer>
+<script>
+const n=document.querySelector('nav.top');const sc=()=>n.classList.toggle('solid',scrollY>40);addEventListener('scroll',sc,{passive:true});sc();
+document.querySelector('.burger').onclick=()=>n.classList.toggle('open');
+document.querySelectorAll('nav.top .links a').forEach(a=>a.onclick=()=>n.classList.remove('open'));
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('on');io.unobserve(e.target)}}),{threshold:.12});
+document.querySelectorAll('.reveal').forEach((el,i)=>{el.style.transitionDelay=(el.dataset.d||0)+'ms';io.observe(el)});
+</script></body></html>
