@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Rambla Run</title>
+<meta name="description" content="Corré por la Rambla de Montevideo: saltá, barrete y juntá mates.">
+<meta name="theme-color" content="#2b1d5c">
+<meta name="color-scheme" content="dark">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Rambla Run">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="format-detection" content="telephone=no">
+<link rel="preload" href="fonts/lilita-one.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game" aria-label="Rambla Run"></canvas>
+<div id="safe-probe"></div>
+
+<button id="btn-pause" class="icon-btn hidden" aria-label="Pausa">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4.2" height="14" rx="1.4"/><rect x="13.8" y="5" width="4.2" height="14" rx="1.4"/></svg>
+</button>
+
+<section id="menu" class="overlay show" aria-label="Menú">
+  <div class="card card-menu">
+    <div class="logo">
+      <span class="logo-small">MONTEVIDEO</span>
+      <h1><span>RAMBLA</span><span class="run">RUN</span></h1>
+    </div>
+    <p class="tagline">Corré por la rambla al atardecer, esquivá todo y juntá mates.</p>
+    <button id="btn-play" class="btn btn-primary">JUGAR</button>
+    <div class="best-row">Récord <b id="menu-best">0</b></div>
+    <ul class="help">
+      <li><span class="key">Tocá</span> saltar <small>(dos veces: doble salto)</small></li>
+      <li><span class="key">Deslizá ↓</span> barrerte bajo las gaviotas</li>
+      <li><span class="key mate">🧉</span> mates seguidos = combo ×5</li>
+    </ul>
+    <div class="row-toggles">
+      <button id="menu-sfx" class="chip" aria-pressed="true">Sonido</button>
+      <button id="menu-music" class="chip" aria-pressed="true">Música</button>
+    </div>
+    <p class="kbd-hint">Teclado: ↑ / Espacio saltar · ↓ barrerte · P pausa</p>
+  </div>
+</section>
+
+<section id="pause" class="overlay" aria-label="Pausa">
+  <div class="card">
+    <h2>PAUSA</h2>
+    <button id="btn-resume" class="btn btn-primary">CONTINUAR</button>
+    <button id="btn-restart" class="btn btn-ghost">REINICIAR</button>
+    <div class="row-toggles">
+      <button id="pause-sfx" class="chip" aria-pressed="true">Sonido</button>
+      <button id="pause-music" class="chip" aria-pressed="true">Música</button>
+    </div>
+    <button id="btn-pause-menu" class="link">Volver al menú</button>
+  </div>
+</section>
+
+<section id="over" class="overlay" aria-label="Fin del juego">
+  <div class="card">
+    <div id="record-badge" class="badge hidden">¡NUEVO RÉCORD!</div>
+    <h2 id="over-title">¡TE CAÍSTE!</h2>
+    <div class="final-score"><span id="over-score">0</span><small>puntos</small></div>
+    <div class="stats">
+      <div><b id="st-m">0</b><span>metros</span></div>
+      <div><b id="st-mates">0</b><span>mates</span></div>
+      <div><b id="st-combo">×1</b><span>mejor combo</span></div>
+    </div>
+    <div class="best-row">Récord <b id="over-best">0</b></div>
+    <button id="btn-again" class="btn btn-primary">OTRA VEZ</button>
+    <button id="btn-over-menu" class="link">Menú</button>
+  </div>
+</section>
+
+<div id="rotate" aria-hidden="true">Girá el teléfono a vertical 📱</div>
+
+<script src="game.js"></script>
+<script>
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
