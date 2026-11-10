@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#050a1c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Zombis en la Rambla</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="hud" class="oculto">
+  <div id="arriba">
+    <div id="oleada">Oleada 1</div>
+    <div id="puntos">0</div>
+    <div id="quedan">quedan 0</div>
+  </div>
+  <div id="barra-armas"></div>
+  <div id="vida"><div id="vida-rel"></div><span id="vida-txt">100</span></div>
+  <div id="arma-info"><div id="arma-nombre">Pistola</div><div id="balas">12 / ∞</div></div>
+  <div id="mira"><i></i><i></i><i></i><i></i></div>
+  <div id="hitmark">✕</div>
+  <div id="mensaje"></div>
+  <div id="aviso"></div>
+  <div id="recargando">recargando…</div>
+  <button id="b-pausa" class="tactil" aria-label="Pausa">❚❚</button>
+</div>
+<div id="vineta"></div>
+<div id="tactil" class="oculto">
+  <div id="joy-base"><div id="joy-palo"></div></div>
+  <button id="b-fuego">🔥</button>
+  <button id="b-recarga">↻</button>
+  <button id="b-cambiar">⇄</button>
+</div>
+
+<div id="inicio" class="pantalla">
+  <h1>Zombis<br><span>en la Rambla</span></h1>
+  <p class="sub">Montevideo, 3 de la mañana. Del río salen muertos y de los edificios también.<br>Aguantá hasta que amanezca, bo.</p>
+  <button id="b-jugar">¡Dale, a matar zombis!</button>
+  <button id="b-ajustes" class="sec">⚙ Ajustes</button>
+  <div class="ayuda pc">WASD moverse · Mouse apuntar · Clic tirar · R recargar · 1-8 / ruedita cambiar arma · Shift correr</div>
+  <div class="ayuda movil">Izquierda: mover · Derecha: mirar · 🔥 tirar · ⇄ cambiar arma</div>
+  <div id="record"></div>
+</div>
+
+<div id="pausa" class="pantalla oculto">
+  <h2>Pausa</h2>
+  <button id="b-seguir">Seguir</button>
+  <button id="b-ajustes2" class="sec">⚙ Ajustes</button>
+  <button id="b-salir" class="sec">Volver al inicio</button>
+</div>
+
+<div id="fin" class="pantalla oculto">
+  <h2>Te comieron, bo</h2>
+  <p id="fin-txt"></p>
+  <button id="b-otra">Jugar otra vez</button>
+</div>
+
+<div id="ajustes" class="pantalla oculto">
+  <h2>Ajustes</h2>
+  <div class="fila"><label>Límite de FPS</label><div class="opc">
+    <button data-fps="60">60</button><button data-fps="120">120</button><button data-fps="144">144</button><button data-fps="240">240</button><button data-fps="0">Sin límite</button></div></div>
+  <div class="fila"><label>Calidad</label><div class="opc">
+    <button data-cal="baja">Baja</button><button data-cal="media">Media</button><button data-cal="alta">Alta</button></div></div>
+  <div class="fila"><label>Sensibilidad <span id="aj-sens-v"></span></label><input id="aj-sens" type="range" min="0.3" max="2.5" step="0.05"></div>
+  <div class="fila"><label>Volumen</label><input id="aj-vol" type="range" min="0" max="1" step="0.05"></div>
+  <div class="fila"><label><input id="aj-fps" type="checkbox"> Mostrar contador de FPS</label></div>
+  <p class="nota">El juego corre igual de rápido a cualquier FPS.</p>
+  <button id="b-cerrar-aj">Listo</button>
+</div>
+<div id="contador" class="oculto"></div>
+<div id="cargando">cargando la rambla…</div>
+<script type="module" src="game.js"></script>
+</body>
+</html>
