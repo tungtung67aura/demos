@@ -98,38 +98,66 @@ function crearMar(scene, movil) {
 }
 
 function crearRambla(scene) {
-  scene.add(cinta(14.5, -2.5, 1.2, 0x1b1b22));
-  scene.add(cinta(8.3, -10.8, 1.6, 0x6b6157));
-  scene.add(cinta(1.3, -12.1, 2.6, 0xb8ab98));
-  scene.add(cinta(300, 12, 1.3, 0x14161a));
-  scene.add(cinta(20, -32, -0.5, 0x3a3328));
-  // líneas de la calle
-  const lineas = cinta(0.25, 4.6, 1.22, 0xc9b25a); scene.add(lineas);
-  const tex = brilloTex('rgba(255,190,110,1)');
-  const n = 80;
-  const postes = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.15, 0.2, 7, 6), new THREE.MeshStandardMaterial({ color: 0x222222 }), n + 1);
-  const bulbos = new THREE.InstancedMesh(new THREE.SphereGeometry(0.5, 10, 8), new THREE.MeshStandardMaterial({ color: 0xffcc88, emissive: 0xffaa55, emissiveIntensity: 3 }), n + 1);
-  const m4 = new THREE.Matrix4(), luces = [], pf = new Float32Array((n + 1) * 3);
-  for (let i = 0; i <= n; i++) {
-    const p = aMundo(i / n * N, -9);
-    m4.makeTranslation(p.x, 5, p.z); postes.setMatrixAt(i, m4);
-    m4.makeTranslation(p.x, 8.6, p.z); bulbos.setMatrixAt(i, m4);
-    pf.set([p.x, 8.6, p.z], i * 3);
+  scene.add(cinta(14.5, -2.5, 1.2, 0x2c2c36));
+  scene.add(cinta(8.3, -10.8, 1.6, 0x8a7d6c));
+  scene.add(cinta(1.3, -12.1, 2.6, 0xc4b6a0));
+  scene.add(cinta(2.5, 12, 1.45, 0x7a7062));   // vereda del lado de la ciudad
+  scene.add(cinta(300, 14.5, 1.3, 0x23262d));
+  scene.add(cinta(20, -32, -0.5, 0x4a4234));
+  scene.add(cinta(0.25, 4.6, 1.22, 0xd9c26a)); // línea amarilla
+  // Faroles en las dos veredas: todo instanciado, la luz del piso es un "charco" aditivo, no una luz real
+  const n = 110, total = (n + 1) * 2;
+  const postes = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.12, 0.18, 7.4, 6).translate(0, 3.7, 0), new THREE.MeshStandardMaterial({ color: 0x2a2c30, roughness: 0.6, metalness: 0.4 }), total);
+  const brazos = new THREE.InstancedMesh(new THREE.BoxGeometry(0.1, 0.1, 1.6).translate(0, 0, 0.8), postes.material, total);
+  const cabezas = new THREE.InstancedMesh(new THREE.BoxGeometry(0.55, 0.22, 0.8), new THREE.MeshStandardMaterial({ color: 0xffe0b0, emissive: 0xffb060, emissiveIntensity: 2.5 }), total);
+  const charcos = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ map: charcoTex(), color: 0xffa850, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }), total);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), s1 = new THREE.Vector3(1, 1, 1), s2 = new THREE.Vector3();
+  const pf = new Float32Array(total * 3), focos = [];
+  let k = 0;
+  for (const lado of [-1, 1]) for (let i = 0; i <= n; i++) {
+    const idx = Math.min(N, (i + (lado > 0 ? 0.5 : 0)) / n * N), m = muestras[Math.round(idx)];
+    const dPoste = lado < 0 ? -9.6 : 13.2, dCabeza = lado < 0 ? -8.1 : 11.7;
+    const p = aMundo(idx, dPoste), c = aMundo(idx, dCabeza), yb = piso(dPoste);
+    m4.makeTranslation(p.x, yb, p.z); postes.setMatrixAt(k, m4);
+    const yaw = Math.atan2(c.x - p.x, c.z - p.z);
+    e.set(0, yaw, 0); q.setFromEuler(e);
+    m4.compose(v.set(p.x, yb + 7.3, p.z), q, s1); brazos.setMatrixAt(k, m4);
+    m4.compose(v.set(c.x, yb + 7.25, c.z), q, s1); cabezas.setMatrixAt(k, m4);
+    const yp = piso(dCabeza) + 0.04;
+    m4.compose(v.set(c.x, yp, c.z), q, s2.set(13, 1, 13)); charcos.setMatrixAt(k, m4);
+    pf.set([c.x, yb + 7.1, c.z], k * 3);
+    focos.push(new THREE.Vector3(c.x, yb + 7, c.z));
+    k++;
   }
+  scene.add(postes, brazos, cabezas, charcos);
   const gf = new THREE.BufferGeometry(); gf.setAttribute('position', new THREE.BufferAttribute(pf, 3));
-  const halos = new THREE.Points(gf, new THREE.PointsMaterial({ map: tex, size: 9, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+  const halos = new THREE.Points(gf, new THREE.PointsMaterial({ map: brilloTex('rgba(255,190,110,1)'), size: 4.5, transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending, depthWrite: false }));
   scene.add(halos);
-  scene.add(postes, bulbos);
-  // pocas luces reales, concentradas en la zona de juego
-  for (let k = 0; k < 5; k++) {
-    const p = aMundo(N * 0.5 + (k - 2) * 26, -9);
-    const l = new THREE.PointLight(0xffb060, 70, 60, 1.6); l.position.set(p.x, 8.6, p.z); scene.add(l); luces.push(l);
-  }
+  // 4 luces reales que se mudan a los faroles más cercanos al jugador
+  const luces = [];
+  for (let j = 0; j < 4; j++) { const l = new THREE.PointLight(0xffb468, 38, 24, 1.4); scene.add(l); luces.push(l); }
+  let reubicar = 0;
+  const cerca = [];
   return {
-    update(t) {
-      luces[1].intensity = Math.sin(t * 17) > -0.2 ? 70 : 10; // un farol que falla
+    update(t, dt, jugador) {
+      if (jugador && (reubicar -= dt) <= 0) {
+        reubicar = 0.3; cerca.length = 0;
+        for (const f of focos) { const d2 = (f.x - jugador.x) ** 2 + (f.z - jugador.z) ** 2; if (d2 < 3600) cerca.push([d2, f]); }
+        cerca.sort((a, b) => a[0] - b[0]);
+        luces.forEach((l, j) => { const f = cerca[j]; if (f) l.position.copy(f[1]); l.visible = true; l.intensity = f ? 38 : 0; });
+      }
+      luces[3].intensity = cerca[3] ? (Math.sin(t * 17) > -0.3 || Math.sin(t * 2.1) > 0 ? 38 : 10) : 0; // uno que titila
     }
   };
+}
+
+function charcoTex() {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d'), gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,255,255,0.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
 }
 
 function texVentanas() {
@@ -181,7 +209,7 @@ function crearCerro(scene) {
   brillo.position.copy(luz.position); brillo.scale.set(40, 40, 1); scene.add(brillo);
   const haz = new THREE.Group(); haz.position.copy(luz.position);
   const cono = new THREE.Mesh(new THREE.ConeGeometry(14, 400, 24, 1, true),
-    new THREE.MeshBasicMaterial({ color: 0xfff2c0, transparent: true, opacity: 0.1, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+    new THREE.MeshBasicMaterial({ color: 0xfff2c0, transparent: true, opacity: 0.05, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
   cono.rotation.z = Math.PI / 2; cono.position.x = 200; haz.add(cono); scene.add(haz);
   return { update: t => { haz.rotation.y = t * 0.8; brillo.material.opacity = 0.6 + 0.4 * Math.abs(Math.cos(t * 0.8)); } };
 }
@@ -272,37 +300,54 @@ function crearChatarra(scene) {
 }
 
 export function crearMundo(scene, movil) {
-  const NOCHE = new THREE.Color(0x050a1c), ALBA = new THREE.Color(0xf6a26b);
+  const NOCHE = new THREE.Color(0x0e1834), ALBA = new THREE.Color(0xf6a26b);
   scene.background = NOCHE.clone();
-  scene.fog = new THREE.FogExp2(0x050a1c, 0.0045);
-  const ambiente = new THREE.HemisphereLight(0x3a4a80, 0x0a0a10, 0.6); scene.add(ambiente);
-  const luzLuna = new THREE.DirectionalLight(0xbfcaff, 0.8); luzLuna.position.set(-300, 300, -800); scene.add(luzLuna);
+  scene.fog = new THREE.FogExp2(0x1a2444, 0.0042);
+  const ambiente = new THREE.HemisphereLight(0x8090d0, 0x2a2420, 1.5); scene.add(ambiente);
+  const luzLuna = new THREE.DirectionalLight(0xc8d4ff, 1.7); luzLuna.position.set(-300, 300, -800); scene.add(luzLuna);
+  // cielo con degradé: más claro sobre el horizonte (resplandor de la ciudad)
+  const cielo = new THREE.Mesh(new THREE.SphereGeometry(1900, 24, 12), new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    uniforms: { arriba: { value: new THREE.Color(0x050a1c) }, horizonte: { value: new THREE.Color(0x2a3260) }, alba: { value: 0 } },
+    vertexShader: 'varying float h; void main(){ h = normalize(position).y; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: `uniform vec3 arriba; uniform vec3 horizonte; uniform float alba; varying float h;
+      void main(){ float k = pow(clamp(h, 0.0, 1.0), 0.45);
+        vec3 c = mix(horizonte, arriba, k);
+        vec3 d = mix(vec3(0.98,0.62,0.42), vec3(0.45,0.6,0.85), k);
+        gl_FragColor = vec4(mix(c, d, alba), 1.0); }`
+  }));
+  cielo.renderOrder = -1; scene.add(cielo);
   const nEst = movil ? 1200 : 2500, pos = new Float32Array(nEst * 3);
   for (let i = 0; i < nEst; i++) {
-    const th = Math.random() * Math.PI * 2, ph = Math.random() * Math.PI * 0.48;
+    const th = Math.random() * Math.PI * 2, ph = Math.random() * Math.PI * 0.45;
     pos.set([1800 * Math.sin(ph) * Math.cos(th), 1800 * Math.cos(ph), 1800 * Math.sin(ph) * Math.sin(th)], i * 3);
   }
   const gEst = new THREE.BufferGeometry(); gEst.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   const estrellas = new THREE.Points(gEst, new THREE.PointsMaterial({ color: 0xffffff, size: 2, sizeAttenuation: false, transparent: true, fog: false }));
   scene.add(estrellas);
-  const luna = new THREE.Mesh(new THREE.SphereGeometry(40, 24, 12), new THREE.MeshBasicMaterial({ color: 0xf4e8d0, fog: false }));
+  const luna = new THREE.Mesh(new THREE.SphereGeometry(40, 24, 12), new THREE.MeshBasicMaterial({ color: 0xf8eed8, fog: false }));
   luna.position.set(-400, 380, -1500); scene.add(luna);
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: brilloTex('rgba(200,210,255,0.6)'), blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+  halo.scale.set(420, 420, 1); scene.add(halo);
 
   const mar = crearMar(scene, movil), rambla = crearRambla(scene);
   crearEdificios(scene);
   const cerro = crearCerro(scene), chatarra = crearChatarra(scene);
   let alba = 0, objetivo = 0;
+  const FOG_N = new THREE.Color(0x1a2444);
   return {
     colisiones: chatarra.colisiones,
     setAlba(v) { objetivo = v; },
-    update(t, dt, renderer) {
-      mar.update(t); rambla.update(t); cerro.update(t); chatarra.update(t);
+    update(t, dt, renderer, jugador) {
+      mar.update(t); rambla.update(t, dt, jugador); cerro.update(t); chatarra.update(t);
       alba += (objetivo - alba) * Math.min(1, dt * 0.5);
-      scene.background.copy(NOCHE).lerp(ALBA, alba); scene.fog.color.copy(scene.background);
+      cielo.material.uniforms.alba.value = alba;
+      cielo.position.copy(jugador || cielo.position);
+      scene.background.copy(NOCHE).lerp(ALBA, alba); scene.fog.color.copy(FOG_N).lerp(ALBA, alba);
       estrellas.material.opacity = 1 - alba;
-      ambiente.intensity = 0.6 + alba * 1.4; luzLuna.color.setHSL(0.6 - alba * 0.55, 0.6, 0.75);
-      luzLuna.intensity = 0.8 + alba * 1.4; luna.position.y = 380 - alba * 300;
-      renderer.toneMappingExposure = 1 + alba * 0.3;
+      ambiente.intensity = 1.5 + alba * 1.2; luzLuna.color.setHSL(0.62 - alba * 0.55, 0.6, 0.8);
+      luzLuna.intensity = 1.7 + alba * 1.2; luna.position.y = 380 - alba * 300; halo.position.copy(luna.position);
+      renderer.toneMappingExposure = 1.25 + alba * 0.2;
     }
   };
 }

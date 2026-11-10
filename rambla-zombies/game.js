@@ -29,7 +29,7 @@ const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 2200);
 camera.rotation.order = 'YXZ';
 scene.add(camera);
 const mundo = crearMundo(scene, CAL[AJ.calidad].olasLivianas);
-const luzJugador = new THREE.PointLight(0xffd8a8, 4, 18, 1.5); camera.add(luzJugador); // linterna tenue + fogonazo
+const luzJugador = new THREE.PointLight(0xffd8a8, 3.5, 16, 1.5); camera.add(luzJugador); // linterna tenue + fogonazo
 
 // arma en primera persona: escena aparte para que nunca atraviese paredes
 const vmScene = new THREE.Scene(), vmCam = new THREE.PerspectiveCamera(60, 1, 0.01, 10);
@@ -70,7 +70,7 @@ const NS = CAL.alta.sangre;
 const sPos = new Float32Array(NS * 3).fill(-999), sVel = new Float32Array(NS * 3), sVida = new Float32Array(NS);
 const gSangre = new THREE.BufferGeometry(); gSangre.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
 gSangre.attributes.position.setUsage(THREE.DynamicDrawUsage);
-const sangre = new THREE.Points(gSangre, new THREE.PointsMaterial({ color: 0xb00a0a, size: 0.075, sizeAttenuation: true, map: gota(), transparent: true, alphaTest: 0.3, depthWrite: false }));
+const sangre = new THREE.Points(gSangre, new THREE.PointsMaterial({ color: 0x8a0606, size: 0.06, sizeAttenuation: true, map: gota(), transparent: true, alphaTest: 0.3, depthWrite: false }));
 sangre.frustumCulled = false; scene.add(sangre);
 let sIdx = 0;
 function salpicar(x, y, z, n, fuerza = 3, dx = 0, dz = 0) {
@@ -190,7 +190,7 @@ function rayo(o, d, alcance, out) {
     let mejor = Infinity, cab = false;
     for (let k = 0; k < 3; k++) {
       if (k === 0 && z.sinCabeza) continue;
-      const cy = p.y + (k === 0 ? 1.7 : k === 1 ? 1.15 : 0.5) * e, r = (k === 0 ? 0.24 : k === 1 ? 0.38 : 0.3) * e * (movil ? 1.15 : 1);
+      const cy = p.y + (k === 0 ? 1.74 : k === 1 ? 1.2 : 0.5) * e, r = (k === 0 ? 0.24 : k === 1 ? 0.38 : 0.3) * e * (movil ? 1.15 : 1);
       const ox = p.x - o.x, oy = cy - o.y, oz = p.z - o.z;
       const tc = ox * d.x + oy * d.y + oz * d.z; if (tc < 0) continue;
       const d2 = ox * ox + oy * oy + oz * oz - tc * tc; if (d2 > r * r) continue;
@@ -664,15 +664,34 @@ function animarArma(dt) {
 }
 
 // ---------- Bucle principal con limitador de FPS ----------
-let acum = 0, ultimo = performance.now(), ultimoCuadro = 0;
+let acum = 0, ultimo = performance.now();
 const medidas = { cuadros: 0, msCPU: 0, t0: performance.now(), fps: 0, ms: 0 };
 const cont = $('contador');
+// Limitador: mide el ritmo real del rAF (lo que da la pantalla/navegador). Si el límite elegido es >= a ese ritmo,
+// dibuja en TODOS los rAF; si es menor, usa un acumulador con tolerancia de medio cuadro para no perder cuadros por jitter.
+let rafPrev = 0, rafDt = 16.7, limAcum = 0;
+const raf = { n: 0, t0: performance.now(), max: 0, ventanas: 0, actual: 0 };
+let limitado60 = false;
 function bucle(ahora) {
   requestAnimationFrame(bucle);
+  const crudo = rafPrev ? ahora - rafPrev : rafDt; rafPrev = ahora;
+  if (crudo > 0 && crudo < 100) rafDt += (crudo - rafDt) * 0.08;
+  raf.n++;
+  if (ahora - raf.t0 >= 1000) {
+    raf.actual = raf.n * 1000 / (ahora - raf.t0); raf.n = 0; raf.t0 = ahora;
+    if (!document.hidden) { raf.ventanas++; raf.max = Math.max(raf.max, raf.actual); }
+    const quiereMas = AJ.fps === 0 || AJ.fps > 65;
+    const lim = quiereMas && raf.ventanas >= 3 && raf.max <= 62 && raf.max >= 45; // ~60 fijo = tope del navegador, no falta de potencia
+    if (lim !== limitado60) { limitado60 = lim; $('aviso-60').classList.toggle('oculto', !lim); }
+  }
   if (AJ.fps > 0) {
     const intervalo = 1000 / AJ.fps;
-    if (ahora - ultimoCuadro < intervalo - 1) return;
-    ultimoCuadro = ahora - ((ahora - ultimoCuadro) % intervalo > 4 ? 0 : (ahora - ultimoCuadro) % intervalo);
+    if (intervalo > rafDt * 1.08) {          // el límite es más bajo que la pantalla: saltear algunos rAF
+      limAcum += crudo;
+      if (limAcum < intervalo - rafDt * 0.5) return;
+      limAcum -= intervalo;
+      if (limAcum < -rafDt || limAcum > intervalo) limAcum = 0;
+    } else limAcum = 0;                       // límite >= pantalla: se dibuja cada rAF
   }
   const c0 = performance.now();
   let dt = Math.min(0.25, (ahora - ultimo) / 1000); ultimo = ahora;
@@ -695,11 +714,11 @@ function bucle(ahora) {
   // cámara
   camera.position.set(J.pos.x, J.pos.y + 1.65 + Math.sin(J.bob * 2) * 0.03 * J.mov, J.pos.z);
   camera.rotation.set(J.pitch + retroceso * 0.5 + (Math.random() - .5) * shake * 0.05, J.yaw + (Math.random() - .5) * shake * 0.05, (Math.random() - .5) * shake * 0.03);
-  luzJugador.intensity = flashT > 0 ? 40 : 4;
+  luzJugador.intensity = flashT > 0 ? 40 : 3.5;
   horda.dibujar(zombis);
   gSangre.attributes.position.needsUpdate = true;
   animarArma(dt);
-  mundo.update(performance.now() / 1000, dt, renderer);
+  mundo.update(performance.now() / 1000, dt, renderer, J.pos);
   renderer.clear();
   renderer.render(scene, camera);
   const info = renderer.info.render, calls = info.calls, tris = info.triangles;
@@ -709,7 +728,7 @@ function bucle(ahora) {
   medidas.cuadros++; medidas.msCPU += performance.now() - c0;
   if (ahora - medidas.t0 > 500) {
     medidas.fps = medidas.cuadros * 1000 / (ahora - medidas.t0); medidas.ms = medidas.msCPU / medidas.cuadros;
-    if (AJ.contador) cont.textContent = `${medidas.fps.toFixed(0)} fps · ${medidas.ms.toFixed(1)} ms CPU · ${medidas.ultCalls} draws`;
+    if (AJ.contador) cont.textContent = `${medidas.fps.toFixed(0)} fps · ${medidas.ms.toFixed(1)} ms CPU · ${medidas.ultCalls} draws` + (limitado60 ? ' · el navegador limita a 60 (ver Ajustes)' : '');
     medidas.cuadros = 0; medidas.msCPU = 0; medidas.t0 = ahora;
   }
 }
@@ -723,12 +742,12 @@ window.__rz = {
   get estado() { return estado; }, get oleada() { return oleada; }, get puntos() { return puntos; }, get bajas() { return bajas; },
   get vida() { return J.vida; }, set vida(v) { J.vida = v; }, set dios(v) { dios = v; }, get arma() { return armaSel; }, get desbloq() { return [...desbloq]; },
   get vivos() { return zombis.filter(z => z.vivo).length; }, get porSalir() { return porSalir; }, get descanso() { return descanso; },
-  get medidas() { return { ...medidas }; }, get pickups() { return pickups.map(p => p.tipo + ':' + p.arma); }, J, AJ,
+  get medidas() { return { ...medidas, rafFps: raf.actual, rafMax: raf.max, limitado60 }; }, get pickups() { return pickups.map(p => p.tipo + ':' + p.arma); }, J, AJ,
   zombis: () => zombis.filter(z => z.vivo).map(z => ({ sube: z.sube, vm: z.velMult, tipo: z.tipo, vida: z.vida, x: z.g.position.x, y: z.g.position.y, z: z.g.position.z, d: Math.hypot(z.g.position.x - J.pos.x, z.g.position.z - J.pos.z) })),
   apuntar(i = 0, cabeza = false) { // mira al zombi vivo más cercano (o al traído con traerZombi si i === 'traido')
     const v = i === 'traido' ? window.__rzZ : zombis.filter(z => z.vivo && !z.sube).sort((a, b) => a.g.position.distanceTo(J.pos) - b.g.position.distanceTo(J.pos))[i];
     if (!v) return false;
-    const dx = v.g.position.x - J.pos.x, dz = v.g.position.z - J.pos.z, dy = v.g.position.y + (cabeza ? 1.7 : 1.15) * v.esc - (J.pos.y + 1.65);
+    const dx = v.g.position.x - J.pos.x, dz = v.g.position.z - J.pos.z, dy = v.g.position.y + (cabeza ? 1.74 : 1.2) * v.esc - (J.pos.y + 1.65);
     J.yaw = Math.atan2(-dx, -dz); J.pitch = Math.atan2(dy, Math.hypot(dx, dz)); return true;
   },
   traerZombi(dist = 2) { const v = zombis.find(z => z.vivo); if (!v) return false; _f.set(-Math.sin(J.yaw), 0, -Math.cos(J.yaw)); v.g.position.set(J.pos.x + _f.x * dist, J.pos.y, J.pos.z + _f.z * dist); v.sube = false; window.__rzZ = v; return { x: v.g.position.x, z: v.g.position.z, vida: v.vida }; },
@@ -739,7 +758,7 @@ window.__rz = {
   get retroceso() { return retroceso; },
   bench(n = 600) { // costo de CPU: simulación (paso fijo) + preparar el cuadro, sin el render de la GPU
     const t0 = performance.now(); for (let i = 0; i < n; i++) simular(PASO); const t1 = performance.now();
-    for (let i = 0; i < 100; i++) { horda.dibujar(zombis); animarArma(1 / 120); mundo.update(i / 120, 1 / 120, renderer); } const t2 = performance.now();
+    for (let i = 0; i < 100; i++) { horda.dibujar(zombis); animarArma(1 / 120); mundo.update(i / 120, 1 / 120, renderer, J.pos); } const t2 = performance.now();
     return { msPorPaso: (t1 - t0) / n, msPrepCuadro: (t2 - t1) / 100, zombis: zombis.length };
   },
   despejar() { for (const z of zombis) if (z !== window.__rzZ && z.vivo) { z.g.position.x += 60; } },
