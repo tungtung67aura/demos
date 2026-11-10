@@ -2,17 +2,16 @@
 import * as THREE from 'https://esm.sh/three@0.160.0';
 
 export const ARMAS = [
-  { id: 'pistola', nombre: 'Pistola', tipo: 'fuego', dano: 34, cadencia: 0.28, cargador: 12, reserva: Infinity, recarga: 1.1, alcance: 80, disp: 0.012, perdigones: 1, retroceso: 0.06, sonido: 'pistola', auto: false },
-  { id: 'escopeta', nombre: 'Escopeta', tipo: 'fuego', dano: 16, cadencia: 0.85, cargador: 6, reserva: 24, recarga: 2.0, alcance: 28, disp: 0.09, perdigones: 9, retroceso: 0.22, sonido: 'escopeta', auto: false, empuje: 3 },
-  { id: 'metralleta', nombre: 'Metralleta', tipo: 'fuego', dano: 21, cadencia: 0.085, cargador: 30, reserva: 90, recarga: 1.6, alcance: 70, disp: 0.03, perdigones: 1, retroceso: 0.035, sonido: 'metralleta', auto: true },
-  { id: 'rifle', nombre: 'Rifle de caza', tipo: 'fuego', dano: 160, cadencia: 1.1, cargador: 5, reserva: 15, recarga: 2.2, alcance: 200, disp: 0.002, perdigones: 1, retroceso: 0.3, sonido: 'rifle', auto: false, atraviesa: 3 },
-  { id: 'termo', nombre: 'Termo', tipo: 'cuerpo', dano: 30, cadencia: 0.5, alcance: 2.6, empuje: 11, sonido: 'termo', arco: 0.55 },
-  { id: 'bate', nombre: 'Bate', tipo: 'cuerpo', dano: 55, cadencia: 0.6, alcance: 2.9, empuje: 10, sonido: 'golpe', arco: 0.5 },
-  { id: 'machete', nombre: 'Machete', tipo: 'cuerpo', dano: 80, cadencia: 0.42, alcance: 2.4, empuje: 2.5, sonido: 'corte', arco: 0.6 },
-  { id: 'sarten', nombre: 'Sartén de la abuela', tipo: 'cuerpo', dano: 45, cadencia: 0.55, alcance: 2.5, empuje: 18, sonido: 'sarten', arco: 0.55 }
+  { id: 'pistola', nombre: 'Pistola', precio: 0, desc: 'La de siempre. Balas infinitas en la reserva.', tipo: 'fuego', dano: 34, cadencia: 0.28, cargador: 12, reserva: Infinity, recarga: 1.1, alcance: 80, disp: 0.012, perdigones: 1, retroceso: 0.06, sonido: 'pistola', auto: false },
+  { id: 'escopeta', nombre: 'Escopeta', precio: 250, desc: 'De cerca no perdona. Nueve perdigones y empuje.', tipo: 'fuego', dano: 16, cadencia: 0.85, cargador: 6, reserva: 24, recarga: 2.0, alcance: 28, disp: 0.09, perdigones: 9, retroceso: 0.22, sonido: 'escopeta', auto: false, empuje: 3 },
+  { id: 'metralleta', nombre: 'Metralleta', precio: 450, desc: 'Automática. Mantené apretado y barré la rambla.', tipo: 'fuego', dano: 21, cadencia: 0.085, cargador: 30, reserva: 90, recarga: 1.6, alcance: 70, disp: 0.03, perdigones: 1, retroceso: 0.035, sonido: 'metralleta', auto: true },
+  { id: 'rifle', nombre: 'Rifle de caza', precio: 700, desc: 'Lento pero atraviesa hasta tres zombis.', tipo: 'fuego', dano: 160, cadencia: 1.1, cargador: 5, reserva: 15, recarga: 2.2, alcance: 200, disp: 0.002, perdigones: 1, retroceso: 0.3, sonido: 'rifle', auto: false, atraviesa: 3 },
+  { id: 'termo', nombre: 'Termo', precio: 0, desc: 'El compañero fiel. ¡Toc! en la cabeza.', tipo: 'cuerpo', dano: 30, cadencia: 0.5, alcance: 2.6, empuje: 11, sonido: 'termo', arco: 0.55 },
+  { id: 'bate', nombre: 'Bate', precio: 100, desc: 'Buen daño y buen empuje.', tipo: 'cuerpo', dano: 55, cadencia: 0.6, alcance: 2.9, empuje: 10, sonido: 'golpe', arco: 0.5 },
+  { id: 'machete', nombre: 'Machete', precio: 180, desc: 'Rápido y filoso. Corta brazos.', tipo: 'cuerpo', dano: 80, cadencia: 0.42, alcance: 2.4, empuje: 2.5, sonido: 'corte', arco: 0.6 },
+  { id: 'sarten', nombre: 'Sartén de la abuela', precio: 140, desc: '¡BONG! El que más empuja.', tipo: 'cuerpo', dano: 45, cadencia: 0.55, alcance: 2.5, empuje: 18, sonido: 'sarten', arco: 0.55 }
 ];
-// orden en que se desbloquean al terminar cada oleada (arrancás con pistola y termo)
-export const DESBLOQUEOS = ['escopeta', 'bate', 'metralleta', 'machete', 'sarten', 'rifle'];
+
 
 const M = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.15, ...extra, metalness: Math.min(0.35, (extra.metalness ?? 0.15)) });
 const metal = M(0x4a4e56, { metalness: 0.8, roughness: 0.35 }), metalClaro = M(0xb8bcc4, { metalness: 0.9, roughness: 0.2 });

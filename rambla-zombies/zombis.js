@@ -6,13 +6,22 @@ import * as THREE from 'https://esm.sh/three@0.160.0';
 const PIEL = [0x7f9a68, 0x8ea37a, 0x9aa486, 0x6f8a70, 0xa9ab90, 0x8a9a5a, 0xb0a890, 0x7a8e90];
 const REMERA = [0x8a2e2e, 0x2e4a80, 0x6a6a4a, 0x9a7a50, 0x3a6a4a, 0x7a3a7a, 0xa8a8a8, 0x7ab8e8, 0xd8b040, 0xd0d0c8, 0x4a4a4a, 0xc85a28];
 const PANT = [0x26304a, 0x4a3a24, 0x2e2e2e, 0x34507a, 0x5a5040];
-const OJO = { normal: 0xffe14a, corredor: 0xff3020, tanque: 0xff8a00 };
+const OJO = { normal: 0xffe14a, corredor: 0xff3020, gateador: 0xfff0a0, escupidor: 0x80ff40, explosivo: 0xff7a10, tanque: 0xff8a00, patovica: 0xff1010, cerro: 0xff2a00 };
 
+// hit: esferas de impacto [altura, radio, adelanto] en unidades del modelo (se multiplican por la escala)
+const HIT_PARADO = [[1.74, 0.24, 0.04], [1.2, 0.38, 0], [0.5, 0.3, 0]];
+const HIT_GATEA = [[0.5, 0.24, 0.95], [0.32, 0.4, 0.45], [0.25, 0.3, -0.05]];
 export const TIPOS = {
-  normal: { vida: 70, vel: 1.75, escala: 1, dano: 9, puntos: 100, alcance: 1.25 },
-  corredor: { vida: 45, vel: 4.0, escala: 0.92, dano: 6, puntos: 150, alcance: 1.2 },
-  tanque: { vida: 420, vel: 1.0, escala: 1.55, dano: 22, puntos: 400, alcance: 1.85 }
+  normal: { nombre: 'Zombi', vida: 70, vel: 1.75, escala: 1, dano: 9, puntos: 100, alcance: 1.25, prep: 0.45, hit: HIT_PARADO },
+  corredor: { nombre: 'Corredor', vida: 45, vel: 4.0, escala: 0.92, dano: 6, puntos: 150, alcance: 1.2, prep: 0.3, hit: HIT_PARADO },
+  gateador: { nombre: 'Gateador', vida: 50, vel: 1.9, escala: 1, dano: 8, puntos: 120, alcance: 1.3, prep: 0.4, hit: HIT_GATEA },
+  escupidor: { nombre: 'Escupidor', vida: 60, vel: 1.5, escala: 1.02, dano: 12, puntos: 180, alcance: 1.25, prep: 0.7, hit: HIT_PARADO, rango: true },
+  explosivo: { nombre: 'Explosivo', vida: 55, vel: 2.3, escala: 1.05, dano: 35, puntos: 160, alcance: 2.0, prep: 0.7, hit: HIT_PARADO },
+  tanque: { nombre: 'Tanque', vida: 420, vel: 1.0, escala: 1.55, dano: 22, puntos: 400, alcance: 1.85, prep: 0.65, hit: HIT_PARADO },
+  patovica: { nombre: 'El Patovica del Cordón', vida: 2400, vel: 1.35, escala: 2.15, dano: 26, puntos: 3000, alcance: 2.4, prep: 0.7, hit: HIT_PARADO, jefe: true },
+  cerro: { nombre: 'El Zombi del Cerro', vida: 9000, vel: 1.25, escala: 3.4, dano: 30, puntos: 10000, alcance: 3.4, prep: 1.0, hit: HIT_PARADO, jefe: true }
 };
+
 
 // oclusión falsa: más oscuro abajo, un poco de mugre al azar
 function ao(geo, oscuro = 0.55, ruido = 0.12) {
@@ -84,7 +93,7 @@ export class Horda {
     this.brillo = new THREE.Points(g, new THREE.PointsMaterial({ size: 0.13, map: new THREE.CanvasTexture(c), vertexColors: true, transparent: true,
       blending: THREE.AdditiveBlending, depthWrite: false }));
     this.brillo.frustumCulled = false; scene.add(this.brillo);
-    this.rojo = new THREE.Color(1.2, 0.25, 0.2); this.cero = new THREE.Matrix4().makeScale(0, 0, 0);
+    this.rojo = new THREE.Color(1.2, 0.25, 0.2); this.naranja = new THREE.Color(1.6, 0.5, 0.1); this.cero = new THREE.Matrix4().makeScale(0, 0, 0);
     this.v = new THREE.Vector3(); this.cnt = {}; for (const k in PARTES) this.cnt[k] = 0;
   }
   dibujar(lista) {
@@ -95,13 +104,17 @@ export class Horda {
     let ne = 0;
     for (const z of lista) {
       z.g.updateMatrixWorld(true);
-      const fl = z.flash > 0, piel = fl ? this.rojo : z.cPiel, rem = fl ? this.rojo : z.cRemera;
+      const fl = z.flash > 0, piel = fl ? this.rojo : z.cPiel;
+      let rem = fl ? this.rojo : z.cRemera;
+      if (z.tipo === 'explosivo' && z.vivo) { z.cTmp.copy(z.cRemera).lerp(this.naranja, z.pulso); rem = fl ? this.rojo : z.cTmp; }
       put('torso', z.torso, rem); put('cadera', z.cadera, z.cPant);
       for (let j = 0; j < 3; j++) put('jiron', z.jirones[j], rem);
       put('mancha', z.manchas[0], z.cSangre); put('mancha', z.manchas[1], z.cRasgon);
       for (let j = 0; j < 2; j++) {
-        put('manga', z.mangas[j], rem); put('brazo', z.brazos[j], piel); put('mano', z.manos[j], piel);
-        put('pierna', z.piernas[j], z.cPant); put('zapato', z.zapatos[j], z.cZapato);
+        if (z.sinBrazo[j]) { nada('manga'); nada('brazo'); nada('mano'); }
+        else { put('manga', z.mangas[j], rem); put('brazo', z.brazos[j], piel); put('mano', z.manos[j], piel); }
+        if (z.tipo === 'gateador') { nada('pierna'); nada('zapato'); }
+        else { put('pierna', z.piernas[j], z.cPant); put('zapato', z.zapatos[j], z.cZapato); }
       }
       if (z.sinCabeza) { nada('cabeza'); nada('mandibula'); nada('boca'); nada('pelo'); nada('ojo'); nada('ojo'); }
       else {
@@ -142,41 +155,51 @@ export function crearZombi() {
   return { g, cuerpo, torso, cadera, jirones, manchas, cabeza, cab, pelo, ojos, boca, mandibula, hombros, mangas, brazos, manos, caderas, piernas, zapatos,
     kb: new THREE.Vector3(),
     cPiel: new THREE.Color(), cRemera: new THREE.Color(), cPant: new THREE.Color(), cOjo: new THREE.Color(), cOjoBrillo: new THREE.Color(), cPelo: new THREE.Color(),
-    cZapato: new THREE.Color(0x1a1714), cSangre: new THREE.Color(0x6a0808), cRasgon: new THREE.Color(), cBoca: new THREE.Color(0x200404), cMuerto: new THREE.Color(0x111111) };
+    cZapato: new THREE.Color(0x1a1714), cTmp: new THREE.Color(), sinBrazo: [false, false], cSangre: new THREE.Color(0x6a0808), cRasgon: new THREE.Color(), cBoca: new THREE.Color(0x200404), cMuerto: new THREE.Color(0x111111) };
 }
 
 const elegir = a => a[Math.floor(Math.random() * a.length)];
 export function prepararZombi(z, tipo) {
   const T = TIPOS[tipo];
-  z.tipo = tipo; z.T = T; z.vida = T.vida; z.vivo = true; z.fase = Math.random() * 6; z.golpeT = 0; z.flash = 0; z.ataque = 0;
+  z.tipo = tipo; z.T = T; z.vida = T.vida; z.vidaMax = T.vida; z.vivo = true; z.fase = Math.random() * 6; z.golpeT = 0.6; z.flash = 0; z.ataque = 0;
+  z.prep = 0; z.estadoIA = 'ir'; z.timerIA = 0; z.cargaT = 0; z.aturdido = 0; z.pulso = 0; z.mecha = 0; z.flinch = 0;
   z.muerteT = 0; z.kb.set(0, 0, 0); z.velMult = 1; z.sube = false; z.gemido = 2 + Math.random() * 6; z.caida = 1; z.sinCabeza = false;
-  z.g.rotation.set(0, 0, 0); z.cuerpo.rotation.set(0, 0, 0); z.cabeza.rotation.set(0, 0, 0);
+  z.sinBrazo[0] = z.sinBrazo[1] = false; z.flanco = (Math.random() * 2 - 1); z.rugidoT = 8; z.piedraT = 5; z.explotado = false; z.rodeo = 1; z.rodeoT = 0; z.chequeoT = 2; z.distPrev = 1e9; z.trancado = 0; z.accion = ''; z.cargaT = 0;
+  z.g.rotation.set(0, 0, 0); z.cuerpo.rotation.set(0, 0, 0); z.cabeza.rotation.set(0, 0, 0); z.cuerpo.position.set(0, 0.86, 0);
+  z.torso.scale.set(1, 1, 1); z.cab.scale.set(1, 1, 1); z.cadera.position.set(0, 0.9, 0); z.cadera.rotation.set(0, 0, 0);
   z.cPiel.setHex(elegir(PIEL)).offsetHSL(0, 0, (Math.random() - 0.5) * 0.08);
-  z.cRemera.setHex(tipo === 'tanque' ? elegir([0x5a1a1a, 0x2a3a2a, 0x3a3a50]) : elegir(REMERA)).offsetHSL(0, -0.1 * Math.random(), -0.08 * Math.random());
-  z.cPant.setHex(elegir(PANT)); z.cRasgon.copy(z.cPiel).multiplyScalar(0.8);
-  z.cOjo.setHex(OJO[tipo]).multiplyScalar(1.2); z.cOjoBrillo.setHex(OJO[tipo]).multiplyScalar(0.6);
+  z.cRemera.setHex(elegir(REMERA)).offsetHSL(0, -0.1 * Math.random(), -0.08 * Math.random());
+  z.cPant.setHex(elegir(PANT)); z.cSangre.setHex(0x6a0808);
+  z.cOjo.setHex(OJO[tipo] || 0xffe14a).multiplyScalar(1.2); z.cOjoBrillo.setHex(OJO[tipo] || 0xffe14a).multiplyScalar(0.6);
   z.cPelo.setHex(Math.random() < 0.25 ? 0x8a8a80 : elegir([0x1a1410, 0x2a1a10, 0x3a2a18]));
   z.pelo.scale.setScalar(Math.random() < 0.8 ? 1 : 0.001);
+  if (tipo === 'tanque') z.cRemera.setHex(elegir([0x5a1a1a, 0x2a3a2a, 0x3a3a50]));
+  if (tipo === 'escupidor') { z.cPiel.setHex(0x8aa050); z.cSangre.setHex(0x6aff30).multiplyScalar(0.6); z.cab.scale.set(1.1, 1.15, 1.1); }
+  if (tipo === 'explosivo') { z.cPiel.setHex(0xa8a060); z.cRemera.setHex(0x8a7a30); z.torso.scale.set(1.45, 1.15, 1.6); z.cSangre.setHex(0xd06010); }
+  if (tipo === 'patovica') { z.cPiel.setHex(0xb8c890); z.cRemera.setHex(0x3a3a44); z.cPant.setHex(0x1a1a24); z.cPelo.setHex(0x050505); z.pelo.scale.setScalar(0.8); z.torso.scale.set(1.25, 1.05, 1.1); }
+  if (tipo === 'cerro') { z.cPiel.setHex(0x9ab878); z.cRemera.setHex(0x7a5a3a); z.cPant.setHex(0x4a4030); z.cPelo.setHex(0x203018); z.torso.scale.set(1.2, 1.1, 1.15); }
   // ropa rota: jirones de largo distinto, algunos arrancados
   z.jirones.forEach(j => { j.scale.set(0.7 + Math.random() * 0.8, Math.random() < 0.2 ? 0.001 : 0.6 + Math.random() * 1.2, 1); j.rotation.z = (Math.random() - .5) * 0.5; });
   z.manchas[0].scale.setScalar(0.12 + Math.random() * 0.14); z.manchas[0].position.set((Math.random() - .5) * 0.2, 0.3 + Math.random() * 0.2, 0.152);
   z.manchas[1].scale.setScalar(Math.random() < 0.6 ? 0.07 + Math.random() * 0.07 : 0.001); z.manchas[1].position.set((Math.random() - .5) * 0.25, 0.42 + Math.random() * 0.12, 0.153);
+  if (tipo === 'explosivo') { z.manchas[0].position.z = 0.25; z.manchas[1].position.z = 0.25; }
+  z.cRasgon.copy(z.cRemera).multiplyScalar(0.45);
   const mangaLarga = Math.random() < 0.4;
   z.mangas.forEach(m => m.scale.set(1, mangaLarga ? 2.4 : 1, 1));
-  z.esc = T.escala * (0.92 + Math.random() * 0.16);
+  z.esc = T.escala * (T.jefe ? 1 : 0.92 + Math.random() * 0.16);
   if (tipo === 'corredor') z.g.scale.set(z.esc * 0.85, z.esc, z.esc * 0.85);
-  else if (tipo === 'tanque') z.g.scale.set(z.esc * 1.12, z.esc, z.esc * 1.05);
+  else if (tipo === 'tanque' || tipo === 'patovica') z.g.scale.set(z.esc * 1.12, z.esc, z.esc * 1.05);
   else z.g.scale.setScalar(z.esc);
-  z.fatiga = Math.random() < 0.5 ? 1 : -1; // de qué lado rengea
+  z.fatiga = Math.random() < 0.5 ? 1 : -1;
   return z;
 }
 
-export function animarZombi(z, dt, mov) {
+export function animarZombi(z, dt, mov, t) {
   const B = z.hombros, P = z.caderas;
   if (!z.vivo) {
     z.muerteT += dt;
     const k = Math.min(1, z.muerteT / 0.6);
-    z.g.rotation.x = -z.caida * (Math.PI / 2) * (k * k);
+    if (z.tipo !== 'gateador') z.g.rotation.x = -z.caida * (Math.PI / 2) * (k * k);
     B[0].rotation.x = B[1].rotation.x = -2.6 * k;
     P[0].rotation.x *= 0.9; P[1].rotation.x *= 0.9;
     z.mandibula.rotation.x = 0.5 * k;
@@ -184,24 +207,43 @@ export function animarZombi(z, dt, mov) {
     if (z.flash > 0) z.flash -= dt;
     return;
   }
-  const corre = z.tipo === 'corredor';
-  z.fase += dt * (corre ? 9 : 4.2) * Math.max(0.3, mov);
+  const tipo = z.tipo, corre = tipo === 'corredor';
+  z.fase += dt * (corre ? 9 : tipo === 'gateador' ? 5 : 4.2) * Math.max(0.3, mov);
   const s = Math.sin(z.fase), c = Math.cos(z.fase * 0.5);
-  const amp = corre ? 0.9 : 0.5;
-  P[0].rotation.x = s * amp; P[1].rotation.x = -s * amp * (corre ? 1 : 0.7);
-  if (corre) {
-    B[0].rotation.x = -s * 1.1 - 0.5; B[1].rotation.x = s * 1.1 - 0.5; B[0].rotation.z = -0.15; B[1].rotation.z = 0.15;
-    z.cuerpo.rotation.x = 0.4; z.cabeza.rotation.x = -0.3;
-  } else { // brazos hacia adelante, rengueando
-    B[0].rotation.x = -1.4 + c * 0.15; B[1].rotation.x = -1.3 - c * 0.15; B[0].rotation.z = -0.08; B[1].rotation.z = 0.08;
-    z.cuerpo.rotation.z = c * 0.13 + z.fatiga * 0.06; z.cuerpo.rotation.x = 0.14 + Math.abs(s) * 0.05;
-    z.cabeza.rotation.z = Math.sin(z.fase * 0.3) * 0.35; z.cabeza.rotation.x = 0.1;
+  if (tipo === 'gateador') { // se arrastra con los brazos
+    z.cuerpo.position.y = 0.3; z.cuerpo.rotation.x = 1.38; z.cabeza.rotation.x = -1.15;
+    B[0].rotation.x = -2.6 + s * 0.6; B[1].rotation.x = -2.6 - s * 0.6; B[0].rotation.z = -0.25; B[1].rotation.z = 0.25;
+    z.cuerpo.rotation.z = s * 0.08; z.cadera.position.set(0, 0.26, -0.15); z.cadera.rotation.x = 1.3;
+  } else {
+    const amp = corre ? 0.9 : 0.5;
+    P[0].rotation.x = s * amp; P[1].rotation.x = -s * amp * (corre ? 1 : 0.7);
+    if (corre) {
+      B[0].rotation.x = -s * 1.1 - 0.5; B[1].rotation.x = s * 1.1 - 0.5; B[0].rotation.z = -0.15; B[1].rotation.z = 0.15;
+      z.cuerpo.rotation.x = 0.4; z.cabeza.rotation.x = -0.3;
+    } else {
+      B[0].rotation.x = -1.4 + c * 0.15; B[1].rotation.x = -1.3 - c * 0.15; B[0].rotation.z = -0.08; B[1].rotation.z = 0.08;
+      z.cuerpo.rotation.z = c * 0.13 + z.fatiga * 0.06; z.cuerpo.rotation.x = 0.14 + Math.abs(s) * 0.05;
+      z.cabeza.rotation.z = Math.sin(z.fase * 0.3) * 0.35; z.cabeza.rotation.x = 0.1;
+    }
+    z.cuerpo.position.y = 0.86 + Math.abs(s) * 0.04;
   }
   z.mandibula.rotation.x = 0.15 + Math.abs(Math.sin(z.fase * 0.7)) * 0.25;
-  if (z.ataque > 0) {
-    const a = Math.sin((1 - z.ataque / 0.5) * Math.PI);
-    B[0].rotation.x = B[1].rotation.x = -1.6 - a * 0.9; z.cuerpo.rotation.x = 0.1 + a * 0.3; z.mandibula.rotation.x = 0.55;
+  // preparación del ataque: se lee de lejos (brazos arriba, boca abierta, se echa para atrás)
+  if (z.prep > 0) {
+    const k = 1 - z.prep / (z.prepTotal || 0.5);
+    if (tipo === 'escupidor') { z.cuerpo.rotation.x = -0.35 * k; z.cabeza.rotation.x = -0.5 * k; z.mandibula.rotation.x = 0.7; }
+    else if (tipo === 'gateador') { B[0].rotation.x = B[1].rotation.x = -3.0; }
+    else if (tipo === 'explosivo') { z.torso.scale.set(1.45 + k * 0.35, 1.15 + k * 0.15, 1.6 + k * 0.35); }
+    else { B[0].rotation.x = B[1].rotation.x = -2.4 - k * 0.6; z.cuerpo.rotation.x = -0.2 * k; z.mandibula.rotation.x = 0.65; }
   }
-  z.cuerpo.position.y = 0.86 + Math.abs(s) * 0.04;
+  if (z.ataque > 0) {
+    const a = Math.sin((1 - z.ataque / 0.4) * Math.PI);
+    if (tipo !== 'gateador') { B[0].rotation.x = B[1].rotation.x = -1.6 + a * 0.7; z.cuerpo.rotation.x = 0.1 + a * 0.45; }
+    z.mandibula.rotation.x = 0.55;
+  }
+  if (z.cargaT > 0) { z.cuerpo.rotation.x = 0.6; B[0].rotation.x = B[1].rotation.x = 0.5; }
+  if (z.aturdido > 0) { z.cuerpo.rotation.z = Math.sin(z.fase * 3) * 0.3; z.cabeza.rotation.x = 0.6; }
+  if (z.flinch > 0) { z.cuerpo.rotation.x -= z.flinch * 2.2; z.flinch = Math.max(0, z.flinch - dt); }
+  if (tipo === 'explosivo') z.pulso = z.mecha > 0 ? (Math.sin(z.mecha * 40) > 0 ? 1 : 0.2) : 0.15 + 0.15 * Math.sin(z.fase * 2);
   if (z.flash > 0) z.flash -= dt;
 }

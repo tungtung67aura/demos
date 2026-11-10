@@ -1,5 +1,6 @@
 // Mundo: el Río de la Plata, la rambla, los edificios, el Cerro y los autos abandonados
 import * as THREE from 'https://esm.sh/three@0.160.0';
+import { crearProps } from './props.js';
 
 export function brilloTex(color) {
   const c = document.createElement('canvas'); c.width = c.height = 64;
@@ -73,8 +74,13 @@ function crearMar(scene, movil) {
   const sx = movil ? 70 : 120, sz = movil ? 40 : 60;
   const geo = new THREE.PlaneGeometry(1600, 900, sx, sz);
   geo.rotateX(-Math.PI / 2); geo.translate(0, 0, -470);
-  const base = geo.attributes.position.array.slice();
   const mat = new THREE.MeshStandardMaterial({ color: 0x0a1a2e, roughness: 0.25, metalness: 0.9, flatShading: true });
+  const uT = { value: 0 }; // olas en la GPU: cero trabajo de CPU por cuadro (flatShading saca la normal de las derivadas)
+  mat.onBeforeCompile = s => {
+    s.uniforms.uT = uT;
+    s.vertexShader = 'uniform float uT;\n' + s.vertexShader.replace('#include <begin_vertex>',
+      'vec3 transformed = vec3(position);\n transformed.y = -0.9 + sin(position.x * 0.03 + uT * 1.2) * 0.5 + sin(position.z * 0.05 + uT * 0.9) * 0.4 + sin((position.x + position.z) * 0.11 + uT * 2.1) * 0.2;');
+  };
   const mar = new THREE.Mesh(geo, mat); scene.add(mar);
   // reflejo de la luna: un solo Points (1 draw call)
   const nr = 50, pr = new Float32Array(nr * 3), fr = new Float32Array(nr);
@@ -83,20 +89,14 @@ function crearMar(scene, movil) {
   const reflejo = new THREE.Points(gr, new THREE.PointsMaterial({ map: brilloTex('rgba(230,235,255,1)'), size: 26, transparent: true, opacity: 0.45,
     blending: THREE.AdditiveBlending, depthWrite: false }));
   scene.add(reflejo);
-  let cuadro = 0;
   function update(t) {
-    if (movil && (cuadro++ & 1)) return; // calidad baja/media: olas a la mitad de cuadros
-    const p = geo.attributes.position.array;
-    for (let i = 0; i < p.length; i += 3) {
-      const x = base[i], z = base[i + 2];
-      p[i + 1] = -0.9 + Math.sin(x * 0.03 + t * 1.2) * 0.5 + Math.sin(z * 0.05 + t * 0.9) * 0.4 + Math.sin((x + z) * 0.11 + t * 2.1) * 0.2;
-    }
-    geo.attributes.position.needsUpdate = true; geo.computeVertexNormals();
+    uT.value = t;
     reflejo.material.opacity = 0.35 + 0.15 * Math.sin(t * 2.3);
   }
   return { update };
 }
 
+let espuma = null;
 function crearRambla(scene) {
   scene.add(cinta(14.5, -2.5, 1.2, 0x2c2c36));
   scene.add(cinta(8.3, -10.8, 1.6, 0x8a7d6c));
@@ -105,6 +105,13 @@ function crearRambla(scene) {
   scene.add(cinta(300, 14.5, 1.3, 0x23262d));
   scene.add(cinta(20, -32, -0.5, 0x4a4234));
   scene.add(cinta(0.25, 4.6, 1.22, 0xd9c26a)); // línea amarilla
+  // el muro de la rambla: cara de piedra hacia la arena y escalón hacia la vereda
+  scene.add(pared(-12.1, -0.5, 2.6, 0xa89a84), pared(-10.8, 1.6, 2.6, 0xb8aa94));
+  scene.add(cinta(0.6, -12.25, 2.62, 0xd6c8b0));
+  // espuma en la orilla: una cinta aditiva que respira con las olas
+  espuma = cinta(2.2, -33.2, -0.42, 0xffffff);
+  espuma.material = new THREE.MeshBasicMaterial({ color: 0x9ab0c8, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, depthWrite: false });
+  scene.add(espuma);
   // Faroles en las dos veredas: todo instanciado, la luz del piso es un "charco" aditivo, no una luz real
   const n = 110, total = (n + 1) * 2;
   const postes = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.12, 0.18, 7.4, 6).translate(0, 3.7, 0), new THREE.MeshStandardMaterial({ color: 0x2a2c30, roughness: 0.6, metalness: 0.4 }), total);
@@ -147,9 +154,21 @@ function crearRambla(scene) {
         cerca.sort((a, b) => a[0] - b[0]);
         luces.forEach((l, j) => { const f = cerca[j]; if (f) l.position.copy(f[1]); l.visible = true; l.intensity = f ? 38 : 0; });
       }
+      if (espuma) espuma.material.opacity = 0.16 + 0.12 * Math.sin(t * 1.1);
       luces[3].intensity = cerca[3] ? (Math.sin(t * 17) > -0.3 || Math.sin(t * 2.1) > 0 ? 38 : 10) : 0; // uno que titila
     }
   };
+}
+
+function pared(off, y0, y1, color) {
+  const pts = curva.getSpacedPoints(300), pos = [], idx = [];
+  pts.forEach((p, i) => {
+    const t = curva.getTangentAt(i / 300), n = new THREE.Vector3(-t.z, 0, t.x), a = p.clone().addScaledVector(n, off);
+    pos.push(a.x, y0, a.z, a.x, y1, a.z);
+    if (i < 300) idx.push(i * 2, i * 2 + 2, i * 2 + 1, i * 2 + 1, i * 2 + 2, i * 2 + 3);
+  });
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
+  return new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color, roughness: 0.95, side: THREE.DoubleSide }));
 }
 
 function charcoTex() {
@@ -188,6 +207,7 @@ function crearEdificios(scene) {
       const w = 10 + Math.random() * 12, d = 10 + Math.random() * 10;
       const off = 33 + Math.random() * 150, h = 10 + Math.pow(Math.random(), 2) * (j < 25 ? 70 : 35);
       const p = aMundo(i, off);
+      if (Math.abs(i - N * 0.5 - 128) < 28 && off < 110) { j--; continue; } // dejar ver el Palacio Salvo
       e.set(0, Math.atan2(m.t.x, m.t.z), 0); q.setFromEuler(e);
       m4.compose(v.set(p.x, 1.3 + h / 2, p.z), q, s.set(w, h, d)); im.setMatrixAt(j, m4);
     }
@@ -239,7 +259,30 @@ function vehiculo(largo, alto, ancho, color, bus) {
   return g;
 }
 
+function texTexto(lineas, w, h, fondo, color, fuente) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
+  g.fillStyle = fondo; g.fillRect(0, 0, w, h); g.fillStyle = color; g.font = fuente; g.textAlign = 'center'; g.textBaseline = 'middle';
+  lineas.forEach((l, i) => g.fillText(l, w / 2, h * (i + 0.5) / lineas.length));
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+// cartel de destino que brilla y el logo al costado: un CUTCSA como los de verdad
+function cartelBus(bus, largo, alto, ancho) {
+  const dest = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 0.42), new THREE.MeshBasicMaterial({ map: texTexto(['121  CIUDAD VIEJA'], 256, 48, '#120a00', '#ffb020', 'bold 30px monospace') }));
+  dest.position.set(largo / 2 + 0.02, alto + 0.05, 0); dest.rotation.y = Math.PI / 2; bus.add(dest);
+  const logo = new THREE.MeshBasicMaterial({ map: texTexto(['CUTCSA'], 256, 64, '#e8e4da', '#9a1414', 'italic bold 48px sans-serif') });
+  for (const s of [1, -1]) { const l = new THREE.Mesh(new THREE.PlaneGeometry(3, 0.7), logo); l.position.set(-1.5, 1.95, s * (ancho / 2 + 0.03)); if (s < 0) l.rotation.y = Math.PI; bus.add(l); }
+}
+
 // junta todas las mallas de un grupo estático en una por material (menos draw calls)
+export function unir(geos) {
+  geos = geos.map(g => g.index ? g.toNonIndexed() : g);
+  let n = 0; geos.forEach(g => n += g.attributes.position.count);
+  const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), uv = new Float32Array(n * 2); let o = 0;
+  geos.forEach(g => { pos.set(g.attributes.position.array, o * 3); nor.set(g.attributes.normal.array, o * 3); if (g.attributes.uv) uv.set(g.attributes.uv.array, o * 2); o += g.attributes.position.count; g.dispose(); });
+  const bg = new THREE.BufferGeometry();
+  bg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); bg.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); bg.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  return bg;
+}
 function hornear(scene, grupo) {
   grupo.updateMatrixWorld(true);
   const cubetas = new Map();
@@ -252,11 +295,7 @@ function hornear(scene, grupo) {
   });
   cubetas.forEach((geos, mat) => {
     let n = 0; geos.forEach(g => n += g.attributes.position.count);
-    const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3); let o = 0;
-    geos.forEach(g => { pos.set(g.attributes.position.array, o * 3); nor.set(g.attributes.normal.array, o * 3); o += g.attributes.position.count; g.dispose(); });
-    const bg = new THREE.BufferGeometry();
-    bg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); bg.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
-    scene.add(new THREE.Mesh(bg, mat));
+    scene.add(new THREE.Mesh(unir(geos), mat));
   });
 }
 
@@ -272,15 +311,15 @@ function crearChatarra(scene) {
     const a = vehiculo(4.2, 1.2, 1.9, colores[c], false);
     const m = muestras[Math.round(i)], p = aMundo(i, d);
     a.position.set(p.x, 1.2, p.z); a.rotation.y = Math.atan2(-m.t.z, m.t.x) + rot; a.rotation.z = (k % 3 - 1) * 0.04;
-    grupoChatarra.add(a); col.push({ x: p.x, z: p.z, r: 2.1 });
+    grupoChatarra.add(a); col.push({ x: p.x, z: p.z, r: 2.1, top: 1.2 + 2.0, metal: true });
     if (k === 1) fuego = p.clone();
   });
   // ómnibus atravesado en la calle
   const ib = N * 0.5 - 22, mb = muestras[Math.round(ib)], pb = aMundo(ib, 5);
-  const bus = vehiculo(12, 3.4, 2.6, 0xd9d2c0, true);
+  const bus = vehiculo(12, 3.4, 2.6, 0xe8e4da, true); cartelBus(bus, 12, 3.4, 2.6);
   bus.position.set(pb.x, 1.2, pb.z); bus.rotation.y = Math.atan2(-mb.t.z, mb.t.x) + 1.1; grupoChatarra.add(bus);
   const dir = new THREE.Vector3(Math.cos(bus.rotation.y), 0, -Math.sin(bus.rotation.y));
-  for (let s = -5; s <= 5; s += 2.5) col.push({ x: pb.x + dir.x * s, z: pb.z + dir.z * s, r: 1.7 });
+  for (let s = -5; s <= 5; s += 2.5) col.push({ x: pb.x + dir.x * s, z: pb.z + dir.z * s, r: 1.7, top: 1.2 + 3.8, metal: true });
   // fuego
   const tex = brilloTex('rgba(255,140,40,1)'), llamas = [];
   for (let i = 0; i < 6; i++) {
@@ -330,19 +369,31 @@ export function crearMundo(scene, movil) {
   const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: brilloTex('rgba(200,210,255,0.6)'), blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
   halo.scale.set(420, 420, 1); scene.add(halo);
 
+  // sol del amanecer: sale sobre el río (solo se ve al final)
+  const sol = new THREE.Sprite(new THREE.SpriteMaterial({ map: brilloTex('rgba(255,200,120,1)'), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false, opacity: 0 }));
+  sol.scale.set(520, 520, 1); scene.add(sol);
+  const disco = new THREE.Mesh(new THREE.CircleGeometry(60, 32), new THREE.MeshBasicMaterial({ color: 0xffd080, fog: false, transparent: true, opacity: 0 }));
+  scene.add(disco);
   const mar = crearMar(scene, movil), rambla = crearRambla(scene);
   crearEdificios(scene);
-  const cerro = crearCerro(scene), chatarra = crearChatarra(scene);
+  const cerro = crearCerro(scene), chatarra = crearChatarra(scene), props = crearProps(scene);
   let alba = 0, objetivo = 0;
   const FOG_N = new THREE.Color(0x1a2444);
   return {
-    colisiones: chatarra.colisiones,
+    colisiones: chatarra.colisiones.concat(props.colisiones),
+    fuegos: (n, c) => props.fuegos(n, c), alSonarFuegos: null,
     setAlba(v) { objetivo = v; },
+    get alba() { return alba; },
     update(t, dt, renderer, jugador) {
-      mar.update(t); rambla.update(t, dt, jugador); cerro.update(t); chatarra.update(t);
+      mar.update(t); rambla.update(t, dt, jugador); cerro.update(t); chatarra.update(t); props.update(t, dt, this.alSonarFuegos);
       alba += (objetivo - alba) * Math.min(1, dt * 0.5);
       cielo.material.uniforms.alba.value = alba;
       cielo.position.copy(jugador || cielo.position);
+      if (jugador) { // el sol, del lado del río y bajito
+        const ds = Math.max(0, alba - 0.45) / 0.55;
+        sol.position.set(jugador.x + 200, jugador.y - 60 + ds * 200, jugador.z - 1500); disco.position.copy(sol.position); disco.lookAt(jugador);
+        sol.material.opacity = ds; disco.material.opacity = ds;
+      }
       scene.background.copy(NOCHE).lerp(ALBA, alba); scene.fog.color.copy(FOG_N).lerp(ALBA, alba);
       estrellas.material.opacity = 1 - alba;
       ambiente.intensity = 1.5 + alba * 1.2; luzLuna.color.setHSL(0.62 - alba * 0.55, 0.6, 0.8);

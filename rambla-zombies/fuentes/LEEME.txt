@@ -1,0 +1,5 @@
+Fuentes de Google Fonts, licencia SIL Open Font License 1.1 (uso y redistribución libres):
+- Butcherman (Typodermic Fonts) — logo
+- Bangers (Vernon Adams) — títulos
+- Barlow Condensed (Jeremy Tribby) — textos de interfaz
+Recortadas a caracteres latinos/español con fontTools.
