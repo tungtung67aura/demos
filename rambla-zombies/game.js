@@ -845,12 +845,12 @@ function abrirTienda() {
   for (const a of ARMAS) if (a.tipo === 'fuego' && tiene.has(a.id)) { const n = Math.min(cargMax(a) - cargador[a.id], reserva[a.id]); cargador[a.id] += n; if (reserva[a.id] !== Infinity) reserva[a.id] -= n; }
   $('tienda-sub').textContent = `Oleada ${oleada} superada · La próxima: ${oleada + 1}${JEFES[oleada + 1] ? ' — ¡viene un jefe!' : ''}`;
   pintarTienda();
-  mostrar('tienda'); $('tactil').classList.add('oculto'); $('hud').classList.add('oculto');
+  mostrar('tienda'); capaJuego(false);
   musica.set(0.1, false, true);
 }
 function cerrarTienda() {
-  ocultar('tienda'); estado = 'jugando'; descanso = 3; $('hud').classList.remove('oculto'); hud();
-  if (movil) $('tactil').classList.remove('oculto'); else pedirLock();
+  ocultar('tienda'); estado = 'jugando'; descanso = 3; capaJuego(true); hud();
+  if (!movil) pedirLock();
   mensaje('Oleada ' + (oleada + 1), 'Preparate…');
 }
 function cobrar(precio) {
@@ -980,7 +980,7 @@ function finDelJuego() {
   $('fin-titulo').textContent = ['Te comieron, bo', 'Fuiste almuerzo', 'Se terminó la noche'][Math.floor(Math.random() * 3)];
   $('fin-sub').innerHTML = `Aguantaste hasta la oleada <b>${oleada}</b> de ${OLEADAS_TOTAL}.`;
   $('jefe').classList.add('oculto'); musica.set(0, false, true);
-  setTimeout(() => { mostrar('fin'); $('tactil').classList.add('oculto'); $('hud').classList.add('oculto'); }, 1400);
+  setTimeout(() => { mostrar('fin'); capaJuego(false); }, 1400);
 }
 function victoria() {
   estado = 'fin'; disparando = false; autoDisparo = false;
@@ -993,7 +993,7 @@ function victoria() {
   $('fin-titulo').textContent = 'Sobreviviste hasta el amanecer';
   $('fin-sub').innerHTML = `Diez oleadas, el Patovica y el Cerro. La rambla es tuya${AJ.modo === 'pesadilla' ? ', y en Pesadilla' : ''}.${perfil.victorias === 1 ? '<br>Desbloqueaste el modo <b>Pesadilla</b>.' : ''}`;
   musica.set(0, false, true);
-  setTimeout(() => { mostrar('fin'); $('tactil').classList.add('oculto'); $('hud').classList.add('oculto'); }, 4500);
+  setTimeout(() => { mostrar('fin'); capaJuego(false); }, 4500);
 }
 
 // ---------- HUD (solo toca el DOM cuando algo cambia) ----------
@@ -1082,12 +1082,16 @@ const sonda = document.createElement('div');
 sonda.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
 document.body.appendChild(sonda);
 function safeArea() { const s = getComputedStyle(sonda); return { t: parseFloat(s.paddingTop) || 0, r: parseFloat(s.paddingRight) || 0, b: parseFloat(s.paddingBottom) || 0, l: parseFloat(s.paddingLeft) || 0 }; }
+let resumeIgnore = 0;
+function enUI(el) { return el && el.closest && el.closest('#b-pausa, #b-fuego, #b-recarga, #b-cambiar, #barra-armas, #girar, .pantalla, button'); }
 function tocar(e) {
   if (estado !== 'jugando') return;
+  if (enUI(e.target) && e.target.closest && e.target.closest('#b-pausa, .pantalla, #girar')) return;
+  if (performance.now() < resumeIgnore) { e.preventDefault(); return; }
   for (const t of e.changedTouches) {
     const el = t.target;
     if (el.closest && el.closest('#b-fuego')) { disparando = true; $('b-fuego').classList.add('on'); vibrar(8); if (mirarId === null) { mirarId = t.identifier; mx0 = t.clientX; my0 = t.clientY; } continue; }
-    if (el.closest && el.closest('button, #barra-armas')) continue;
+    if (el.closest && el.closest('button, #barra-armas, #b-pausa')) continue;
     if (t.clientX < innerWidth * 0.45 && joyId === null) {
       joyId = t.identifier;
       const r = 60 * AJ.botones, sa = safeArea();
@@ -1125,7 +1129,13 @@ addEventListener('touchend', soltar); addEventListener('touchcancel', soltar);
 const tap = (id, fn) => $(id).addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); fn(); vibrar(8); tocar(e); }, { passive: false });
 tap('b-recarga', () => recargar());
 tap('b-cambiar', () => ciclarArma(1));
-$('b-pausa').addEventListener('click', () => pausar());
+(function () {
+  const bp = $('b-pausa');
+  const ir = e => { e.preventDefault(); e.stopPropagation(); pausar(); };
+  bp.addEventListener('pointerdown', ir);
+  bp.addEventListener('touchend', ir, { passive: false });
+  bp.addEventListener('click', ir);
+})();
 // deslizar sobre la barra de armas cambia de arma
 {
   let x0 = null;
@@ -1139,6 +1149,11 @@ $('b-girar-ok').addEventListener('click', () => { giroOk = true; revisarGiro(); 
 $('b-girar-ok').addEventListener('touchstart', e => { e.stopPropagation(); giroOk = true; revisarGiro(); }, { passive: true });
 
 // ---------- Pantallas ----------
+function capaJuego(si) {
+  $('hud').classList.toggle('oculto', !si);
+  $('tactil').classList.toggle('oculto', !(si && movil));
+  $('b-pausa').classList.toggle('oculto', !(si && movil));
+}
 const PANTALLAS = ['inicio', 'como', 'logros', 'pausa', 'tienda', 'fin', 'ajustes'];
 function mostrar(id) { PANTALLAS.forEach(p => $(p).classList.toggle('oculto', p !== id)); }
 function ocultar(id) { $(id).classList.add('oculto'); }
@@ -1149,7 +1164,7 @@ function jugar() {
   telon(() => {
     reiniciar(); estado = 'jugando';
     PANTALLAS.forEach(ocultar);
-    $('hud').classList.remove('oculto'); if (movil) $('tactil').classList.remove('oculto');
+    capaJuego(true);
     $('jefe').classList.add('oculto');
     if (!movil) pedirLock();
     mensaje('Zombis en la Rambla', AJ.modo === 'pesadilla' ? 'Modo Pesadilla. Que Dios te ayude' : 'Aguantá hasta que amanezca', false);
@@ -1159,22 +1174,41 @@ function jugar() {
     document.documentElement.requestFullscreen().catch(() => { });
   primeraVez = false;
 }
+function soltarControles() {
+  disparando = false; autoDisparo = false; joyId = null; mirarId = null; joy.x = joy.y = 0;
+  palo.style.transform = ''; base.style.left = base.style.top = base.style.bottom = '';
+  $('b-fuego').classList.remove('on');
+}
 function pausar() {
   if (estado !== 'jugando') return;
-  estado = 'pausa'; disparando = false; autoDisparo = false; musica.pausa(true);
+  estado = 'pausa'; soltarControles(); musica.pausa(true);
   $('pausa-info').textContent = `Oleada ${oleada} · ${puntos} puntos · $${pesos}`;
   mostrar('pausa');
   if (document.pointerLockElement) document.exitPointerLock();
 }
-function seguir() { estado = 'jugando'; musica.pausa(false); PANTALLAS.forEach(ocultar); if (!movil) pedirLock(); ultimo = performance.now(); }
+function seguir() {
+  estado = 'jugando'; soltarControles(); musica.pausa(false); PANTALLAS.forEach(ocultar);
+  resumeIgnore = performance.now() + 280; acum = 0; ultimo = performance.now();
+  if (!movil) pedirLock();
+}
 function aMenu() {
   telon(() => {
     estado = 'inicio'; PANTALLAS.forEach(ocultar); mostrar('inicio');
-    $('hud').classList.add('oculto'); $('tactil').classList.add('oculto'); $('girar').classList.add('oculto');
+    capaJuego(false); $('girar').classList.add('oculto');
     reiniciar(); poblarMenu(); mostrarRecord(); musica.pausa(false); musica.set(0, false, true);
   });
 }
-const clic = (id, fn) => $(id).addEventListener('click', () => { iniciarAudio(); sonido.clic(); fn(); });
+const clic = (id, fn) => {
+  let t0 = 0;
+  const ir = e => {
+    e.preventDefault(); e.stopPropagation();
+    const n = performance.now(); if (n - t0 < 400) return; t0 = n;
+    iniciarAudio(); sonido.clic(); fn();
+  };
+  const el = $(id);
+  el.addEventListener('pointerup', ir);
+  el.addEventListener('click', ir);
+};
 clic('b-jugar', jugar); clic('b-otra', jugar); clic('b-seguir', seguir); clic('b-salir', aMenu); clic('b-menu', aMenu);
 let volverA = 'inicio';
 clic('b-como', () => { volverA = 'inicio'; mostrar('como'); }); clic('b-como2', () => { volverA = 'pausa'; mostrar('como'); });
