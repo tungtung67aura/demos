@@ -49,19 +49,39 @@ for (const a of ARMAS) {
 
 function aplicarCalidad() {
   renderer.setPixelRatio(Math.min(devicePixelRatio, CAL[AJ.calidad].pr));
-  redimensionar();
+  redimensionar(true);
 }
-let aspecto = 1;
-function redimensionar() {
-  const w = innerWidth, h = innerHeight; aspecto = w / h;
-  renderer.setSize(w, h);
+// Tamaño de la vista: el CSS manda (canvas fijo a 100vw x 100dvh) y el buffer se ajusta a lo que mide el canvas.
+// En iOS el 'resize' al girar el celular llega a veces con innerWidth viejo, así que se re-mide varias veces
+// y además se chequea en cada cuadro (leer clientWidth es barato).
+let aspecto = 1, vistaW = 0, vistaH = 0;
+const lienzo = renderer.domElement;
+function medida() {
+  const w = lienzo.clientWidth || innerWidth, h = lienzo.clientHeight || innerHeight;
+  return [Math.max(1, Math.round(w)), Math.max(1, Math.round(h))];
+}
+function redimensionar(forzar) {
+  const [w, h] = medida();
+  if (!forzar && w === vistaW && h === vistaH) return;
+  vistaW = w; vistaH = h; aspecto = w / h;
+  renderer.setSize(w, h, false); // false: no tocar el CSS del canvas
   // campo visual horizontal ~90°, también en vertical (celular parado)
   camera.fov = Math.min(95, THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(45)) / aspecto)));
   camera.fov = Math.max(camera.fov, 62);
   camera.aspect = aspecto; camera.updateProjectionMatrix();
   vmCam.aspect = aspecto; vmCam.updateProjectionMatrix();
+  document.body.classList.toggle('apaisado', w > h && h < 560);
 }
-addEventListener('resize', redimensionar);
+function remedirLuego() {
+  requestAnimationFrame(() => redimensionar());
+  setTimeout(() => redimensionar(), 120);
+  setTimeout(() => redimensionar(), 350);
+  setTimeout(() => redimensionar(), 800);
+}
+addEventListener('resize', remedirLuego);
+addEventListener('orientationchange', remedirLuego);
+if (window.visualViewport) visualViewport.addEventListener('resize', remedirLuego);
+if (window.ResizeObserver) new ResizeObserver(() => redimensionar()).observe(lienzo);
 aplicarCalidad();
 
 // ---------- Sangre (partículas en un solo Points) ----------
@@ -549,6 +569,10 @@ document.addEventListener('pointerlockchange', () => {
 // ---------- Entrada: celular ----------
 let joyId = null, joyX0 = 0, joyY0 = 0, mirarId = null, mx0 = 0, my0 = 0;
 const base = $('joy-base'), palo = $('joy-palo');
+const sonda = document.createElement('div');
+sonda.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+document.body.appendChild(sonda);
+function safeArea() { const s = getComputedStyle(sonda); return { t: parseFloat(s.paddingTop) || 0, r: parseFloat(s.paddingRight) || 0, b: parseFloat(s.paddingBottom) || 0, l: parseFloat(s.paddingLeft) || 0 }; }
 function tocar(e) {
   if (estado !== 'jugando') return;
   for (const t of e.changedTouches) {
@@ -556,8 +580,13 @@ function tocar(e) {
     if (el.id === 'b-fuego') { disparando = true; gatillo = false; $('b-fuego').classList.add('on'); if (mirarId === null) { mirarId = t.identifier; mx0 = t.clientX; my0 = t.clientY; } continue; }
     if (el.closest && el.closest('button, #barra-armas')) continue;
     if (t.clientX < innerWidth * 0.45 && joyId === null) {
-      joyId = t.identifier; joyX0 = t.clientX; joyY0 = t.clientY;
-      base.style.left = (t.clientX - 60) + 'px'; base.style.top = (t.clientY - 60) + 'px'; base.style.bottom = 'auto';
+      joyId = t.identifier;
+      // que la base nunca quede cortada por el borde (ni por la muesca)
+      const sa = safeArea();
+      const cx = Math.max(sa.l + 66, Math.min(innerWidth * 0.45 - 60, t.clientX));
+      const cy = Math.max(sa.t + 110, Math.min(innerHeight - sa.b - (innerWidth > innerHeight ? 66 : 128), t.clientY)); // en vertical, por arriba de la barra de vida
+      joyX0 = cx; joyY0 = cy;
+      base.style.left = (cx - 60) + 'px'; base.style.top = (cy - 60) + 'px'; base.style.bottom = 'auto';
     } else if (mirarId === null) { mirarId = t.identifier; mx0 = t.clientX; my0 = t.clientY; }
   }
   e.preventDefault();
@@ -576,7 +605,7 @@ function arrastrar(e) {
 }
 function soltar(e) {
   for (const t of e.changedTouches) {
-    if (t.identifier === joyId) { joyId = null; joy.x = joy.y = 0; palo.style.transform = ''; }
+    if (t.identifier === joyId) { joyId = null; joy.x = joy.y = 0; palo.style.transform = ''; base.style.left = base.style.top = base.style.bottom = ''; }
     if (t.identifier === mirarId) mirarId = null;
     if (t.target.id === 'b-fuego') { disparando = false; $('b-fuego').classList.remove('on'); }
   }
@@ -693,6 +722,7 @@ function bucle(ahora) {
       if (limAcum < -rafDt || limAcum > intervalo) limAcum = 0;
     } else limAcum = 0;                       // límite >= pantalla: se dibuja cada rAF
   }
+  if (lienzo.clientWidth !== vistaW || lienzo.clientHeight !== vistaH) redimensionar();
   const c0 = performance.now();
   let dt = Math.min(0.25, (ahora - ultimo) / 1000); ultimo = ahora;
   if (estado === 'jugando' || estado === 'fin' || estado === 'inicio') {
@@ -742,6 +772,7 @@ window.__rz = {
   get estado() { return estado; }, get oleada() { return oleada; }, get puntos() { return puntos; }, get bajas() { return bajas; },
   get vida() { return J.vida; }, set vida(v) { J.vida = v; }, set dios(v) { dios = v; }, get arma() { return armaSel; }, get desbloq() { return [...desbloq]; },
   get vivos() { return zombis.filter(z => z.vivo).length; }, get porSalir() { return porSalir; }, get descanso() { return descanso; },
+  get vista() { const v = new THREE.Vector2(); renderer.getSize(v); return { rw: v.x, rh: v.y, cw: lienzo.clientWidth, ch: lienzo.clientHeight, iw: innerWidth, ih: innerHeight, bw: renderer.domElement.width, bh: renderer.domElement.height }; },
   get medidas() { return { ...medidas, rafFps: raf.actual, rafMax: raf.max, limitado60 }; }, get pickups() { return pickups.map(p => p.tipo + ':' + p.arma); }, J, AJ,
   zombis: () => zombis.filter(z => z.vivo).map(z => ({ sube: z.sube, vm: z.velMult, tipo: z.tipo, vida: z.vida, x: z.g.position.x, y: z.g.position.y, z: z.g.position.z, d: Math.hypot(z.g.position.x - J.pos.x, z.g.position.z - J.pos.z) })),
   apuntar(i = 0, cabeza = false) { // mira al zombi vivo más cercano (o al traído con traerZombi si i === 'traido')
