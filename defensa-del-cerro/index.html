@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Defensa del Cerro</title>
+<meta name="description" content="Defendé la Fortaleza del Cerro de Montevideo: piratas por tierra, mar y aire. Torres, mejoras, jefes y oleadas.">
+<meta name="theme-color" content="#16243f">
+<meta name="color-scheme" content="dark">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Defensa Cerro">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="format-detection" content="telephone=no">
+<link rel="preload" href="fonts/lilita-one.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game" aria-label="Campo de batalla"></canvas>
+<div id="safe-probe"></div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 4.5 6.8 4.5c2.2 0 3.6 1.2 5.2 3 1.6-1.8 3-3 5.2-3 3.8 0 5.9 3.9 4.4 7.3C19.5 16.4 12 21 12 21z"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5" fill="#ffd54a" stroke="#a8741a" stroke-width="2"/><circle cx="12" cy="12" r="5.6" fill="none" stroke="#e0a526" stroke-width="2"/><path d="M8.5 8.5l2 2" stroke="#fff6c8" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="5" width="4.2" height="14" rx="1.4"/><rect x="13.8" y="5" width="4.2" height="14" rx="1.4"/></symbol>
+  <symbol id="i-skull" viewBox="0 0 24 24"><path d="M12 2.5c-5 0-8.5 3.4-8.5 8 0 2.8 1.3 4.6 3 5.6V19c0 1 .8 1.8 1.8 1.8h7.4c1 0 1.8-.8 1.8-1.8v-2.9c1.7-1 3-2.8 3-5.6 0-4.6-3.5-8-8.5-8zM8.6 14a2.2 2.2 0 110-4.4 2.2 2.2 0 010 4.4zm6.8 0a2.2 2.2 0 110-4.4 2.2 2.2 0 010 4.4z"/></symbol>
+  <symbol id="i-bomb" viewBox="0 0 32 32"><circle cx="14" cy="19" r="9" fill="#2b2f38" stroke="#211a2e" stroke-width="2"/><circle cx="11" cy="16" r="2.4" fill="#fff" opacity=".45"/><path d="M20 12l3-3" stroke="#8a5a2b" stroke-width="3" stroke-linecap="round"/><path d="M24 4l1 3 3 1-3 1-1 3-1-3-3-1 3-1z" fill="#ffd54a"/></symbol>
+  <symbol id="i-troops" viewBox="0 0 32 32"><path d="M7 27V5" stroke="#5b3a1e" stroke-width="2.6" stroke-linecap="round"/><path d="M8 5h17l-3 4.5 3 4.5H8z" fill="#fff" stroke="#211a2e" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 7.6h15M8 10.4h15" stroke="#5aa9e6" stroke-width="1.6"/><circle cx="12" cy="8" r="1.8" fill="#f2c94c"/><path d="M12 30l6-9 6 9" fill="none" stroke="#e9e4d8" stroke-width="2.4" stroke-linecap="round"/></symbol>
+  <symbol id="i-flare" viewBox="0 0 32 32"><circle cx="16" cy="13" r="6" fill="#ffb347"/><circle cx="16" cy="13" r="3" fill="#fff6d5"/><path d="M16 1v4M16 21v4M4 13h4M24 13h4M7.5 4.5l2.8 2.8M21.7 18.7l2.8 2.8M7.5 21.5l2.8-2.8M21.7 7.3l2.8-2.8" stroke="#ffd54a" stroke-width="2.2" stroke-linecap="round"/><path d="M16 25v6" stroke="#c0392b" stroke-width="3" stroke-linecap="round"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.2l-5.9 3.2 1.3-6.5L2.5 9.3l6.6-.8z"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="11" rx="2.5"/><path d="M8 10.5V8a4 4 0 018 0v2.5" fill="none" stroke="currentColor" stroke-width="2.4"/></symbol>
+  <symbol id="i-medal" viewBox="0 0 24 24"><path d="M7 2h4l2 6H9zM13 2h4l-2 6h-4z" fill="#5aa9e6"/><circle cx="12" cy="15" r="6.5" fill="#ffd54a" stroke="#a8741a" stroke-width="1.6"/><path d="M12 11.5l1.1 2.2 2.4.3-1.8 1.7.5 2.4-2.2-1.2-2.2 1.2.5-2.4-1.8-1.7 2.4-.3z" fill="#fff6c8"/></symbol>
+  <symbol id="i-laurel" viewBox="0 0 24 24"><path d="M12 21c-5-1-8-5-8-11M12 21c5-1 8-5 8-11" fill="none" stroke="#7fd36a" stroke-width="2"/><g fill="#7fd36a"><ellipse cx="4.6" cy="9" rx="1.4" ry="2.4"/><ellipse cx="5.6" cy="13" rx="1.4" ry="2.4" transform="rotate(-30 5.6 13)"/><ellipse cx="8" cy="16.6" rx="1.4" ry="2.4" transform="rotate(-55 8 16.6)"/><ellipse cx="19.4" cy="9" rx="1.4" ry="2.4"/><ellipse cx="18.4" cy="13" rx="1.4" ry="2.4" transform="rotate(30 18.4 13)"/><ellipse cx="16" cy="16.6" rx="1.4" ry="2.4" transform="rotate(55 16 16.6)"/></g></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><path d="M19.4 13a7.6 7.6 0 000-2l2.1-1.6-2-3.5-2.5 1a7.6 7.6 0 00-1.7-1L15 3.3h-4l-.4 2.6a7.6 7.6 0 00-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 000 2l-2.1 1.6 2 3.5 2.5-1a7.6 7.6 0 001.7 1l.4 2.6h4l.4-2.6a7.6 7.6 0 001.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 110-7 3.5 3.5 0 010 7z" transform="translate(-1 0)"/></symbol>
+  <symbol id="i-sell" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#ffd54a" stroke="#a8741a" stroke-width="2"/><path d="M12 6.5v11M14.8 9c-.6-1-1.6-1.4-2.8-1.4-1.6 0-2.8.8-2.8 2s1 1.7 2.8 2.1c1.8.4 2.9 1 2.9 2.3s-1.3 2.1-2.9 2.1c-1.4 0-2.5-.5-3.1-1.6" fill="none" stroke="#7a4d10" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 3l8 9h-5v9H9v-9H4z"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
+</svg>
+
+<!-- ====== PANTALLA DE TÍTULO ====== -->
+<section id="title" class="screen show" aria-label="Inicio">
+  <div class="title-wrap">
+    <div class="logo">
+      <span class="logo-small">MONTEVIDEO</span>
+      <h1><span class="l1">DEFENSA</span><span class="l2">DEL CERRO</span></h1>
+    </div>
+    <p class="tagline">Piratas por tierra, mar y aire. La fortaleza no se entrega.</p>
+    <button id="btn-play" class="btn btn-primary btn-xl">JUGAR</button>
+    <div class="title-row">
+      <button id="btn-meta" class="btn btn-tile"><svg><use href="#i-medal"/></svg><span>Cuartel</span><b id="title-medals" class="badge hidden">0</b></button>
+      <button id="btn-ach" class="btn btn-tile"><svg><use href="#i-star"/></svg><span>Logros</span></button>
+      <button id="btn-settings" class="btn btn-tile"><svg><use href="#i-gear"/></svg><span>Ajustes</span></button>
+    </div>
+    <button id="btn-install" class="btn btn-ghost btn-sm hidden">Instalar como app</button>
+    <p id="ios-hint" class="hint hidden">En iPhone: tocá <b>Compartir</b> y después <b>Agregar a inicio</b> para tenerlo como app.</p>
+  </div>
+</section>
+
+<!-- ====== SELECCIÓN DE MAPA ====== -->
+<section id="levels" class="screen" aria-label="Mapas">
+  <header class="screen-head">
+    <button class="icon-btn back" data-back="title" aria-label="Volver"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <h2>Elegí el frente</h2>
+    <div class="medals-pill"><svg><use href="#i-medal"/></svg><b id="lv-medals">0</b></div>
+  </header>
+  <div id="level-list" class="level-list"></div>
+  <div id="level-detail" class="level-detail">
+    <div class="ld-name" id="ld-name"></div>
+    <p class="ld-blurb" id="ld-blurb"></p>
+    <div class="seg" id="ld-diff" role="radiogroup" aria-label="Dificultad"></div>
+    <label class="endless-toggle hidden" id="ld-endless-wrap"><input type="checkbox" id="ld-endless"><span>Modo Sin Fin <small id="ld-endless-best"></small></span></label>
+    <button id="btn-start" class="btn btn-primary">¡A DEFENDER!</button>
+  </div>
+</section>
+
+<!-- ====== HUD ====== -->
+<div id="hud" class="hidden">
+  <div class="topbar">
+    <div class="pill lives" id="hud-lives-pill"><svg><use href="#i-heart"/></svg><b id="hud-lives">20</b></div>
+    <div class="pill gold" id="hud-gold-pill"><svg><use href="#i-coin"/></svg><b id="hud-gold">0</b></div>
+    <div class="pill wave"><span>Oleada</span><b id="hud-wave">0/20</b></div>
+    <button id="btn-pause" class="icon-btn" aria-label="Pausa"><svg><use href="#i-pause"/></svg></button>
+  </div>
+  <div id="bossbar" class="bossbar hidden"><span id="boss-name">Jefe</span><div class="bb-track"><i id="boss-fill"></i><i id="boss-shield" class="sh"></i></div></div>
+  <div id="aim-banner" class="aim-banner hidden"><span id="aim-text">Tocá el mapa</span><button id="aim-cancel" class="icon-btn sm" aria-label="Cancelar"><svg><use href="#i-close"/></svg></button></div>
+  <div class="bottombar">
+    <div class="abilities">
+      <button class="abil" data-ab="bomb" aria-label="Bombardeo naval"><svg><use href="#i-bomb"/></svg><i class="cd"></i><em></em></button>
+      <button class="abil" data-ab="troops" aria-label="Blandengues"><svg><use href="#i-troops"/></svg><i class="cd"></i><em></em></button>
+      <button class="abil" data-ab="flare" aria-label="Bengala"><svg><use href="#i-flare"/></svg><i class="cd"></i><em></em></button>
+    </div>
+    <button id="btn-speed" class="speed" aria-label="Velocidad">×1</button>
+    <div class="wave-wrap">
+      <div id="next-preview" class="next-preview"></div>
+      <button id="btn-wave" class="wave-btn"><svg class="ring" viewBox="0 0 40 40"><circle cx="20" cy="20" r="17"/></svg><svg class="wskull"><use href="#i-skull"/></svg><span id="wave-label">¡LLAMAR OLEADA!</span><small id="wave-sub"></small></button>
+    </div>
+  </div>
+</div>
+
+<div id="radial" class="radial hidden"></div>
+<div id="info" class="info hidden"></div>
+<div id="tip" class="tip hidden"><p id="tip-text"></p><button id="tip-ok" class="link">Entendido</button></div>
+<div id="banner" class="banner"><b id="banner-big"></b><span id="banner-small"></span></div>
+<div id="toasts" class="toasts"></div>
+
+<!-- ====== PAUSA ====== -->
+<section id="pause" class="overlay" aria-label="Pausa">
+  <div class="card">
+    <h2>PAUSA</h2>
+    <p class="sub" id="pause-sub"></p>
+    <button id="btn-resume" class="btn btn-primary">CONTINUAR</button>
+    <button id="btn-restart" class="btn btn-ghost">REINICIAR NIVEL</button>
+    <div class="row-toggles">
+      <button class="chip" data-set="sfx" aria-pressed="true">Sonido</button>
+      <button class="chip" data-set="music" aria-pressed="true">Música</button>
+    </div>
+    <button id="btn-quit" class="link">Salir al mapa</button>
+  </div>
+</section>
+
+<!-- ====== RESULTADO ====== -->
+<section id="result" class="overlay" aria-label="Resultado">
+  <div class="card result-card">
+    <h2 id="res-title">¡VICTORIA!</h2>
+    <div id="res-stars" class="res-stars"><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg></div>
+    <p id="res-sub" class="sub"></p>
+    <dl id="res-stats" class="res-stats"></dl>
+    <p id="res-reward" class="reward hidden"></p>
+    <button id="btn-next" class="btn btn-primary">SIGUIENTE</button>
+    <button id="btn-retry" class="btn btn-ghost">REINTENTAR</button>
+    <button id="btn-map" class="link">Volver al mapa</button>
+  </div>
+</section>
+
+<!-- ====== FICHA (enemigo/torre nueva) ====== -->
+<section id="cardov" class="overlay" aria-label="Novedad">
+  <div class="card intro-card">
+    <span class="kicker" id="ic-kicker">¡NUEVO ENEMIGO!</span>
+    <img id="ic-img" alt="">
+    <h2 id="ic-name"></h2>
+    <p id="ic-desc"></p>
+    <p id="ic-tip" class="ic-tip"></p>
+    <button id="ic-ok" class="btn btn-primary">¡VAMOS!</button>
+  </div>
+</section>
+
+<!-- ====== CUARTEL ====== -->
+<section id="meta" class="overlay" aria-label="Cuartel">
+  <div class="card wide">
+    <button class="icon-btn sm close" data-close="meta" aria-label="Cerrar"><svg><use href="#i-close"/></svg></button>
+    <h2>CUARTEL</h2>
+    <p class="sub">Ganás medallas con estrellas, laureles de Bravo y el modo Sin Fin. Gastalas en mejoras permanentes.</p>
+    <div class="medals-pill big"><svg><use href="#i-medal"/></svg><b id="meta-free">0</b><span>disponibles</span></div>
+    <div id="meta-list" class="meta-list"></div>
+    <button id="meta-reset" class="link">Devolver todas las medallas</button>
+  </div>
+</section>
+
+<!-- ====== LOGROS ====== -->
+<section id="ach" class="overlay" aria-label="Logros">
+  <div class="card wide">
+    <button class="icon-btn sm close" data-close="ach" aria-label="Cerrar"><svg><use href="#i-close"/></svg></button>
+    <h2>LOGROS</h2>
+    <p class="sub" id="ach-count"></p>
+    <div id="ach-list" class="ach-list"></div>
+  </div>
+</section>
+
+<!-- ====== AJUSTES ====== -->
+<section id="settings" class="overlay" aria-label="Ajustes">
+  <div class="card">
+    <button class="icon-btn sm close" data-close="settings" aria-label="Cerrar"><svg><use href="#i-close"/></svg></button>
+    <h2>AJUSTES</h2>
+    <div class="set-list">
+      <button class="set" data-set="sfx"><span>Efectos de sonido</span><i></i></button>
+      <button class="set" data-set="music"><span>Música (candombe)</span><i></i></button>
+      <button class="set" data-set="vib"><span>Vibración</span><i></i></button>
+      <button class="set" data-set="shake"><span>Temblor de pantalla</span><i></i></button>
+      <button class="set" data-set="lowfx"><span>Modo ahorro (teléfonos viejos)</span><i></i></button>
+    </div>
+    <button id="set-tut" class="btn btn-ghost btn-sm">Ver el tutorial de nuevo</button>
+    <button id="set-wipe" class="link danger">Borrar todo el progreso</button>
+    <p class="credits">Hecho en Montevideo. Fuentes Lilita One y Nunito (OFL). v<span id="ver"></span></p>
+  </div>
+</section>
+
+<noscript><p style="padding:2rem;color:#fff">Necesitás JavaScript para jugar.</p></noscript>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

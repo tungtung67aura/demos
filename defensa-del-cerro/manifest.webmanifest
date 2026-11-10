@@ -1,0 +1,20 @@
+{
+  "name": "Defensa del Cerro",
+  "short_name": "Defensa Cerro",
+  "description": "Defendé la Fortaleza del Cerro de Montevideo: piratas por tierra, mar y aire.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "es-UY",
+  "background_color": "#16243f",
+  "theme_color": "#16243f",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
