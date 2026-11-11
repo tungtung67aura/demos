@@ -22,7 +22,7 @@ export function crearProps(scene) {
   for (let i = 4; i < N; i += 14) {
     const p = aMundo(i, -6.8); const yaw = angulo(i) + Math.PI / 2;
     bancos.push({ x: p.x, y: piso(-6.8), z: p.z, yaw });
-    if (Math.abs(i - C) < 75) col.push({ x: p.x, z: p.z, r: 0.75, top: piso(-6.8) + 0.95 });
+    if (Math.abs(i - C) < 75) col.push({ x: p.x, z: p.z, r: 0.75, top: piso(-6.8) + 0.95, madera: true, cajas: [{ cx: p.x, cz: p.z, c: Math.cos(yaw), s: Math.sin(yaw), hx: 0.95, hz: 0.24, y0: piso(-6.8), y1: piso(-6.8) + 0.91 }] });
   }
   instanciar(scene, geoBanco, new THREE.MeshStandardMaterial({ color: 0x5a3a20, roughness: 0.9 }), bancos);
 
@@ -41,7 +41,7 @@ export function crearProps(scene) {
   for (let i = 2; i < N; i += 9) {
     const lado = (i / 9 | 0) % 3 === 0 ? -4.2 : 14.2;
     const p = aMundo(i, lado); palmas.push({ x: p.x, y: piso(lado), z: p.z, yaw: Math.random() * 6.28, s: 0.85 + Math.random() * 0.35 });
-    if (Math.abs(i - C) < 75 && lado < 0) col.push({ x: p.x, z: p.z, r: 0.35, top: 20 });
+    if (Math.abs(i - C) < 75 && lado < 0) col.push({ x: p.x, z: p.z, r: 0.35, top: 20, madera: true });
   }
   instanciar(scene, geoTronco, new THREE.MeshStandardMaterial({ color: 0x5a4632, roughness: 1 }), palmas);
   instanciar(scene, geoHojas, new THREE.MeshStandardMaterial({ color: 0x2f5a2a, roughness: 0.9, side: THREE.DoubleSide }), palmas);
@@ -51,8 +51,8 @@ export function crearProps(scene) {
   const geoBolsa = new THREE.IcosahedronGeometry(0.4, 0).scale(1, 0.8, 1);
   const conts = [], bolsas = [];
   for (const [i, d] of [[C - 8, 10.6], [C + 15, 10.6], [C + 33, 10.6], [C - 37, 10.6], [C - 55, 10.6], [C + 62, 10.6], [C + 3, -9.2], [C - 25, -9.2]]) {
-    const p = aMundo(i, d); conts.push({ x: p.x, y: piso(d), z: p.z, yaw: angulo(i) + Math.PI / 2 + (Math.random() - .5) * 0.3 });
-    col.push({ x: p.x, z: p.z, r: 1.05, top: piso(d) + 1.5, metal: true });
+    const p = aMundo(i, d), yaw = angulo(i) + Math.PI / 2 + (Math.random() - .5) * 0.3; conts.push({ x: p.x, y: piso(d), z: p.z, yaw });
+    col.push({ x: p.x, z: p.z, r: 1.05, top: piso(d) + 1.5, metal: true, cajas: [{ cx: p.x, cz: p.z, c: Math.cos(yaw), s: Math.sin(yaw), hx: 1.0, hz: 0.6, y0: piso(d), y1: piso(d) + 1.47 }] });
     for (let b = 0; b < 4; b++) { const pb = aMundo(i + (Math.random() - .5) * 3, d + (Math.random() - .5) * 2.4); bolsas.push({ x: pb.x, y: piso(d) + 0.25, z: pb.z, yaw: Math.random() * 6, s: 0.6 + Math.random() * 0.6 }); }
   }
   instanciar(scene, geoCont, new THREE.MeshStandardMaterial({ color: 0x3d5a3a, roughness: 0.6, metalness: 0.3 }), conts);
@@ -107,7 +107,7 @@ export function crearProps(scene) {
   const matValla = new THREE.MeshStandardMaterial({ map: valla, roughness: 0.6, emissive: 0x220000 });
   const vallas = [];
   for (const sg of [-1, 1]) {
-    const i = C + sg * 73;
+    const i = sg < 0 ? C - 73 : C + 131; /* U4: el lado este termina después del Puerto del Buceo */
     for (let d = -10; d <= 20; d += 2.6) { const p = aMundo(i + (Math.random() - .5), d); vallas.push({ x: p.x, y: piso(d) + 0.55, z: p.z, yaw: angulo(i) + Math.PI / 2 + (Math.random() - .5) * 0.3 }); }
   }
   instanciar(scene, unir([caja(2.4, 0.35, 0.1, 0, 0.3, 0), caja(0.08, 1.1, 0.5, -1, 0, 0), caja(0.08, 1.1, 0.5, 1, 0, 0)]), matValla, vallas);

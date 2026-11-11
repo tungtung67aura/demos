@@ -280,6 +280,7 @@ export function unir(geos) {
   const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), uv = new Float32Array(n * 2); let o = 0;
   geos.forEach(g => { pos.set(g.attributes.position.array, o * 3); nor.set(g.attributes.normal.array, o * 3); if (g.attributes.uv) uv.set(g.attributes.uv.array, o * 2); o += g.attributes.position.count; g.dispose(); });
   const bg = new THREE.BufferGeometry();
+  if (geos.every(g => g.attributes.color)) { const col = new Float32Array(n * 3); let q = 0; geos.forEach(g => { col.set(g.attributes.color.array, q * 3); q += g.attributes.color.count; }); bg.setAttribute('color', new THREE.BufferAttribute(col, 3)); }
   bg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); bg.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); bg.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   return bg;
 }
@@ -311,7 +312,13 @@ function crearChatarra(scene) {
     const a = vehiculo(4.2, 1.2, 1.9, colores[c], false);
     const m = muestras[Math.round(i)], p = aMundo(i, d);
     a.position.set(p.x, 1.2, p.z); a.rotation.y = Math.atan2(-m.t.z, m.t.x) + rot; a.rotation.z = (k % 3 - 1) * 0.04;
-    grupoChatarra.add(a); col.push({ x: p.x, z: p.z, r: 2.1, top: 1.2 + 2.0, metal: true });
+    grupoChatarra.add(a);
+    { // cajas reales del auto (para balas, marcas y cadáveres): carrocería + techo
+      const c = Math.cos(a.rotation.y), s = Math.sin(a.rotation.y);
+      col.push({ x: p.x, z: p.z, r: 2.1, top: 1.2 + 2.0, metal: true, cajas: [
+        { cx: p.x, cz: p.z, c, s, hx: 2.1, hz: 0.95, y0: 1.2, y1: 2.8 },
+        { cx: p.x - c * 0.21, cz: p.z + s * 0.21, c, s, hx: 1.05, hz: 0.86, y0: 2.8, y1: 3.5 }] });
+    }
     if (k === 1) fuego = p.clone();
   });
   // ómnibus atravesado en la calle
@@ -319,7 +326,8 @@ function crearChatarra(scene) {
   const bus = vehiculo(12, 3.4, 2.6, 0xe8e4da, true); cartelBus(bus, 12, 3.4, 2.6);
   bus.position.set(pb.x, 1.2, pb.z); bus.rotation.y = Math.atan2(-mb.t.z, mb.t.x) + 1.1; grupoChatarra.add(bus);
   const dir = new THREE.Vector3(Math.cos(bus.rotation.y), 0, -Math.sin(bus.rotation.y));
-  for (let s = -5; s <= 5; s += 2.5) col.push({ x: pb.x + dir.x * s, z: pb.z + dir.z * s, r: 1.7, top: 1.2 + 3.8, metal: true });
+  const cajaBus = [{ cx: pb.x, cz: pb.z, c: Math.cos(bus.rotation.y), s: Math.sin(bus.rotation.y), hx: 6, hz: 1.3, y0: 1.2, y1: 5.0 }];
+  for (let s = -5; s <= 5; s += 2.5) col.push({ x: pb.x + dir.x * s, z: pb.z + dir.z * s, r: 1.7, top: 1.2 + 3.8, metal: true, cajas: cajaBus });
   // fuego
   const tex = brilloTex('rgba(255,140,40,1)'), llamas = [];
   for (let i = 0; i < 6; i++) {
@@ -334,6 +342,81 @@ function crearChatarra(scene) {
     update(t) {
       llamas.forEach((s, i) => { const k = 2 + Math.sin(t * 9 + i * 2) * 0.8 + Math.random() * 0.6; s.scale.set(k * 1.2, k * 1.8, 1); s.position.y = 2.6 + ((t * 1.5 + i * 0.3) % 1.2); });
       luzFuego.intensity = 40 + Math.sin(t * 13) * 10 + Math.random() * 15;
+    }
+  };
+}
+
+// ---------- Zona nueva: el Puerto del Buceo (contenedores, muelle, grúa) ----------
+// Se abre pasando el portón del extremo este; todos los contenedores tienen cajas reales (balas, marcas y ragdolls)
+export const PUERTO_I0 = N * 0.5 + 74, PUERTO_I1 = N * 0.5 + 128;
+const _lp = {};
+function crearPuerto(scene) {
+  const C = N * 0.5, col = [], grupo = new THREE.Group();
+  const rayas = new THREE.CanvasTexture((() => { const c = document.createElement('canvas'); c.width = 64; c.height = 8; const g = c.getContext('2d');
+    for (let x = 0; x < 64; x++) { const v = 150 + 105 * Math.abs(Math.sin(x / 64 * Math.PI * 14)); g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(x, 0, 1, 8); } return c; })());
+  rayas.colorSpace = THREE.SRGBColorSpace;
+  const COLS = [0x2a5a8a, 0x9a2a20, 0x2a6a3a, 0xc06a20, 0x707070, 0x2a7a7a], mats = COLS.map(c => new THREE.MeshStandardMaterial({ color: c, map: rayas, roughness: 0.7, metalness: 0.3 }));
+  const matCont = new THREE.MeshStandardMaterial({ map: rayas, vertexColors: true, roughness: 0.7, metalness: 0.3 }), matVC = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7, metalness: 0.3 });
+  const _c = new THREE.Color(), pint = (geo, hex) => { const g = geo.index ? geo.toNonIndexed() : geo.clone(); _c.setHex(hex); const a = new Float32Array(g.attributes.position.count * 3); for (let i = 0; i < a.length; i += 3) { a[i] = _c.r; a[i + 1] = _c.g; a[i + 2] = _c.b; } g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g; }; /* todo el puerto en 2 draws (color por vértice) */
+  const geoCont = new THREE.BoxGeometry(6.1, 2.6, 2.44), ang = i => { const m = muestras[Math.round(i)]; return Math.atan2(-m.t.z, m.t.x); };
+  // [i, d, giro, color, pisos]
+  const lista = [[C + 84, 2.5, 0, 0, 2], [C + 84, 9.5, 0.05, 1, 1], [C + 91, 16, 0, 2, 2], [C + 97, 5, 1.57, 3, 1], [C + 104, 12, 0.2, 4, 2],
+    [C + 108, 1, 0, 5, 1], [C + 115, 16, 0, 0, 1], [C + 118, 6.5, -0.3, 2, 2], [C + 124, -0.5, 1.57, 1, 1], [C + 125, 13, 0, 3, 3]];
+  let puerta = null;
+  lista.forEach(([i, d, giro, ci, pisos], k) => {
+    const p = aMundo(i, d), y0 = piso(d), yaw = ang(i) + giro, c = Math.cos(yaw), s = Math.sin(yaw);
+    for (let h = 0; h < pisos; h++) { const m = new THREE.Mesh(pint(geoCont, COLS[(ci + h * 2) % COLS.length]), matCont); m.position.set(p.x, y0 + 1.3 + h * 2.6, p.z); m.rotation.y = yaw + (h ? (k % 2 ? 0.06 : -0.05) : 0); grupo.add(m); }
+    const cajas = [{ cx: p.x, cz: p.z, c, s, hx: 3.05, hz: 1.22, y0, y1: y0 + 2.6 * pisos }];
+    for (const t of [-1.85, 0, 1.85]) col.push({ x: p.x + c * t, z: p.z - s * t, r: 1.28, top: y0 + 2.6 * pisos, metal: true, cajas });
+    if (k === 3) puerta = { x: p.x, z: p.z, c, s, yaw, y0 };
+  });
+  // portón de entrada con cartel
+  const matPoste = new THREE.MeshStandardMaterial({ color: 0x3a3a3a, roughness: 0.6, metalness: 0.5 });
+  const cartel = new THREE.MeshBasicMaterial({ map: texTexto(['PUERTO DEL BUCEO'], 512, 64, '#0a2a4a', '#f2e6c0', 'bold 40px sans-serif') });
+  { const a = ang(C + 76);
+    for (const d of [-2.2, 18.2]) { const p = aMundo(C + 76, d), m = new THREE.Mesh(pint(new THREE.BoxGeometry(0.4, 6, 0.4), 0x3a3a3a), matVC); m.position.set(p.x, piso(d) + 3, p.z); grupo.add(m); col.push({ x: p.x, z: p.z, r: 0.35, top: piso(d) + 6, metal: true }); }
+    const pm = aMundo(C + 76, 8), viga = new THREE.Mesh(pint(new THREE.BoxGeometry(0.3, 0.5, 20.6), 0x3a3a3a), matVC); viga.position.set(pm.x, 7.6, pm.z); viga.rotation.y = a; grupo.add(viga);
+    for (const sg of [1, -1]) { const t = new THREE.Mesh(new THREE.PlaneGeometry(9, 1.1), cartel); t.position.set(pm.x - Math.cos(a) * 0.17 * sg, 6.8, pm.z + Math.sin(a) * 0.17 * sg); t.rotation.y = a + (sg > 0 ? -Math.PI / 2 : Math.PI / 2); grupo.add(t); } }
+  // bitas de amarre sobre el muro
+  const matBita = new THREE.MeshStandardMaterial({ color: 0x202020, roughness: 0.5, metalness: 0.6 }), geoBita = new THREE.CylinderGeometry(0.22, 0.28, 0.6, 8);
+  for (let i = C + 80; i < C + 128; i += 7) { const p = aMundo(i, -9.6), m = new THREE.Mesh(pint(geoBita, 0x202020), matVC); m.position.set(p.x, piso(-9.6) + 0.3, p.z); grupo.add(m); col.push({ x: p.x, z: p.z, r: 0.3, top: piso(-9.6) + 0.6, metal: true }); }
+  // muelle de madera hacia el río, con la grúa y un pesquero amarrado (decorado: fuera de la zona jugable)
+  const matMadera = new THREE.MeshStandardMaterial({ color: 0x5a4430, roughness: 0.9 }), matGrua = new THREE.MeshStandardMaterial({ color: 0xd09a20, roughness: 0.6, metalness: 0.3 });
+  { const im = C + 102, a = ang(im), pm = aMundo(im, -30), m = new THREE.Mesh(pint(new THREE.BoxGeometry(7, 0.4, 36), 0x5a4430), matVC); m.position.set(pm.x, 1.0, pm.z); m.rotation.y = a; grupo.add(m);
+    for (let t = -16; t <= 16; t += 4) for (const l of [-3.2, 3.2]) { const q = aMundo(im, -30 + t); const pil = new THREE.Mesh(pint(new THREE.CylinderGeometry(0.18, 0.18, 3, 6), 0x5a4430), matVC); pil.position.set(q.x + Math.cos(a) * l, -0.5, q.z - Math.sin(a) * l); grupo.add(pil); }
+    const g = aMundo(im, -36); // grúa: dos patas, viga y pluma
+    for (const l of [-2.6, 2.6]) { const pa = new THREE.Mesh(pint(new THREE.BoxGeometry(0.5, 14, 0.5), 0xd09a20), matVC); pa.position.set(g.x + Math.cos(a) * l, 8, g.z - Math.sin(a) * l); grupo.add(pa); }
+    const vg = new THREE.Mesh(pint(new THREE.BoxGeometry(6.4, 0.8, 0.8), 0xd09a20), matVC); vg.position.set(g.x, 15, g.z); vg.rotation.y = a; grupo.add(vg);
+    const pl = new THREE.Mesh(pint(new THREE.BoxGeometry(0.6, 0.6, 22), 0xd09a20), matVC), pp = aMundo(im, -30); pl.position.set(pp.x, 15.6, pp.z); pl.rotation.y = a; grupo.add(pl);
+    const b = aMundo(im + 6, -30), casco = new THREE.Mesh(pint(new THREE.BoxGeometry(12, 2.2, 3.6), 0xb02a20), matVC);
+    casco.position.set(b.x, 0, b.z); casco.rotation.y = a + Math.PI / 2; grupo.add(casco);
+    const cab = new THREE.Mesh(pint(new THREE.BoxGeometry(3, 2.2, 2.6), 0xe8e4da), matVC); cab.position.set(b.x, 2.2, b.z); cab.rotation.y = a + Math.PI / 2; grupo.add(cab); }
+  // luces de sodio: postes altos con halo
+  const texSodio = brilloTex('rgba(255,170,60,1)'), halos = [];
+  for (const [i, d] of [[C + 88, 6], [C + 106, 7], [C + 122, 8]]) {
+    const p = aMundo(i, d), m = new THREE.Mesh(pint(new THREE.CylinderGeometry(0.12, 0.16, 9, 6), 0x3a3a3a), matVC); m.position.set(p.x, piso(d) + 4.5, p.z); grupo.add(m); col.push({ x: p.x, z: p.z, r: 0.25, top: 20, metal: true });
+    const h = new THREE.Sprite(new THREE.SpriteMaterial({ map: texSodio, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true })); h.position.set(p.x, piso(d) + 9.1, p.z); h.scale.setScalar(4); scene.add(h); halos.push(h);
+  }
+  /* sin PointLight: una luz más encarece el sombreado de toda la escena */
+  hornear(scene, grupo);
+  // la puerta del contenedor que se abre (evento): dos hojas sueltas, del lado de la calle
+  const hojas = [];
+  if (puerta) for (const sg of [-1, 1]) { /* bisagra en la punta del contenedor (eje local x = largo, z = ancho) */
+    const piv = new THREE.Group(), hoja = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.5, 1.22), mats[3]);
+    hoja.position.set(0, 0, -sg * 0.61); piv.add(hoja);
+    piv.position.set(puerta.x + puerta.c * 3.08 + puerta.s * sg * 1.22, puerta.y0 + 1.3, puerta.z - puerta.s * 3.08 + puerta.c * sg * 1.22);
+    piv.rotation.y = puerta.yaw; scene.add(piv); hojas.push({ piv, sg, a: 0, obj: 0 });
+  }
+  return {
+    colisiones: col, puerta,
+    abrir() { for (const h of hojas) h.obj = 1; }, cerrar() { for (const h of hojas) { h.obj = 0; h.a = 0; h.piv.rotation.y = puerta.yaw; } },
+    get abierta() { return hojas.length ? hojas[0].a : 0; },
+    update(t, dt, jug) {
+      const cerca = !jug || local(jug.x, jug.z, _lp).i > C + 40; /* lejos no se dibujan halos ni puertas: draws */
+      for (const h of halos) h.visible = cerca; for (const h of hojas) h.piv.visible = cerca;
+      if (!cerca) return;
+      for (const h of halos) h.material.opacity = 0.85 + Math.sin(t * 50 + h.position.x) * 0.05;
+      for (const h of hojas) if (h.a < h.obj) { h.a = Math.min(h.obj, h.a + dt * 2.5); const e = 1 - (1 - h.a) ** 3; h.piv.rotation.y = puerta.yaw - h.sg * e * 1.9; }
     }
   };
 }
@@ -376,16 +459,16 @@ export function crearMundo(scene, movil) {
   scene.add(disco);
   const mar = crearMar(scene, movil), rambla = crearRambla(scene);
   crearEdificios(scene);
-  const cerro = crearCerro(scene), chatarra = crearChatarra(scene), props = crearProps(scene);
+  const cerro = crearCerro(scene), chatarra = crearChatarra(scene), props = crearProps(scene), puerto = crearPuerto(scene);
   let alba = 0, objetivo = 0;
   const FOG_N = new THREE.Color(0x1a2444);
   return {
-    colisiones: chatarra.colisiones.concat(props.colisiones),
+    colisiones: chatarra.colisiones.concat(props.colisiones, puerto.colisiones), puerto,
     fuegos: (n, c) => props.fuegos(n, c), alSonarFuegos: null,
     setAlba(v) { objetivo = v; },
     get alba() { return alba; },
     update(t, dt, renderer, jugador) {
-      mar.update(t); rambla.update(t, dt, jugador); cerro.update(t); chatarra.update(t); props.update(t, dt, this.alSonarFuegos);
+      mar.update(t); rambla.update(t, dt, jugador); cerro.update(t); chatarra.update(t); puerto.update(t, dt, jugador); props.update(t, dt, this.alSonarFuegos);
       alba += (objetivo - alba) * Math.min(1, dt * 0.5);
       cielo.material.uniforms.alba.value = alba;
       cielo.position.copy(jugador || cielo.position);

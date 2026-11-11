@@ -43,9 +43,11 @@ function tono({ f = 440, f2 = null, dur = 0.2, tipo = 'sine', vol = 0.4, a = 0.0
 export function volumen(v, musica = 0.5) { if (master) { master.gain.value = v; musBus.gain.value = musica; } }
 export const audioListo = () => !!ctx;
 
+// variación chica en cada impacto para que no suene siempre igual
+const vr = (x, p = 0.12) => x * (1 + (Math.random() * 2 - 1) * p);
+let ultimoCae = 0;
 export const sonido = {
   pistola() { ruido({ dur: 0.18, f: 2600, f2: 400, vol: 0.9 }); tono({ f: 160, f2: 60, dur: 0.12, vol: 0.5 }); },
-  revolver() { ruido({ dur: 0.35, f: 1800, f2: 200, vol: 1 }); tono({ f: 110, f2: 40, dur: 0.25, vol: 0.6, tipo: 'triangle' }); },
   escopeta() {
     ruido({ dur: 0.45, f: 1400, f2: 120, vol: 1.2, rate: 0.7 }); tono({ f: 90, f2: 30, dur: 0.35, vol: 0.8, tipo: 'triangle' });
     // chak-chak del cargador
@@ -53,21 +55,33 @@ export const sonido = {
     setTimeout(() => { ruido({ dur: 0.06, f: 1800, tipo: 'bandpass', q: 4, vol: 0.6 }); setTimeout(() => ruido({ dur: 0.07, f: 2500, tipo: 'bandpass', q: 4, vol: 0.6 }), 110); }, 330);
   },
   metralleta() { ruido({ dur: 0.08, f: 3200, f2: 700, vol: 0.7 }); tono({ f: 200, f2: 80, dur: 0.06, vol: 0.3, tipo: 'square' }); },
+  revolver() { ruido({ dur: 0.34, f: 3000, f2: 260, vol: 1.0 }); tono({ f: 120, f2: 45, dur: 0.24, vol: 0.65 }); },
   rifle() { ruido({ dur: 0.6, f: 3500, f2: 150, vol: 1.1 }); tono({ f: 140, f2: 35, dur: 0.4, vol: 0.7, tipo: 'sawtooth' }); },
   vacio() { tono({ f: 1800, dur: 0.03, vol: 0.2, tipo: 'square' }); },
   recarga() { ruido({ dur: 0.05, f: 2200, tipo: 'bandpass', q: 5, vol: 0.5 }); setTimeout(() => ruido({ dur: 0.06, f: 1400, tipo: 'bandpass', q: 5, vol: 0.6 }), 260); },
   swing() { ruido({ dur: 0.22, f: 400, f2: 2200, tipo: 'bandpass', q: 1.5, vol: 0.5, a: 0.05 }); },
-  golpe() { ruido({ dur: 0.12, f: 600, vol: 0.9 }); tono({ f: 120, f2: 50, dur: 0.1, vol: 0.6 }); },
-  corte() { ruido({ dur: 0.15, f: 5000, f2: 1500, tipo: 'highpass', vol: 0.5 }); ruido({ dur: 0.1, f: 500, vol: 0.7 }); },
+  golpe() { ruido({ dur: vr(0.12), f: vr(600, 0.2), vol: 0.9, rate: vr(1, 0.15) }); tono({ f: vr(120), f2: 50, dur: 0.1, vol: 0.6 }); },
+  corte() { ruido({ dur: 0.15, f: vr(5000, 0.2), f2: 1500, tipo: 'highpass', vol: 0.5 }); ruido({ dur: 0.1, f: vr(500, 0.2), vol: 0.7, rate: vr(1, 0.15) }); },
   termo() { // ¡toc! hueco de termo
-    tono({ f: 820, f2: 700, dur: 0.18, vol: 0.5 }); tono({ f: 1960, dur: 0.12, vol: 0.2 }); ruido({ dur: 0.05, f: 1200, vol: 0.4 });
+    const k = vr(1, 0.06); tono({ f: 820 * k, f2: 700 * k, dur: 0.18, vol: 0.5 }); tono({ f: 1960 * k, dur: 0.12, vol: 0.2 }); ruido({ dur: 0.05, f: 1200, vol: 0.4 });
   },
   sarten() { // ¡BONG!
     [310, 742, 1225, 1810].forEach((f, i) => tono({ f, dur: 1.1 - i * 0.2, vol: 0.35 / (i + 1) + 0.1, tipo: 'sine' }));
     ruido({ dur: 0.05, f: 3000, vol: 0.5 });
   },
-  carne() { ruido({ dur: 0.1, f: 700, f2: 200, vol: 0.6 }); },
-  cabeza() { ruido({ dur: 0.2, f: 900, f2: 150, vol: 0.9, rate: 0.6 }); tono({ f: 70, dur: 0.15, vol: 0.5 }); },
+  carne() { ruido({ dur: vr(0.1, 0.25), f: vr(700, 0.25), f2: vr(200, 0.2), vol: vr(0.6, 0.15), rate: vr(1, 0.2) }); },
+  cabeza() { ruido({ dur: 0.2, f: vr(900, 0.2), f2: 150, vol: 0.9, rate: vr(0.6, 0.15) }); tono({ f: vr(70), dur: 0.15, vol: 0.5 }); },
+  crujido() { ruido({ dur: 0.07, f: vr(2600, 0.2), tipo: 'bandpass', q: 3, vol: 0.55 }); ruido({ dur: 0.05, f: vr(1500, 0.2), tipo: 'bandpass', q: 4, vol: 0.4, delay: 0.03 }); },
+  madera() { ruido({ dur: 0.09, f: vr(1100, 0.2), tipo: 'bandpass', q: 2.5, vol: 0.5 }); tono({ f: vr(260, 0.15), f2: 180, dur: 0.08, vol: 0.18, tipo: 'triangle' }); },
+  piedra() { ruido({ dur: 0.06, f: vr(3200, 0.25), tipo: 'bandpass', q: 1.5, vol: 0.3 }); },
+  // cuerpo que cae al piso (con tope: si caen muchos juntos suena uno)
+  cae(pesado, fuerza = 1) {
+    if (!ctx) return; const t = ctx.currentTime; if (t - ultimoCae < (pesado ? 0 : 0.07)) return; ultimoCae = t;
+    const v = Math.min(1, 0.35 + fuerza * 0.08);
+    if (pesado) { tono({ f: 48, f2: 20, dur: 0.9, vol: 1.2 }); ruido({ dur: 0.8, f: 260, f2: 50, vol: 1.1, rate: 0.35 }); }
+    else { ruido({ dur: vr(0.16), f: vr(320, 0.2), f2: 90, vol: 0.7 * v, rate: vr(0.6, 0.2) }); tono({ f: vr(75, 0.2), f2: 40, dur: 0.12, vol: 0.4 * v }); }
+  },
+  chapoteo() { ruido({ dur: vr(0.14), f: vr(1100, 0.3), f2: 300, vol: 0.35, rate: vr(0.8, 0.2) }); },
   gemido(grave = 1) {
     if (!ctx) return;
     const t = ctx.currentTime, d = 0.8 + Math.random() * 0.6;
@@ -88,10 +102,13 @@ export const sonido = {
     ruido({ dur: 0.3, f: 3000, f2: 500, vol: 0.6 });
   },
   mecha() { tono({ f: 1400, dur: 0.05, vol: 0.18, tipo: 'square' }); },
+  portazo() { ruido({ dur: 0.5, f: 600, f2: 120, vol: 1.0 }); tono({ f: 70, f2: 40, dur: 0.5, vol: 0.7, tipo: 'triangle' }); ruido({ dur: 0.2, f: 2500, tipo: 'bandpass', q: 4, vol: 0.4 }); },
+  zap() { tono({ f: 1800, f2: 300, dur: 0.18, vol: 0.3, tipo: 'square' }); ruido({ dur: 0.15, f: 4000, tipo: 'bandpass', q: 2, vol: 0.35 }); },
+  grito() { tono({ f: 650, f2: 1500, dur: 0.9, vol: 0.45, tipo: 'sawtooth' }); tono({ f: 990, f2: 1900, dur: 0.8, vol: 0.25, tipo: 'square' }); ruido({ dur: 0.9, f: 1800, f2: 3200, tipo: 'bandpass', q: 2, vol: 0.5 }); },
   escupe() { ruido({ dur: 0.25, f: 700, f2: 2400, tipo: 'bandpass', q: 3, vol: 0.6 }); tono({ f: 300, f2: 150, dur: 0.2, vol: 0.2, tipo: 'sawtooth' }); },
   salpica() { ruido({ dur: 0.3, f: 1500, f2: 300, vol: 0.5, rate: 0.8 }); },
   rebote() { tono({ f: 2400 + Math.random() * 1500, f2: 900, dur: 0.15, vol: 0.12, tipo: 'triangle' }); ruido({ dur: 0.04, f: 4000, tipo: 'highpass', vol: 0.3 }); },
-  chapa() { ruido({ dur: 0.12, f: 2500, tipo: 'bandpass', q: 2, vol: 0.4 }); tono({ f: 420 + Math.random() * 200, dur: 0.2, vol: 0.1, tipo: 'square' }); },
+  chapa() { ruido({ dur: 0.12, f: vr(2500, 0.2), tipo: 'bandpass', q: 2, vol: 0.4 }); tono({ f: 420 + Math.random() * 200, dur: 0.2, vol: 0.1, tipo: 'square' }); },
   rugido(grave = 1) {
     if (!ctx) return;
     const t = ctx.currentTime, d = 1.6;

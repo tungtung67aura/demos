@@ -9,7 +9,8 @@ export function mezcla(n) {
     gateador: n >= 3 ? 2 + n * 0.3 : 0,
     escupidor: n >= 3 ? 1 + n * 0.35 : 0,
     explosivo: n >= 4 ? 1 + n * 0.35 : 0,
-    tanque: n >= 4 ? 0.5 + n * 0.25 : 0
+    tanque: n >= 4 ? 0.5 + n * 0.25 : 0,
+    griton: n >= 3 ? 0.6 + n * 0.2 : 0
   };
 }
 export function cantidad(n) {
@@ -43,7 +44,7 @@ export const VENTAJAS = [
   { id: 'corazon', nombre: 'Corazón de tablado', desc: '+25 de vida máxima.', precio: 400 }
 ];
 
-export const PESOS = { normal: 10, corredor: 14, gateador: 12, escupidor: 20, explosivo: 18, tanque: 40, patovica: 300, cerro: 1000 };
+export const PESOS = { normal: 10, corredor: 14, gateador: 12, escupidor: 20, explosivo: 18, tanque: 40, griton: 16, patovica: 300, cerro: 1000 };
 
 export const LOGROS = [
   { id: 'primera', nombre: 'Primera sangre', desc: 'Matá tu primer zombi.' },
@@ -66,6 +67,6 @@ const CLAVE = 'rz-perfil';
 export function cargarPerfil() {
   let p = {};
   try { p = JSON.parse(localStorage.getItem(CLAVE) || '{}'); } catch (e) { p = {}; }
-  return Object.assign({ record: +localStorage.getItem('rz-record') || 0, mejorOleada: 0, bajas: 0, partidas: 0, victorias: 0, logros: {}, pesadilla: false, tipGiro: false }, p);
+  return Object.assign({ record: +localStorage.getItem('rz-record') || 0, mejorOleada: 0, bajas: 0, partidas: 0, victorias: 0, logros: {}, pesadilla: false, tipGiro: false, armasCamp: ['pistola', 'termo'], infArmas: ['pistola', 'termo'], inf: { mejorOleada: 0, record: 0, partidas: 0, bajas: 0 } }, p);
 }
 export function guardarPerfil(p) { try { localStorage.setItem(CLAVE, JSON.stringify(p)); } catch (e) { } }

@@ -9,7 +9,8 @@ export const ARMAS = [
   { id: 'termo', nombre: 'Termo', precio: 0, desc: 'El compañero fiel. ¡Toc! en la cabeza.', tipo: 'cuerpo', dano: 30, cadencia: 0.5, alcance: 2.6, empuje: 11, sonido: 'termo', arco: 0.55 },
   { id: 'bate', nombre: 'Bate', precio: 100, desc: 'Buen daño y buen empuje.', tipo: 'cuerpo', dano: 55, cadencia: 0.6, alcance: 2.9, empuje: 10, sonido: 'golpe', arco: 0.5 },
   { id: 'machete', nombre: 'Machete', precio: 180, desc: 'Rápido y filoso. Corta brazos.', tipo: 'cuerpo', dano: 80, cadencia: 0.42, alcance: 2.4, empuje: 2.5, sonido: 'corte', arco: 0.6 },
-  { id: 'sarten', nombre: 'Sartén de la abuela', precio: 140, desc: '¡BONG! El que más empuja.', tipo: 'cuerpo', dano: 45, cadencia: 0.55, alcance: 2.5, empuje: 18, sonido: 'sarten', arco: 0.55 }
+  { id: 'sarten', nombre: 'Sartén de la abuela', precio: 140, desc: '¡BONG! El que más empuja.', tipo: 'cuerpo', dano: 45, cadencia: 0.55, alcance: 2.5, empuje: 18, sonido: 'sarten', arco: 0.55 },
+  { id: 'revolver', nombre: 'Revólver .38', precio: 380, desc: 'Seis tiros que tumban. Atraviesa a dos.', tipo: 'fuego', dano: 95, cadencia: 0.55, cargador: 6, reserva: 30, recarga: 2.3, alcance: 90, disp: 0.006, perdigones: 1, retroceso: 0.24, sonido: 'revolver', auto: false, atraviesa: 2, empuje: 1.8 }
 ];
 
 
@@ -29,7 +30,7 @@ function modelo(id) {
   const g = new THREE.Group(), punta = new THREE.Vector3(0, 0, -0.3);
   switch (id) {
     case 'pistola':
-      g.add(caja(0.05, 0.06, 0.26, metal, 0, 0.02, -0.08)); g.add(caja(0.045, 0.12, 0.06, negro, 0, -0.06, 0.01));
+      g.add(caja(0.05, 0.06, 0.26, metal, 0, 0.02, -0.08)); { const c = caja(0.045, 0.12, 0.06, negro, 0, -0.06, 0.01); c.name = 'cargador'; g.add(c); }
       g.add(caja(0.01, 0.015, 0.01, metalClaro, 0, 0.06, -0.19)); mano(g, 0, -0.08, 0.03); punta.set(0, 0.02, -0.22); break;
     case 'escopeta': {
       g.add(cil(0.022, 0.022, 0.75, metal, 0, 0.03, -0.3, Math.PI / 2));
@@ -40,7 +41,7 @@ function modelo(id) {
     }
     case 'metralleta':
       g.add(caja(0.07, 0.09, 0.36, metal, 0, 0.02, -0.08)); g.add(cil(0.015, 0.015, 0.2, metal, 0, 0.03, -0.35, Math.PI / 2));
-      g.add(caja(0.04, 0.16, 0.06, negro, 0, -0.09, -0.12)); g.add(caja(0.05, 0.1, 0.05, negro, 0, -0.06, 0.04));
+      { const c = caja(0.04, 0.16, 0.06, negro, 0, -0.09, -0.12); c.name = 'cargador'; g.add(c); } g.add(caja(0.05, 0.1, 0.05, negro, 0, -0.06, 0.04));
       g.add(caja(0.03, 0.05, 0.22, negro, 0, 0.0, 0.2)); g.add(caja(0.02, 0.03, 0.02, metalClaro, 0, 0.08, -0.2));
       mano(g, 0, -0.08, 0.05); punta.set(0, 0.03, -0.46); break;
     case 'rifle':
@@ -48,6 +49,12 @@ function modelo(id) {
       g.add(caja(0.055, 0.11, 0.3, madera, 0, -0.04, 0.3)); g.add(cil(0.028, 0.028, 0.28, negro, 0, 0.1, -0.08, Math.PI / 2));
       g.add(cil(0.035, 0.03, 0.03, metalClaro, 0, 0.1, -0.23, Math.PI / 2));
       mano(g, 0, -0.08, 0.1); punta.set(0, 0.03, -0.76); break;
+    case 'revolver': { // .38 de caño corto: el tambor se abre al recargar
+      g.add(cil(0.017, 0.017, 0.2, metal, 0, 0.035, -0.2, Math.PI / 2)); g.add(caja(0.05, 0.05, 0.12, metal, 0, 0.03, -0.04));
+      const t = cil(0.034, 0.034, 0.075, metalClaro, 0, 0.025, -0.07, Math.PI / 2); t.name = 'tambor'; g.add(t);
+      g.add(caja(0.045, 0.13, 0.06, madera, 0, -0.06, 0.03)); g.add(caja(0.01, 0.02, 0.01, metalClaro, 0, 0.065, -0.29));
+      mano(g, 0, -0.09, 0.05); punta.set(0, 0.035, -0.31); break;
+    }
     case 'termo': { // termo de mate, verde clásico, con su mate al lado
       const verde = M(0x2f6b3a, { metalness: 0.5, roughness: 0.4 });
       g.add(cil(0.055, 0.055, 0.42, verde, 0, 0.12, 0)); g.add(cil(0.045, 0.055, 0.06, metalClaro, 0, 0.36, 0));
