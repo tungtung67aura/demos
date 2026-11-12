@@ -1,6 +1,9 @@
 // Mundo: el Río de la Plata, la rambla, los edificios, el Cerro y los autos abandonados
 import * as THREE from 'https://esm.sh/three@0.160.0';
 import { crearProps } from './props.js';
+import { crearAuto, crearBus } from './autos.js';
+import { texAsfalto, texBaldosa, texPiedra, texArena, texFachada } from './texturas.js';
+import { crearAmbiente } from './ambiente.js';
 
 export function brilloTex(color) {
   const c = document.createElement('canvas'); c.width = c.height = 64;
@@ -55,19 +58,19 @@ export function piso(d) {
   return 1.3;                        // ciudad
 }
 
-function cinta(ancho, off, alto, color) {
-  const pts = curva.getSpacedPoints(300), pos = [], idx = [];
+function cinta(ancho, off, alto, color, tex = null, tile = 4) {
+  const pts = curva.getSpacedPoints(300), pos = [], uv = [], idx = [], paso = curva.getLength() / 300;
   pts.forEach((p, i) => {
     const t = curva.getTangentAt(i / 300);
     const n = new THREE.Vector3(-t.z, 0, t.x);
     const a = p.clone().addScaledVector(n, off), b = p.clone().addScaledVector(n, off + ancho);
-    pos.push(a.x, alto, a.z, b.x, alto, b.z);
+    pos.push(a.x, alto, a.z, b.x, alto, b.z); uv.push(i * paso / tile, 0, i * paso / tile, ancho / tile);
     if (i < 300) idx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2);
   });
   const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   g.setIndex(idx); g.computeVertexNormals();
-  return new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color, side: THREE.DoubleSide, roughness: 0.9 }));
+  return new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color, map: tex, side: THREE.DoubleSide, roughness: 0.9 }));
 }
 
 function crearMar(scene, movil) {
@@ -98,16 +101,17 @@ function crearMar(scene, movil) {
 
 let espuma = null;
 function crearRambla(scene) {
-  scene.add(cinta(14.5, -2.5, 1.2, 0x2c2c36));
-  scene.add(cinta(8.3, -10.8, 1.6, 0x8a7d6c));
-  scene.add(cinta(1.3, -12.1, 2.6, 0xc4b6a0));
-  scene.add(cinta(2.5, 12, 1.45, 0x7a7062));   // vereda del lado de la ciudad
-  scene.add(cinta(300, 14.5, 1.3, 0x23262d));
-  scene.add(cinta(20, -32, -0.5, 0x4a4234));
+  const tAsf = texAsfalto(), tBal = texBaldosa(), tPie = texPiedra(), tAre = texArena();
+  scene.add(cinta(14.5, -2.5, 1.2, 0x3a3a44, tAsf, 6));
+  scene.add(cinta(8.3, -10.8, 1.6, 0x9c8f7c, tBal, 4));
+  scene.add(cinta(1.3, -12.1, 2.6, 0xc4b6a0, tBal, 4));
+  scene.add(cinta(2.5, 12, 1.45, 0x8a7e6e, tBal, 4));   // vereda del lado de la ciudad
+  scene.add(cinta(300, 14.5, 1.3, 0x2c2f36, tAsf, 10));
+  scene.add(cinta(20, -32, -0.5, 0x6a604c, tAre, 8));
   scene.add(cinta(0.25, 4.6, 1.22, 0xd9c26a)); // línea amarilla
   // el muro de la rambla: cara de piedra hacia la arena y escalón hacia la vereda
-  scene.add(pared(-12.1, -0.5, 2.6, 0xa89a84), pared(-10.8, 1.6, 2.6, 0xb8aa94));
-  scene.add(cinta(0.6, -12.25, 2.62, 0xd6c8b0));
+  scene.add(pared(-12.1, -0.5, 2.6, 0xb4a690, tPie), pared(-10.8, 1.6, 2.6, 0xc4b6a0, tPie));
+  scene.add(cinta(0.6, -12.25, 2.62, 0xd6c8b0, tBal, 2));
   // espuma en la orilla: una cinta aditiva que respira con las olas
   espuma = cinta(2.2, -33.2, -0.42, 0xffffff);
   espuma.material = new THREE.MeshBasicMaterial({ color: 0x9ab0c8, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, depthWrite: false });
@@ -160,15 +164,15 @@ function crearRambla(scene) {
   };
 }
 
-function pared(off, y0, y1, color) {
-  const pts = curva.getSpacedPoints(300), pos = [], idx = [];
+function pared(off, y0, y1, color, tex = null) {
+  const pts = curva.getSpacedPoints(300), pos = [], uv = [], idx = [], paso = curva.getLength() / 300;
   pts.forEach((p, i) => {
     const t = curva.getTangentAt(i / 300), n = new THREE.Vector3(-t.z, 0, t.x), a = p.clone().addScaledVector(n, off);
-    pos.push(a.x, y0, a.z, a.x, y1, a.z);
+    pos.push(a.x, y0, a.z, a.x, y1, a.z); uv.push(i * paso / 4, y0 / 2, i * paso / 4, y1 / 2);
     if (i < 300) idx.push(i * 2, i * 2 + 2, i * 2 + 1, i * 2 + 1, i * 2 + 2, i * 2 + 3);
   });
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
-  return new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color, roughness: 0.95, side: THREE.DoubleSide }));
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
+  return new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color, map: tex, roughness: 0.95, side: THREE.DoubleSide }));
 }
 
 function charcoTex() {
@@ -179,40 +183,41 @@ function charcoTex() {
   return new THREE.CanvasTexture(c);
 }
 
-function texVentanas() {
-  const c = document.createElement('canvas'); c.width = 64; c.height = 128;
-  const g = c.getContext('2d');
-  g.fillStyle = '#0c0d12'; g.fillRect(0, 0, 64, 128);
-  for (let y = 4; y < 128; y += 8) for (let x = 4; x < 64; x += 8) {
-    if (Math.random() < 0.3) {
-      g.fillStyle = ['#ffd27a', '#ffe9b0', '#9ecbff', '#ffb35c', '#ff5040'][Math.floor(Math.random() * 5)];
-      g.fillRect(x, y, 4, 5);
-    }
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.magFilter = THREE.NearestFilter; t.colorSpace = THREE.SRGBColorSpace;
-  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1.6, 2.5);
-  return t;
-}
-
 function crearEdificios(scene) {
-  const geo = new THREE.BoxGeometry(1, 1, 1), por = 55;
-  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), s = new THREE.Vector3();
+  const por = 55, techos = [], luzP = [];
+  const tonos = [0xe4dccc, 0xc9c0b0, 0xb9b5ad, 0xd9c9b1, 0xc3b9a8, 0xd2d2cd, 0xbfa890, 0xa8b4b8];
+  const pintar = (g, hex, k) => { const c = new THREE.Color(hex).multiplyScalar(k), n = g.attributes.position.count, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) a.set([c.r, c.g, c.b], i * 3); g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g; };
+  const pos = (g, p, yaw, y) => { g.rotateY(yaw); g.translate(p.x, y, p.z); return g; };
   for (let k = 0; k < 4; k++) {
-    const tx = texVentanas();
-    const mat = new THREE.MeshStandardMaterial({ color: 0x15161c, emissive: 0xffffff, emissiveMap: tx, emissiveIntensity: 1.1, map: tx });
-    const im = new THREE.InstancedMesh(geo, mat, por);
+    const tx = texFachada(0.3 + k * 0.05);
+    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, map: tx.mapa, emissive: 0xffffff, emissiveMap: tx.emisivo, emissiveIntensity: 1.3, roughness: 0.95 });
+    const geos = [];
     for (let j = 0; j < por; j++) {
       const i = Math.random() * N, m = muestras[Math.round(i)];
       const w = 10 + Math.random() * 12, d = 10 + Math.random() * 10;
       const off = 33 + Math.random() * 150, h = 10 + Math.pow(Math.random(), 2) * (j < 25 ? 70 : 35);
       const p = aMundo(i, off);
       if (Math.abs(i - N * 0.5 - 128) < 28 && off < 110) { j--; continue; } // dejar ver el Palacio Salvo
-      e.set(0, Math.atan2(m.t.x, m.t.z), 0); q.setFromEuler(e);
-      m4.compose(v.set(p.x, 1.3 + h / 2, p.z), q, s.set(w, h, d)); im.setMatrixAt(j, m4);
+      const yaw = Math.atan2(m.t.x, m.t.z), g = new THREE.BoxGeometry(w, h, d), uv = g.attributes.uv, u0 = Math.random();
+      for (let q = 0; q < 24; q++) {
+        const f = q >> 2, u = uv.getX(q), v = uv.getY(q);
+        if (f >= 2 && f <= 3) uv.setXY(q, 0.015, 0.99);               // techo y base: la esquina lisa de la textura
+        else uv.setXY(q, u * ((f < 2 ? d : w) / 12) + u0, v * (h / 24));
+      }
+      pintar(g, tonos[Math.random() * tonos.length | 0], 0.72 + Math.random() * 0.28); geos.push(pos(g, p, yaw, 1.3 + h / 2));
+      // azotea: cuarto de máquinas, tanque de agua y antena (en todos los edificios, en un solo mesh)
+      const y0 = 1.3 + h, loc = (x, z) => ({ x: p.x + Math.cos(yaw) * x + Math.sin(yaw) * z, z: p.z - Math.sin(yaw) * x + Math.cos(yaw) * z });
+      techos.push(pos(pintar(new THREE.BoxGeometry(w * 0.28, 2.6, d * 0.3), 0x6a6e74, 1), loc(-w * 0.2, d * 0.15), yaw, y0 + 1.3).rotateY(0));
+      if (Math.random() < 0.5) { const q = loc(w * 0.22, -d * 0.2); techos.push(pos(pintar(new THREE.CylinderGeometry(1.3, 1.3, 2.2, 9), 0x7a6a58, 1), q, 0, y0 + 2.4)); for (const [dx, dz] of [[-0.9, -0.9], [0.9, 0.9]]) techos.push(pos(pintar(new THREE.BoxGeometry(0.2, 1.3, 0.2), 0x4a4e54, 1), { x: q.x + dx, z: q.z + dz }, 0, y0 + 0.65)); }
+      if (Math.random() < 0.35 || h > 45) { const q = loc(w * 0.3, d * 0.25); techos.push(pos(pintar(new THREE.CylinderGeometry(0.06, 0.08, 7, 4), 0x30343a, 1), q, 0, y0 + 3.5)); if (h > 45) luzP.push(q.x, y0 + 7.1, q.z); }
     }
-    scene.add(im);
+    scene.add(new THREE.Mesh(unir(geos), mat));
   }
+  scene.add(new THREE.Mesh(unir(techos), new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.85 })));
+  const gl = new THREE.BufferGeometry(); gl.setAttribute('position', new THREE.Float32BufferAttribute(luzP, 3));
+  const luces = new THREE.Points(gl, new THREE.PointsMaterial({ map: brilloTex('rgba(255,40,30,1)'), size: 7, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+  scene.add(luces);
+  return { update(t) { luces.material.opacity = Math.sin(t * 2.2) > 0.2 ? 1 : 0.12; } };
 }
 
 function crearCerro(scene) {
@@ -234,30 +239,7 @@ function crearCerro(scene) {
   return { update: t => { haz.rotation.y = t * 0.8; brillo.material.opacity = 0.6 + 0.4 * Math.abs(Math.cos(t * 0.8)); } };
 }
 
-// Autos abandonados, el ómnibus cruzado y un auto prendido fuego
-const matsAuto = new Map(), matAuto = c => { if (!matsAuto.has(c)) matsAuto.set(c, new THREE.MeshStandardMaterial({ color: c, roughness: 0.6, metalness: 0.4 })); return matsAuto.get(c); };
-const MR = new THREE.MeshStandardMaterial({ color: 0x111111 }), GR = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 10);
-function vehiculo(largo, alto, ancho, color, bus) {
-  const g = new THREE.Group();
-  const mat = matAuto(color);
-  const cuerpo = new THREE.Mesh(new THREE.BoxGeometry(largo, alto, ancho), mat);
-  cuerpo.position.y = alto / 2 + 0.4; g.add(cuerpo);
-  if (bus) {
-    const v = new THREE.Mesh(new THREE.BoxGeometry(largo * 0.9, alto * 0.3, ancho + 0.05),
-      new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0x9a8a60, emissiveIntensity: 0.6 }));
-    v.position.y = alto * 0.7 + 0.4; g.add(v);
-    const franja = new THREE.Mesh(new THREE.BoxGeometry(largo + 0.02, 0.4, ancho + 0.02), new THREE.MeshStandardMaterial({ color: 0x8a1c1c }));
-    franja.position.y = 1.2; g.add(franja);
-  } else {
-    const techo = new THREE.Mesh(new THREE.BoxGeometry(largo * 0.5, alto * 0.6, ancho * 0.9), mat);
-    techo.position.set(-largo * 0.05, alto + 0.75, 0); g.add(techo);
-  }
-  const rueda = GR, mr = MR;
-  [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([a, b]) => {
-    const r = new THREE.Mesh(rueda, mr); r.rotation.x = Math.PI / 2; r.position.set(a * largo * 0.33, 0.4, b * ancho / 2); g.add(r);
-  });
-  return g;
-}
+// Autos abandonados, el ómnibus cruzado y un auto prendido fuego (los modelos viven en autos.js)
 
 function texTexto(lineas, w, h, fondo, color, fuente) {
   const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
@@ -268,9 +250,9 @@ function texTexto(lineas, w, h, fondo, color, fuente) {
 // cartel de destino que brilla y el logo al costado: un CUTCSA como los de verdad
 function cartelBus(bus, largo, alto, ancho) {
   const dest = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 0.42), new THREE.MeshBasicMaterial({ map: texTexto(['121  CIUDAD VIEJA'], 256, 48, '#120a00', '#ffb020', 'bold 30px monospace') }));
-  dest.position.set(largo / 2 + 0.02, alto + 0.05, 0); dest.rotation.y = Math.PI / 2; bus.add(dest);
+  dest.position.set(largo / 2 + 0.02, alto, 0); dest.rotation.y = Math.PI / 2; bus.add(dest);
   const logo = new THREE.MeshBasicMaterial({ map: texTexto(['CUTCSA'], 256, 64, '#e8e4da', '#9a1414', 'italic bold 48px sans-serif') });
-  for (const s of [1, -1]) { const l = new THREE.Mesh(new THREE.PlaneGeometry(3, 0.7), logo); l.position.set(-1.5, 1.95, s * (ancho / 2 + 0.03)); if (s < 0) l.rotation.y = Math.PI; bus.add(l); }
+  for (const s of [1, -1]) { const l = new THREE.Mesh(new THREE.PlaneGeometry(3, 0.7), logo); l.position.set(-1.5, 1.0, s * (ancho / 2 + 0.05)); if (s < 0) l.rotation.y = Math.PI; bus.add(l); }
 }
 
 // junta todas las mallas de un grupo estático en una por material (menos draw calls)
@@ -301,29 +283,30 @@ function hornear(scene, grupo) {
 }
 
 function crearChatarra(scene) {
-  const col = [], colores = [0x6a2020, 0x24345a, 0x888888, 0x222222, 0x8a7030, 0x3c5a3c];
+  const col = [], colores = [0x7a2222, 0x24345a, 0x8c9096, 0x2b2b30, 0xa88a38, 0x3c6a4a];
+  // [i, d, giro, color, modelo]
   const lista = [
-    [N * 0.5 + 8, 2, 0.4, 0], [N * 0.5 - 14, 8, -0.3, 1], [N * 0.5 + 22, 6, 1.4, 2], [N * 0.5 - 30, 1, 0.1, 3],
-    [N * 0.5 + 40, 9, -1.0, 4], [N * 0.5 - 45, 4, 2.5, 5], [N * 0.5 + 55, 3, 0.2, 0], [N * 0.5 - 60, 7, -0.6, 2]
+    [N * 0.5 + 8, 2, 0.4, 0, 'sedan'], [N * 0.5 - 14, 8, -0.3, 1, 'sedan'], [N * 0.5 + 22, 6, 1.4, 2, 'taxi'], [N * 0.5 - 30, 1, 0.1, 3, 'hatch'],
+    [N * 0.5 + 40, 9, -1.0, 4, 'pickup'], [N * 0.5 - 45, 4, 2.5, 5, 'patrullero'], [N * 0.5 + 55, 3, 0.2, 0, 'combi'], [N * 0.5 - 60, 7, -0.6, 2, 'hatch']
   ];
   let fuego = null;
   const grupoChatarra = new THREE.Group();
-  lista.forEach(([i, d, rot, c], k) => {
-    const a = vehiculo(4.2, 1.2, 1.9, colores[c], false);
+  lista.forEach(([i, d, rot, c, modelo], k) => {
+    const A = crearAuto(modelo, colores[c], k + 3, { quemado: k === 1 }), a = A.g;
     const m = muestras[Math.round(i)], p = aMundo(i, d);
     a.position.set(p.x, 1.2, p.z); a.rotation.y = Math.atan2(-m.t.z, m.t.x) + rot; a.rotation.z = (k % 3 - 1) * 0.04;
     grupoChatarra.add(a);
-    { // cajas reales del auto (para balas, marcas y cadáveres): carrocería + techo
-      const c = Math.cos(a.rotation.y), s = Math.sin(a.rotation.y);
-      col.push({ x: p.x, z: p.z, r: 2.1, top: 1.2 + 2.0, metal: true, cajas: [
-        { cx: p.x, cz: p.z, c, s, hx: 2.1, hz: 0.95, y0: 1.2, y1: 2.8 },
-        { cx: p.x - c * 0.21, cz: p.z + s * 0.21, c, s, hx: 1.05, hz: 0.86, y0: 2.8, y1: 3.5 }] });
+    { // cajas reales del auto (para balas, marcas y cadáveres): carrocería + techo; los números salen de cada modelo
+      const c = Math.cos(a.rotation.y), s = Math.sin(a.rotation.y), q = A.cajas, ox = q.rcx === undefined ? -0.2 : q.rcx;
+      col.push({ x: p.x, z: p.z, r: q.hx + 0.05, top: 1.2 + q.ry1 - 0.1, metal: true, cajas: [
+        { cx: p.x, cz: p.z, c, s, hx: q.hx, hz: q.hz, y0: 1.2, y1: 1.2 + q.y1 },
+        { cx: p.x + c * ox, cz: p.z - s * ox, c, s, hx: q.rx, hz: q.hz - 0.09, y0: 1.2 + q.y1, y1: 1.2 + q.ry1 }] });
     }
     if (k === 1) fuego = p.clone();
   });
   // ómnibus atravesado en la calle
   const ib = N * 0.5 - 22, mb = muestras[Math.round(ib)], pb = aMundo(ib, 5);
-  const bus = vehiculo(12, 3.4, 2.6, 0xe8e4da, true); cartelBus(bus, 12, 3.4, 2.6);
+  const bus = crearBus(7); cartelBus(bus, 12, 3.05, 2.6);
   bus.position.set(pb.x, 1.2, pb.z); bus.rotation.y = Math.atan2(-mb.t.z, mb.t.x) + 1.1; grupoChatarra.add(bus);
   const dir = new THREE.Vector3(Math.cos(bus.rotation.y), 0, -Math.sin(bus.rotation.y));
   const cajaBus = [{ cx: pb.x, cz: pb.z, c: Math.cos(bus.rotation.y), s: Math.sin(bus.rotation.y), hx: 6, hz: 1.3, y0: 1.2, y1: 5.0 }];
@@ -458,17 +441,17 @@ export function crearMundo(scene, movil) {
   const disco = new THREE.Mesh(new THREE.CircleGeometry(60, 32), new THREE.MeshBasicMaterial({ color: 0xffd080, fog: false, transparent: true, opacity: 0 }));
   scene.add(disco);
   const mar = crearMar(scene, movil), rambla = crearRambla(scene);
-  crearEdificios(scene);
-  const cerro = crearCerro(scene), chatarra = crearChatarra(scene), props = crearProps(scene), puerto = crearPuerto(scene);
+  const edif = crearEdificios(scene);
+  const cerro = crearCerro(scene), chatarra = crearChatarra(scene), props = crearProps(scene), puerto = crearPuerto(scene), amb = crearAmbiente(scene);
   let alba = 0, objetivo = 0;
   const FOG_N = new THREE.Color(0x1a2444);
   return {
-    colisiones: chatarra.colisiones.concat(props.colisiones, puerto.colisiones), puerto,
+    colisiones: chatarra.colisiones.concat(props.colisiones, puerto.colisiones, amb.colisiones), puerto,
     fuegos: (n, c) => props.fuegos(n, c), alSonarFuegos: null,
     setAlba(v) { objetivo = v; },
     get alba() { return alba; },
     update(t, dt, renderer, jugador) {
-      mar.update(t); rambla.update(t, dt, jugador); cerro.update(t); chatarra.update(t); puerto.update(t, dt, jugador); props.update(t, dt, this.alSonarFuegos);
+      mar.update(t); edif.update(t); amb.update(t, dt, jugador); rambla.update(t, dt, jugador); cerro.update(t); chatarra.update(t); puerto.update(t, dt, jugador); props.update(t, dt, this.alSonarFuegos);
       alba += (objetivo - alba) * Math.min(1, dt * 0.5);
       cielo.material.uniforms.alba.value = alba;
       cielo.position.copy(jugador || cielo.position);

@@ -39,6 +39,64 @@ function ao(geo, oscuro = 0.55, ruido = 0.12) {
 }
 const cap = (r, l, cs = 4, rs = 8) => new THREE.CapsuleGeometry(r, l, cs, rs);
 
+
+// ---------- detalles de ropa y heridas ----------
+// Cada fila es una pieza pegada a un hueso del zombi: [pieza, hueso, posición, escala, rotación, color, bandera, límite]
+// Las piezas se agrupan en pocas mallas instanciadas (caja, cilindro, esfera, toro...) y solo se dibujan si la bandera del zombi está prendida.
+const zF = x => 0.148 * Math.sqrt(Math.max(0.05, 1 - (x / 0.2375) ** 2)) + 0.004; // frente del torso a un costado
+const DET = [
+  ['cilindro', 'cuerpo', [0, 0.735, 0], [0.15, 0.13, 0.15], [0, 0, 0], 'piel', null, null],
+  // cinturón
+  ['cilindro', 'cadera', [0, 0.045, 0], [0.335, 0.045, 0.295], [0, 0, 0], 'cuero', 'cinto', null],
+  ['caja', 'cadera', [0, 0.045, 0.149], [0.05, 0.04, 0.014], [0, 0, 0], 'metal', 'cinto', null],
+  // camisetas de fútbol: Peñarol (rayas), Nacional (banda)
+  ...[-0.15, 0, 0.15].map(x => ['caja', 'torso', [x, 0.08, zF(x)], [0.05, 0.5, 0.014], [0, x * 2.2, 0], 'acc1', 'pena', null]),
+  ['caja', 'torso', [0, 0.12, 0.151], [0.52, 0.085, 0.016], [0, 0, 0], 'acc1', 'nac', null],
+  // gorra, barba, anteojos oscuros, bufanda, cadena
+  ['gorra', 'cabeza', [0, 0.098, -0.004], [1, 1, 1], [0, 0, 0], 'acc1', 'gorra', 'c'],
+  ['caja', 'cabeza', [0, 0.105, 0.245], [0.2, 0.014, 0.15], [0.12, 0, 0], 'acc1', 'gorra', 'c'],
+  ['caja', 'cabeza', [0, -0.05, 0.115], [0.13, 0.07, 0.09], [0, 0, 0], 'pelo', 'barba', 'c'],
+  ['caja', 'cabeza', [0, 0.125, 0.148], [0.3, 0.05, 0.04], [0, 0, 0], 'negro', 'lentes', 'c'],
+  ['toro', 'cuerpo', [0, 0.735, 0], [0.23, 0.23, 0.23], [0, 0, 0], 'acc1', 'bufanda', null],
+  ['toro', 'cuerpo', [0, 0.69, 0.0], [0.27, 0.27, 0.27], [0, 0, 0], 'oro', 'cadena', null],
+  // mochila, termo (con la mano)
+  ['caja', 'torso', [0, 0.02, -0.2], [0.3, 0.38, 0.14], [0, 0, 0], 'acc2', 'mochila', null],
+  ['cilindro', 'hombro1', [0.05, -0.44, 0.07], [0.085, 0.3, 0.085], [0, 0, 0], 'acc2', 'termo', 'b1'],
+  // costillas al aire, tajos, vendas
+  ...[0, 1, 2].map(i => ['cilindro', 'torso', [-0.085, 0.16 - i * 0.075, 0.147], [0.014, 0.15, 0.014], [0, 0.25, 1.4 + i * 0.12], 'hueso', 'costillas', null]),
+  ['caja', 'cab', [0.07, 0, 0.146], [0.075, 0.016, 0.014], [0, 0, 0.5], 'tajo', 'tajo', 'c'],
+  ['caja', 'brazo0', [0, -0.3, 0.063], [0.012, 0.11, 0.014], [0, 0, 0], 'tajo', 'tajo', 'b0'],
+  ['cilindro', 'brazo1', [0, -0.34, 0], [0.138, 0.12, 0.138], [0, 0, 0], 'venda', 'venda', 'b1'],
+  // chaleco refractivo
+  ['chaleco', 'torso', [0, 0, 0], [1.03, 1, 1.05], [0, 0, 0], 'acc2', 'chaleco', null],
+  ['caja', 'torso', [-0.105, 0.04, 0.158], [0.045, 0.52, 0.014], [0, -0.32, 0], 'plata', 'chaleco', null],
+  ['caja', 'torso', [0.105, 0.04, 0.158], [0.045, 0.52, 0.014], [0, 0.32, 0], 'plata', 'chaleco', null],
+  ['caja', 'torso', [0, -0.12, 0.162], [0.4, 0.04, 0.014], [0, 0, 0], 'plata', 'chaleco', null],
+  // traje: solapas, camisa y corbata
+  ['caja', 'torso', [0, 0.14, 0.152], [0.17, 0.33, 0.012], [0, 0, 0], 'blanco', 'traje', null],
+  ['caja', 'torso', [-0.09, 0.13, 0.156], [0.058, 0.35, 0.03], [0, 0, 0.26], 'traje', 'traje', null],
+  ['caja', 'torso', [0.09, 0.13, 0.156], [0.058, 0.35, 0.03], [0, 0, -0.26], 'traje', 'traje', null],
+  ['caja', 'torso', [0, 0.08, 0.16], [0.06, 0.3, 0.016], [0, 0, 0], 'acc1', 'corbata', null],
+  // el Zombi del Cerro: la piedra le crece de la espalda
+  ['roca', 'cuerpo', [-0.3, 0.62, -0.02], [1.2, 1, 1.1], [0.4, 0.2, 0.3], 'piedra', 'rocas', null],
+  ['roca', 'cuerpo', [0.3, 0.66, -0.04], [1.5, 1.2, 1.3], [0.2, 1.1, 0.5], 'piedra', 'rocas', null],
+  ['roca', 'cuerpo', [0.02, 0.42, -0.22], [1.6, 1.4, 1.2], [1, 0.4, 0.1], 'piedra', 'rocas', null],
+  ['roca', 'cuerpo', [-0.14, 0.1, -0.2], [1.1, 0.9, 1], [0.6, 0.9, 0.2], 'piedra', 'rocas', null],
+  ...[[-0.13, 0.22], [0.1, 0.3], [-0.02, 0.05], [0.14, 0.0], [-0.12, -0.12]].map(([x, y], i) => ['pua', 'torso', [x, y, -0.16], [1 + (i % 2) * 0.4, 1 + (i % 3) * 0.3, 1], [-1.25 + i * 0.1, x * 2, 0], 'piedra', 'rocas', null]),
+  // el Explosivo lleva una garrafa de supergás atada al pecho
+  ['cilindro', 'torso', [0, 0, 0.2], [0.24, 0.42, 0.24], [0, 0, 0], 'naranja', 'garrafa', null],
+  ['cilindro', 'torso', [0, 0.25, 0.2], [0.07, 0.08, 0.07], [0, 0, 0], 'metal', 'garrafa', null],
+  ['caja', 'torso', [0, 0.1, 0.2], [0.5, 0.03, 0.3], [0, 0, 0], 'negro', 'garrafa', null],
+  // el Escupidor: bultos hinchados
+  ['esfera', 'torso', [-0.13, 0.2, 0.13], [0.17, 0.17, 0.17], [0, 0, 0], 'sangre', 'bultos', null],
+  ['esfera', 'cab', [0.07, 0.07, 0.1], [0.1, 0.1, 0.1], [0, 0, 0], 'sangre', 'bultos', 'c'],
+  // el Gritón: ondas de sonido al gritar (se dibujan aparte, aditivas)
+  ['onda', 'cabeza', [0, 0.05, 0.22], [1, 1, 1], [0, 0, 0], 'onda', null, 'c'],
+  ['onda', 'cabeza', [0, 0.05, 0.22], [1, 1, 1], [0, 0, 0], 'onda', null, 'c']
+];
+const DET_N = {}; for (const r of DET) DET_N[r[0]] = (DET_N[r[0]] || 0) + 1;
+const FLAGS = ['pena', 'nac', 'cinto', 'gorra', 'barba', 'lentes', 'bufanda', 'cadena', 'mochila', 'termo', 'costillas', 'tajo', 'venda', 'chaleco', 'traje', 'corbata', 'rocas', 'garrafa', 'bultos'];
+
 const PARTES = {
   torso: { geo: ao(cap(0.19, 0.3, 3, 10).scale(1.25, 1, 0.78), 0.5), n: 1 },
   cadera: { geo: ao(cap(0.13, 0.16, 2, 8).rotateZ(Math.PI / 2).scale(1, 1, 0.9), 0.6), n: 1 },
@@ -53,7 +111,17 @@ const PARTES = {
   brazo: { geo: ao(cap(0.058, 0.46, 2, 7).translate(0, -0.29, 0), 0.65), n: 2 },
   mano: { geo: ao(new THREE.SphereGeometry(0.065, 7, 5).scale(0.9, 1.2, 0.7), 0.6), n: 2 },
   pierna: { geo: ao(cap(0.088, 0.58, 2, 8).translate(0, -0.38, 0), 0.45), n: 2 },
-  zapato: { geo: ao(new THREE.BoxGeometry(0.13, 0.09, 0.25).translate(0, 0, 0.04), 0.6), n: 2 }
+  zapato: { geo: ao(new THREE.BoxGeometry(0.13, 0.09, 0.25).translate(0, 0, 0.04), 0.6), n: 2 },
+  // piezas de detalle (ver DET): geometrías unitarias que se escalan con el hueso al que están pegadas
+  caja: { geo: ao(new THREE.BoxGeometry(1, 1, 1), 0.82, 0.05), n: DET_N.caja },
+  cilindro: { geo: ao(new THREE.CylinderGeometry(0.5, 0.5, 1, 9), 0.75, 0.05), n: DET_N.cilindro },
+  esfera: { geo: ao(new THREE.SphereGeometry(0.5, 7, 5), 0.8, 0.05), n: DET_N.esfera },
+  toro: { geo: ao(new THREE.TorusGeometry(0.5, 0.08, 5, 14).rotateX(Math.PI / 2), 0.85, 0.05), n: DET_N.toro },
+  gorra: { geo: ao(new THREE.SphereGeometry(0.172, 10, 6, 0, Math.PI * 2, 0, Math.PI * 0.5).scale(1, 1, 1.06), 0.75, 0.05), n: DET_N.gorra },
+  chaleco: { geo: ao(cap(0.205, 0.3, 3, 10).scale(1.28, 1, 0.84), 0.65, 0.08), n: DET_N.chaleco },
+  roca: { geo: ao(new THREE.DodecahedronGeometry(0.13, 0), 0.6, 0.15), n: DET_N.roca },
+  pua: { geo: ao(new THREE.ConeGeometry(0.07, 0.3, 5).translate(0, 0.15, 0), 0.6, 0.15), n: DET_N.pua },
+  onda: { geo: new THREE.TorusGeometry(0.2, 0.012, 4, 20), n: DET_N.onda, basic: true }
 };
 
 // MeshStandard + borde de luz de luna, para que la silueta se separe del fondo
@@ -74,7 +142,7 @@ export class Horda {
     const lit = materialZombi();
     for (const k in PARTES) {
       const P = PARTES[k];
-      const mat = P.basic ? new THREE.MeshBasicMaterial() :
+      const mat = k === 'onda' ? new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }) : P.basic ? new THREE.MeshBasicMaterial() :
         k === 'mancha' ? new THREE.MeshStandardMaterial({ roughness: 0.4, polygonOffset: true, polygonOffsetFactor: -3, side: THREE.DoubleSide }) :
         k === 'boca' ? new THREE.MeshBasicMaterial() : lit;
       const im = new THREE.InstancedMesh(P.geo, mat, max * P.n);
@@ -96,6 +164,9 @@ export class Horda {
       blending: THREE.AdditiveBlending, depthWrite: false }));
     this.brillo.frustumCulled = false; scene.add(this.brillo);
     this.rojo = new THREE.Color(1.2, 0.25, 0.2); this.naranja = new THREE.Color(1.6, 0.5, 0.1); this.cero = new THREE.Matrix4().makeScale(0, 0, 0);
+    const H = x => new THREE.Color(x);
+    this.K = { hueso: H(0xcfc8b0), tajo: H(0x4a0a0a), venda: H(0xc8c0a4), negro: H(0x101012), blanco: H(0xd8d8d0), oro: H(0xc8a030), metal: H(0x9aa0a8), cuero: H(0x2a1c12), piedra: H(0x5a6458), traje: H(0x0e0e14), plata: H(0xcfd4da), naranja: H(0xd2621a) };
+    this.cOnda = H(0x9fe6ff); this._tmp = new THREE.Color();
     this.v = new THREE.Vector3(); this.cnt = {}; for (const k in PARTES) this.cnt[k] = 0;
   }
   dibujar(lista) {
@@ -131,6 +202,16 @@ export class Horda {
           }
         }
       }
+      // detalles: ropa, accesorios y heridas pegados a los huesos
+      const D = z.det, F = z.f, K = this.K;
+      for (let j = 0; j < D.length; j++) {
+        const d = D[j];
+        if (d.f && !F[d.f]) continue;
+        const l = d.l; if (l !== null && ((l === 'c' && z.sinCabeza) || (l === 'b0' && z.sinBrazo[0]) || (l === 'b1' && z.sinBrazo[1]))) continue;
+        if (d.k === 'onda') { const e = d.n.scale.x; if (z.tipo === 'griton' && z.vivo && e > 0.05) { put('onda', d.n, this._tmp.copy(this.cOnda).multiplyScalar(Math.max(0, 1.3 - e * 0.45))); } continue; }
+        const c = d.c;
+        put(d.k, d.n, c === 'acc1' ? z.cAcc1 : c === 'acc2' ? z.cAcc2 : c === 'piel' ? piel : c === 'pelo' ? z.cPelo : c === 'sangre' ? z.cSangre : K[c]);
+      }
     }
     for (let i = ne; i < this.max * 2; i++) this.pOjos[i * 3 + 1] = -999;
     this.brillo.geometry.attributes.position.needsUpdate = true; this.brillo.geometry.attributes.color.needsUpdate = true;
@@ -154,7 +235,11 @@ export function crearZombi() {
   const mangas = hombros.map(h => o(h)), brazos = hombros.map(h => o(h)), manos = hombros.map(h => o(h, 0, -0.62));
   const caderas = [-1, 1].map(s => o(g, s * 0.11, 0.86));
   const piernas = caderas.map(c => o(c)), zapatos = caderas.map(c => o(c, 0, -0.81, 0.0));
-  return { g, cuerpo, torso, cadera, jirones, manchas, cabeza, cab, pelo, ojos, boca, mandibula, hombros, mangas, brazos, manos, caderas, piernas, zapatos,
+  const padres = { cuerpo, torso, cadera, cabeza, cab, hombro1: hombros[1], brazo0: brazos[0], brazo1: brazos[1] };
+  const det = DET.map(([k, p, pos, esc, rot, c, f, l]) => { const n = o(padres[p], pos[0], pos[1], pos[2]); n.scale.set(esc[0], esc[1], esc[2]); n.rotation.set(rot[0], rot[1], rot[2]); return { k, n, c, f, l }; });
+  const ondas = det.filter(d => d.k === 'onda').map(d => d.n);
+  const f = {}; for (const k of FLAGS) f[k] = false;
+  return { det, ondas, f, cAcc1: new THREE.Color(), cAcc2: new THREE.Color(), g, cuerpo, torso, cadera, jirones, manchas, cabeza, cab, pelo, ojos, boca, mandibula, hombros, mangas, brazos, manos, caderas, piernas, zapatos,
     kb: new THREE.Vector3(), ultPts: new Float32Array(27), rag: null, snapDir: new THREE.Vector2(),
     cPiel: new THREE.Color(), cRemera: new THREE.Color(), cPant: new THREE.Color(), cOjo: new THREE.Color(), cOjoBrillo: new THREE.Color(), cPelo: new THREE.Color(),
     cZapato: new THREE.Color(0x1a1714), cTmp: new THREE.Color(), sinBrazo: [false, false], cSangre: new THREE.Color(0x6a0808), cRasgon: new THREE.Color(), cBoca: new THREE.Color(0x200404), cMuerto: new THREE.Color(0x111111) };
@@ -183,7 +268,7 @@ export function prepararZombi(z, tipo) {
   if (tipo === 'escupidor') { z.cPiel.setHex(0x8aa050); z.cSangre.setHex(0x6aff30).multiplyScalar(0.6); z.cab.scale.set(1.1, 1.15, 1.1); }
   if (tipo === 'griton') { z.cPiel.setHex(0xc8c4b0); z.cRemera.setHex(0x30303a); z.cab.scale.set(0.95, 1.22, 0.95); z.pelo.scale.setScalar(0.001); }
   if (tipo === 'explosivo') { z.cPiel.setHex(0xa8a060); z.cRemera.setHex(0x8a7a30); z.torso.scale.set(1.45, 1.15, 1.6); z.cSangre.setHex(0xd06010); }
-  if (tipo === 'patovica') { z.cPiel.setHex(0xb8c890); z.cRemera.setHex(0x3a3a44); z.cPant.setHex(0x1a1a24); z.cPelo.setHex(0x050505); z.pelo.scale.setScalar(0.8); z.torso.scale.set(1.25, 1.05, 1.1); }
+  if (tipo === 'patovica') { z.cPiel.setHex(0xb8c890); z.cRemera.setHex(0x16161e); z.cPant.setHex(0x1a1a24); z.cPelo.setHex(0x050505); z.pelo.scale.setScalar(0.8); z.torso.scale.set(1.25, 1.05, 1.1); }
   if (tipo === 'cerro') { z.cPiel.setHex(0x9ab878); z.cRemera.setHex(0x7a5a3a); z.cPant.setHex(0x4a4030); z.cPelo.setHex(0x203018); z.torso.scale.set(1.2, 1.1, 1.15); }
   // ropa rota: jirones de largo distinto, algunos arrancados
   z.jirones.forEach(j => { j.scale.set(0.7 + Math.random() * 0.8, Math.random() < 0.2 ? 0.001 : 0.6 + Math.random() * 1.2, 1); j.rotation.z = (Math.random() - .5) * 0.5; });
@@ -191,6 +276,32 @@ export function prepararZombi(z, tipo) {
   z.manchas[1].scale.setScalar(Math.random() < 0.6 ? 0.07 + Math.random() * 0.07 : 0.001); z.manchas[1].position.set((Math.random() - .5) * 0.25, 0.42 + Math.random() * 0.12, 0.153);
   if (tipo === 'explosivo') { z.manchas[0].position.z = 0.25; z.manchas[1].position.z = 0.25; }
   z.cRasgon.copy(z.cRemera).multiplyScalar(0.45);
+  // ---- detalles: cada zombi se arma con un conjunto distinto de ropa y heridas ----
+  { const F = z.f, r = Math.random, norm = tipo === 'normal' || tipo === 'corredor' || tipo === 'gateador' || tipo === 'escupidor' || tipo === 'explosivo' || tipo === 'griton';
+    for (const k of FLAGS) F[k] = false;
+    for (const n of z.ondas) n.scale.setScalar(0.0001);
+    z.cAcc1.setHex(elegir([0xb02020, 0x1a3a9a, 0x161616, 0x8a8a8a, 0xd8b020, 0x5ab4e8, 0xe8e8e8]));
+    z.cAcc2.setHex(elegir([0x2a3a5a, 0x4a2a2a, 0x2a4a2a, 0x5a5a5a, 0x7a3a8a]));
+    if (norm) {
+      F.cinto = r() < 0.55; F.costillas = r() < 0.2; F.tajo = r() < 0.55; F.venda = r() < 0.16;
+      const cam = r();
+      if (cam < 0.1) { F.pena = true; z.cRemera.setHex(0xe0b818); z.cRasgon.copy(z.cRemera).multiplyScalar(0.45); z.cAcc1.setHex(0x121212); }      // Peñarol
+      else if (cam < 0.18) { F.nac = true; z.cRemera.setHex(0xe6e6ea); z.cRasgon.copy(z.cRemera).multiplyScalar(0.45); z.cAcc1.setHex(0x1a3a9a); } // Nacional
+      else if (cam < 0.26) { z.cRemera.setHex(0x62b8ea); z.cRasgon.copy(z.cRemera).multiplyScalar(0.45); }                                           // la Celeste
+      if (tipo !== 'gateador') { F.gorra = r() < 0.18; F.mochila = r() < 0.15; F.termo = r() < 0.14; F.bufanda = !F.gorra && r() < 0.2; }
+      F.barba = r() < 0.2; F.lentes = r() < 0.07; F.corbata = tipo === 'normal' && r() < 0.1; F.chaleco = tipo === 'normal' && !F.pena && !F.nac && r() < 0.1;
+      if (F.gorra) z.pelo.scale.setScalar(0.001);
+      if (F.corbata) { z.cRemera.setHex(elegir([0xd8d8d0, 0x9ab8d8, 0xb8b8a8])); z.cRasgon.copy(z.cRemera).multiplyScalar(0.45); z.cAcc1.setHex(elegir([0x8a1c1c, 0x1c2a6a, 0x222222])); }
+      if (F.chaleco) z.cAcc2.setHex(0xe86a10);
+      if (tipo === 'explosivo') { F.garrafa = true; F.cinto = false; F.pena = F.nac = false; }
+      if (tipo === 'escupidor') { F.bultos = true; F.gorra = false; F.lentes = false; }
+      if (tipo === 'griton') { F.gorra = false; F.barba = false; F.lentes = false; F.bufanda = r() < 0.5; F.chaleco = false; F.corbata = false; z.cAcc1.setHex(0x8a8a90); }
+    }
+    z.tajo2 = F.tajo && r() < 0.5;
+    if (tipo === 'tanque') { F.cinto = true; F.costillas = r() < 0.3; F.tajo = true; F.venda = r() < 0.4; F.chaleco = r() < 0.6; z.cAcc2.setHex(0xe86a10); F.cadena = r() < 0.3; }
+    if (tipo === 'patovica') { F.traje = true; F.corbata = true; F.lentes = true; F.cadena = true; F.cinto = true; F.tajo = true; z.cAcc1.setHex(0x8a1c1c); }
+    if (tipo === 'cerro') { F.rocas = true; F.costillas = true; F.tajo = true; F.cinto = true; F.barba = true; }
+  }
   const mangaLarga = Math.random() < 0.4;
   z.mangas.forEach(m => m.scale.set(1, mangaLarga ? 2.4 : 1, 1));
   z.esc = T.escala * (T.jefe ? 1 : 0.92 + Math.random() * 0.16);
@@ -245,6 +356,10 @@ export function animarZombi(z, dt, mov, t) {
     else if (tipo === 'griton') { z.cuerpo.rotation.x = -0.3 * k; z.cabeza.rotation.x = -0.7 * k; z.mandibula.rotation.x = 1.0; B[0].rotation.x = B[1].rotation.x = -0.9 * k; B[0].rotation.z = 0.8 * k; B[1].rotation.z = -0.8 * k; }
     else if (tipo === 'explosivo') { z.torso.scale.set(1.45 + k * 0.35, 1.15 + k * 0.15, 1.6 + k * 0.35); }
     else { const w = Math.min(1, k * 3); B[0].rotation.x += (-2.4 - k * 0.6 - B[0].rotation.x) * w; B[1].rotation.x += (-2.4 - k * 0.6 - B[1].rotation.x) * w; z.cuerpo.rotation.x += (-0.2 * k - z.cuerpo.rotation.x) * w; z.mandibula.rotation.x = 0.65; }
+  }
+  if (tipo === 'griton') { // ondas de sonido: dos anillos que se agrandan mientras toma aire para gritar
+    const k = z.prep > 0 ? 1 - z.prep / (z.prepTotal || 1.1) : -1;
+    for (let j = 0; j < 2; j++) z.ondas[j].scale.setScalar(k < 0 ? 0.0001 : 0.5 + ((k * 2.2 + j * 0.5) % 1) * 3.4);
   }
   if (z.ataque > 0) {
     const a = Math.sin((1 - z.ataque / 0.4) * Math.PI);
