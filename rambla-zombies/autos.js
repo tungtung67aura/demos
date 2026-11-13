@@ -31,7 +31,8 @@ function mats() {
     pintura: new THREE.MeshStandardMaterial({ vertexColors: true, map: texMugre(), roughness: 0.5, metalness: 0.5 }),
     vidrio: new THREE.MeshStandardMaterial({ color: 0x070b10, emissive: 0x0c1826, roughness: 0.08, metalness: 0.9, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
     cromo: new THREE.MeshStandardMaterial({ color: 0xb4bac2, roughness: 0.3, metalness: 0.95 }),
-    goma: new THREE.MeshStandardMaterial({ color: 0x121214, roughness: 0.9, metalness: 0.05 }),
+    goma: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0.55 }), // goma + cromo (color por vértice)
+    luces: new THREE.MeshBasicMaterial({ vertexColors: true }),
     farol: new THREE.MeshStandardMaterial({ color: 0xfff4d0, emissive: 0xffe9a8, emissiveIntensity: 1.5, roughness: 0.2 }),
     luzRoja: new THREE.MeshStandardMaterial({ color: 0xb01818, emissive: 0xff2010, emissiveIntensity: 1.1, roughness: 0.3 }),
     luzAzul: new THREE.MeshStandardMaterial({ color: 0x1830c0, emissive: 0x2050ff, emissiveIntensity: 1.3, roughness: 0.3 }),
@@ -41,6 +42,15 @@ function mats() {
   return MATS;
 }
 
+
+// menos draw calls: cromo y goma comparten material (el color va por vértice) y todas las ópticas son una sola malla sin luz
+const COL_LUZ = { farol: 0xfff0c8, luzRoja: 0xff2a18, luzAzul: 0x2a58ff, luzAmbar: 0xffa810 };
+function compactar(B) {
+  const pintarSi = (geos, hex, soloBlancos) => { _c.setHex(hex); for (const g of geos) { const a = g.attributes.color; if (!a) continue; for (let i = 0; i < a.count; i++) if (!soloBlancos || a.getX(i) > 0.99) a.setXYZ(i, _c.r, _c.g, _c.b); } return geos; };
+  B.goma = B.goma.concat(pintarSi(B.cromo, 0xb4bac2, true)); B.cromo = [];
+  B.luces = []; for (const k in COL_LUZ) if (B[k]) { B.luces = B.luces.concat(pintarSi(B[k], COL_LUZ[k], false)); B[k] = []; }
+  return B;
+}
 // ---------- geometría ----------
 const _c = new THREE.Color();
 function teñir(geo, hex, oscuro = 0.62) { // color por vértice + oscurecido abajo (oclusión falsa)
@@ -184,6 +194,7 @@ export function crearAuto(tipo, color, sem = 1, opc = {}) {
   }
 
   // armar la malla final: una por material
+  compactar(B);
   const g = new THREE.Group(); g.name = 'auto';
   for (const k in B) { if (!B[k].length) continue; const geos = B[k].map(x => x.index ? x.toNonIndexed() : x); let n = 0; geos.forEach(x => n += x.attributes.position.count);
     const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), uv = new Float32Array(n * 2), col = new Float32Array(n * 3); let o = 0;
@@ -220,6 +231,7 @@ export function crearBus(sem = 5) {
   for (let i = 0; i < 3; i++) B.cromo.push(caja(0.9, 0.12, 0.7, -3 + i * 2.2, 3.62, 0, 0xb4bac2, 1)); // ventilaciones del techo
   B.pintura.push(caja(0.7, 0.55, 0.012, -1 + R() * 3, 1.1, W2 + 0.02, 0x4a0a0a, 1)); // sangre en la puerta
   const g = new THREE.Group(); g.name = 'bus';
+  compactar(B);
   for (const k in B) { if (!B[k].length) continue; const geos = B[k].map(x => x.index ? x.toNonIndexed() : x); let n = 0; geos.forEach(x => n += x.attributes.position.count);
     const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), uv = new Float32Array(n * 2), col = new Float32Array(n * 3); let o = 0;
     for (const x of geos) { if (!x.attributes.normal) x.computeVertexNormals(); pos.set(x.attributes.position.array, o * 3); nor.set(x.attributes.normal.array, o * 3); if (x.attributes.uv) uv.set(x.attributes.uv.array, o * 2); if (x.attributes.color) col.set(x.attributes.color.array, o * 3); else col.fill(1, o * 3, (o + x.attributes.position.count) * 3); o += x.attributes.position.count; x.dispose(); }

@@ -28,7 +28,7 @@ class Lote {
 
 export function crearAmbiente(scene) {
   const C = NM / 2;
-  const col = [], L = new Lote(), flags = [], ambar = [];
+  const col = [], L = new Lote(), flags = [], ambar = []; let banderas = null;
   const MAT = {
     pintado: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.65, metalness: 0.15 }),
     metal: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.4, metalness: 0.8 }),
@@ -43,6 +43,11 @@ export function crearAmbiente(scene) {
     const tx = rotulo(['MONTEVIDEO'], 2048, 300, null, '#f4f6f8', 'bold 215px "Bangers", "Impact", sans-serif', ['#2a7fc0', 26]);
     const cartel = new THREE.Mesh(new THREE.PlaneGeometry(30, 4.4), new THREE.MeshStandardMaterial({ map: tx, alphaTest: 0.45, side: THREE.DoubleSide, emissive: 0xffffff, emissiveMap: tx, emissiveIntensity: 0.28, roughness: 0.7 }));
     cartel.position.set(p.x, y + 3.1, p.z); cartel.rotation.y = yaw; scene.add(cartel);
+    // la fuente Bangers carga sola (font-display: swap): si todavía no estaba, se vuelve a pintar el cartel cuando llega
+    if (document.fonts && !document.fonts.check('215px Bangers')) document.fonts.load('215px Bangers').then(() => {
+      const n = rotulo(['MONTEVIDEO'], 2048, 300, null, '#f4f6f8', 'bold 215px "Bangers", "Impact", sans-serif', ['#2a7fc0', 26]);
+      cartel.material.map.dispose(); cartel.material.map = cartel.material.emissiveMap = n; cartel.material.needsUpdate = true;
+    }).catch(() => {});
     L.add('pintado', cb(31, 0.6, 1.0, 0, 0.3, 0, 0x9a948a), p.x, y, p.z, yaw);
     for (const x of [-12, 0, 12]) L.add('metal', cb(0.25, 2.2, 0.25, x, 1.4, -0.05, 0x3a3e44), p.x, y, p.z, yaw);
   }
@@ -106,9 +111,10 @@ export function crearAmbiente(scene) {
       L.add('metal', cb(0.12, 3.6, 0.12, 0, 1.8, 0, 0x2a2e34), p.x, y0, p.z, yw);
       L.add('pintado', cb(0.4, 1.1, 0.3, 0, 3.7, 0, 0x16181c), p.x, y0, p.z, yw);
       L.add('emisivo', cb(0.2, 0.2, 0.05, 0, 4.05, 0.16, 0xff2418), p.x, y0, p.z, yw * 1);
-      const a = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.05), new THREE.MeshBasicMaterial({ color: 0xffa000 })); a.position.set(p.x + Math.sin(yw) * 0.17, y0 + 3.7, p.z + Math.cos(yw) * 0.17); a.rotation.y = yw; scene.add(a); ambar.push(a);
+      ambar.push(new THREE.BoxGeometry(0.2, 0.2, 0.05).rotateY(yw).translate(p.x + Math.sin(yw) * 0.17, y0 + 3.7, p.z + Math.cos(yw) * 0.17)); // se juntan en una malla (1 draw call)
     }
   }
+  const luzAmbar = new THREE.Mesh(unir(ambar), new THREE.MeshBasicMaterial({ color: 0xffa000 })); scene.add(luzAmbar);
   {
     const im = new THREE.InstancedMesh(new THREE.BoxGeometry(0.5, 0.03, 3.3), new THREE.MeshStandardMaterial({ color: 0xdcdad0, roughness: 0.85, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }), zebra.length);
     zebra.forEach((o, k) => { _e.set(0, o.yaw, 0); _q.setFromEuler(_e); _m.compose(_v.set(o.x, o.y, o.z), _q, _s); im.setMatrixAt(k, _m); }); scene.add(im);
@@ -124,10 +130,12 @@ export function crearAmbiente(scene) {
     for (const i of [C - 62, C - 18, C + 8, C + 52, C + 88, C + 120]) {
       const d = -9.9, p = aMundo(i, d), y0 = piso(d), yw = yawDe(i);
       L.add('metal', new THREE.CylinderGeometry(0.06, 0.09, 7.5, 6).translate(0, 3.75, 0), p.x, y0, p.z, 0);
-      const gr = new THREE.Group(); gr.position.set(p.x, y0 + 6.7, p.z); const f = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 1.27, 6, 1), new THREE.MeshStandardMaterial({ map: tx, side: THREE.DoubleSide, roughness: 0.9 }));
-      f.position.x = 0.95; gr.add(f); gr.rotation.y = yw + Math.PI / 2; scene.add(gr); flags.push({ gr, f, yw, k: Math.random() * 6 });
+      const gr = new THREE.Group(); gr.position.set(p.x, y0 + 6.7, p.z); const f = new THREE.Object3D(); // la bandera se dibuja instanciada (las 6 en 1 draw call)
+      f.position.x = 0.95; gr.add(f); gr.rotation.y = yw + Math.PI / 2; flags.push({ gr, f, yw, k: Math.random() * 6 });
       col.push({ x: p.x, z: p.z, r: 0.18, top: y0 + 7.5, metal: true });
     }
+    banderas = new THREE.InstancedMesh(new THREE.PlaneGeometry(1.9, 1.27, 6, 1), new THREE.MeshStandardMaterial({ map: tx, side: THREE.DoubleSide, roughness: 0.9 }), flags.length);
+    banderas.frustumCulled = false; scene.add(banderas);
   }
 
   // ---------- tachos de basura sobre la vereda del muro ----------
@@ -168,8 +176,9 @@ export function crearAmbiente(scene) {
   return {
     colisiones: col,
     update(t) {
-      for (const f of flags) { f.f.rotation.y = Math.sin(t * 1.7 + f.k) * 0.18; f.gr.rotation.y = f.yw + Math.PI / 2 + Math.sin(t * 0.5 + f.k) * 0.25; }
-      const on = Math.sin(t * 5) > 0; for (const a of ambar) a.visible = on;
+      flags.forEach((f, j) => { f.f.rotation.y = Math.sin(t * 1.7 + f.k) * 0.18; f.gr.rotation.y = f.yw + Math.PI / 2 + Math.sin(t * 0.5 + f.k) * 0.25; f.gr.updateMatrixWorld(true); banderas.setMatrixAt(j, f.f.matrixWorld); });
+      banderas.instanceMatrix.needsUpdate = true;
+      luzAmbar.visible = Math.sin(t * 5) > 0;
     }
   };
 }

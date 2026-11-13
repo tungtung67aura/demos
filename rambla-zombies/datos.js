@@ -67,6 +67,14 @@ const CLAVE = 'rz-perfil';
 export function cargarPerfil() {
   let p = {};
   try { p = JSON.parse(localStorage.getItem(CLAVE) || '{}'); } catch (e) { p = {}; }
-  return Object.assign({ record: +localStorage.getItem('rz-record') || 0, mejorOleada: 0, bajas: 0, partidas: 0, victorias: 0, logros: {}, pesadilla: false, tipGiro: false, armasCamp: ['pistola', 'termo'], infArmas: ['pistola', 'termo'], inf: { mejorOleada: 0, record: 0, partidas: 0, bajas: 0 } }, p);
+  const r = Object.assign({ record: +localStorage.getItem('rz-record') || 0, mejorOleada: 0, bajas: 0, partidas: 0, victorias: 0, logros: {}, pesadilla: false, tipGiro: false, armasCamp: ['pistola', 'termo'], infArmas: ['pistola', 'termo'], inf: { mejorOleada: 0, record: 0, partidas: 0, bajas: 0 } }, p);
+  // perfiles de antes del Modo Infinito: las armas que ya se habían comprado no quedaron anotadas.
+  // Se desbloquean según la mejor oleada alcanzada (lo que se podía pagar hasta ahí), una sola vez.
+  if (!r.migrArmas) {
+    r.migrArmas = 1;
+    if (r.partidas > 0) { const PRECIO = { bate: 100, sarten: 140, machete: 180, escopeta: 250, revolver: 380, metralleta: 450, rifle: 700 };
+      for (const id in PRECIO) if (PRECIO[id] <= r.mejorOleada * 90 && !r.armasCamp.includes(id)) r.armasCamp.push(id); }
+  }
+  return r;
 }
 export function guardarPerfil(p) { try { localStorage.setItem(CLAVE, JSON.stringify(p)); } catch (e) { } }

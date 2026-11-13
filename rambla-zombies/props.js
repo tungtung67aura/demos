@@ -1,7 +1,8 @@
 // Utilería de la rambla: bancos, palmeras, contenedores, parada del ómnibus, el Palacio Salvo,
 // barricadas en los extremos, bengalas y fuegos artificiales. Casi todo instanciado o horneado.
 import * as THREE from 'https://esm.sh/three@0.160.0';
-import { aMundo, muestras, piso, NM, brilloTex, unir } from './world.js';
+import { aMundo, muestras, piso, NM, brilloTex, unir, hornear } from './world.js';
+import { enZona } from './mapas.js';
 
 const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), s1 = new THREE.Vector3(1, 1, 1);
 const caja = (w, h, d, x = 0, y = 0, z = 0) => new THREE.BoxGeometry(w, h, d).translate(x, y, z);
@@ -22,7 +23,7 @@ export function crearProps(scene) {
   for (let i = 4; i < N; i += 14) {
     const p = aMundo(i, -6.8); const yaw = angulo(i) + Math.PI / 2;
     bancos.push({ x: p.x, y: piso(-6.8), z: p.z, yaw });
-    if (Math.abs(i - C) < 75) col.push({ x: p.x, z: p.z, r: 0.75, top: piso(-6.8) + 0.95, madera: true, cajas: [{ cx: p.x, cz: p.z, c: Math.cos(yaw), s: Math.sin(yaw), hx: 0.95, hz: 0.24, y0: piso(-6.8), y1: piso(-6.8) + 0.91 }] });
+    if (enZona(i)) col.push({ x: p.x, z: p.z, r: 0.75, top: piso(-6.8) + 0.95, madera: true, cajas: [{ cx: p.x, cz: p.z, c: Math.cos(yaw), s: Math.sin(yaw), hx: 0.95, hz: 0.24, y0: piso(-6.8), y1: piso(-6.8) + 0.91 }] });
   }
   instanciar(scene, geoBanco, new THREE.MeshStandardMaterial({ color: 0x5a3a20, roughness: 0.9 }), bancos);
 
@@ -41,7 +42,7 @@ export function crearProps(scene) {
   for (let i = 2; i < N; i += 9) {
     const lado = (i / 9 | 0) % 3 === 0 ? -4.2 : 14.2;
     const p = aMundo(i, lado); palmas.push({ x: p.x, y: piso(lado), z: p.z, yaw: Math.random() * 6.28, s: 0.85 + Math.random() * 0.35 });
-    if (Math.abs(i - C) < 75 && lado < 0) col.push({ x: p.x, z: p.z, r: 0.35, top: 20, madera: true });
+    if (enZona(i) && lado < 0) col.push({ x: p.x, z: p.z, r: 0.35, top: 20, madera: true });
   }
   instanciar(scene, geoTronco, new THREE.MeshStandardMaterial({ color: 0x5a4632, roughness: 1 }), palmas);
   instanciar(scene, geoHojas, new THREE.MeshStandardMaterial({ color: 0x2f5a2a, roughness: 0.9, side: THREE.DoubleSide }), palmas);
@@ -76,7 +77,7 @@ export function crearProps(scene) {
     const cartel = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.6), new THREE.MeshBasicMaterial({ map: tx, side: THREE.DoubleSide }));
     cartel.position.set(2.2, 2.4, 0); cartel.rotation.y = Math.PI / 2; g.add(cartel);
     g.add(new THREE.Mesh(caja(0.06, 2.8, 0.06, 2.2, 1.4, 0), fierro));
-    scene.add(g);
+    hornear(scene, g); // una malla por material
     col.push({ x: p.x, z: p.z, r: 1.0, top: y0 + 2.7 });
   }
 
@@ -96,7 +97,7 @@ export function crearProps(scene) {
       [new THREE.CylinderGeometry(0.2, 1.4, 14, 6), 119, piedra]];
     for (const [geo, y, m] of partes) { const ms = new THREE.Mesh(geo, m); ms.position.y = y; g.add(ms); }
     for (const sx of [-1, 1]) { const t = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 10, 8), piedra); t.position.set(sx * 12, 81, sx * 0); g.add(t); }
-    scene.add(g);
+    hornear(scene, g);
     luzSalvo = new THREE.Sprite(new THREE.SpriteMaterial({ map: brilloTex('rgba(255,40,30,1)'), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false }));
     luzSalvo.position.set(p.x, y0 + 127, p.z); luzSalvo.scale.setScalar(9); scene.add(luzSalvo);
   }
@@ -113,15 +114,22 @@ export function crearProps(scene) {
   instanciar(scene, unir([caja(2.4, 0.35, 0.1, 0, 0.3, 0), caja(0.08, 1.1, 0.5, -1, 0, 0), caja(0.08, 1.1, 0.5, 1, 0, 0)]), matValla, vallas);
 
   // ---- bengalas rojas tiradas en la calle (sin luz real: emisivo + halo + charco aditivo)
-  const bengalas = [];
-  const texRoja = brilloTex('rgba(255,50,30,1)');
-  for (const [i, d] of [[C + 6, 3], [C - 18, 8], [C + 28, 1.5], [C - 44, 6]]) {
+  // (antes 3 draw calls por bengala; ahora 3 en total: palitos juntos, halos en un Points y charcos instanciados con brillo por color)
+  const bengalas = [], LB = [[C + 6, 3], [C - 18, 8], [C + 28, 1.5], [C - 44, 6]];
+  const texRoja = brilloTex('rgba(255,50,30,1)'), palitos = [], hPos = new Float32Array(LB.length * 3), hCol = new Float32Array(LB.length * 3);
+  const charcosB = new THREE.InstancedMesh(new THREE.PlaneGeometry(7, 7).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: texRoja, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }), LB.length);
+  LB.forEach(([i, d], k) => {
     const p = aMundo(i, d), y = piso(d);
-    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.3, 6).rotateZ(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xff4020 })); b.position.set(p.x, y + 0.05, p.z); scene.add(b);
-    const h = new THREE.Sprite(new THREE.SpriteMaterial({ map: texRoja, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true })); h.position.set(p.x, y + 0.3, p.z); h.scale.setScalar(1.6); scene.add(h);
-    const c = new THREE.Mesh(new THREE.PlaneGeometry(7, 7).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: texRoja, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
-    c.position.set(p.x, y + 0.03, p.z); scene.add(c); bengalas.push({ h, c, f: Math.random() * 10 });
-  }
+    palitos.push(new THREE.CylinderGeometry(0.04, 0.04, 0.3, 6).rotateZ(Math.PI / 2).translate(p.x, y + 0.05, p.z));
+    hPos.set([p.x, y + 0.3, p.z], k * 3);
+    m4.makeTranslation(p.x, y + 0.03, p.z); charcosB.setMatrixAt(k, m4); charcosB.setColorAt(k, new THREE.Color(0.4, 0.4, 0.4));
+    bengalas.push({ f: Math.random() * 10 });
+  });
+  scene.add(new THREE.Mesh(unir(palitos), new THREE.MeshBasicMaterial({ color: 0xff4020 })));
+  const halosB = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(hPos, 3)).setAttribute('color', new THREE.BufferAttribute(hCol, 3)),
+    new THREE.PointsMaterial({ map: texRoja, size: 3.6, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+  scene.add(halosB, charcosB);
+  const _cb = new THREE.Color();
 
   // ---- fuegos artificiales sobre la ciudad (pool de 3 estallidos en un solo Points)
   const NF = 3 * 90, fPos = new Float32Array(NF * 3).fill(-999), fCol = new Float32Array(NF * 3), fVel = new Float32Array(NF * 3), fVida = new Float32Array(NF), fC0 = new Float32Array(NF * 3);
@@ -148,7 +156,8 @@ export function crearProps(scene) {
     fuegos(n = 3, centro) { for (let k = 0; k < n; k++) setTimeout(() => { _c.copy(centro || aMundo(C + (Math.random() - .5) * 120, 90 + Math.random() * 60)); _c.y = 55 + Math.random() * 35; estallido(_c); }, k * 450); return n; },
     update(t, dt, sonar) {
       luzSalvo.material.opacity = Math.sin(t * 2.5) > 0 ? 1 : 0.15;
-      for (const b of bengalas) { const k = 0.75 + Math.sin(t * 23 + b.f) * 0.15 + Math.random() * 0.15; b.h.scale.setScalar(1.3 + k); b.c.material.opacity = 0.3 * k; }
+      bengalas.forEach((b, j) => { const k = 0.75 + Math.sin(t * 23 + b.f) * 0.15 + Math.random() * 0.15; halosB.geometry.attributes.color.setXYZ(j, k, k, k); charcosB.setColorAt(j, _cb.setScalar(0.3 * k)); });
+      halosB.geometry.attributes.color.needsUpdate = true; charcosB.instanceColor.needsUpdate = true;
       if ((proximo -= dt) <= 0) { proximo = 9 + Math.random() * 14; this.fuegos(1 + (Math.random() * 2 | 0)); if (sonar) sonar(); }
       if (!activos) return;
       let vivas = 0;

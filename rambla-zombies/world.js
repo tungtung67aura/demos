@@ -4,6 +4,7 @@ import { crearProps } from './props.js';
 import { crearAuto, crearBus } from './autos.js';
 import { texAsfalto, texBaldosa, texPiedra, texArena, texFachada } from './texturas.js';
 import { crearAmbiente } from './ambiente.js';
+import { crearZonas } from './zonas.js';
 
 export function brilloTex(color) {
   const c = document.createElement('canvas'); c.width = c.height = 64;
@@ -188,10 +189,11 @@ function crearEdificios(scene) {
   const tonos = [0xe4dccc, 0xc9c0b0, 0xb9b5ad, 0xd9c9b1, 0xc3b9a8, 0xd2d2cd, 0xbfa890, 0xa8b4b8];
   const pintar = (g, hex, k) => { const c = new THREE.Color(hex).multiplyScalar(k), n = g.attributes.position.count, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) a.set([c.r, c.g, c.b], i * 3); g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g; };
   const pos = (g, p, yaw, y) => { g.rotateY(yaw); g.translate(p.x, y, p.z); return g; };
+  // una sola textura y una sola malla para los 220 edificios (antes 4 mallas): el desfase de UV ya los hace distintos
+  const tx = texFachada(0.35);
+  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, map: tx.mapa, emissive: 0xffffff, emissiveMap: tx.emisivo, emissiveIntensity: 1.3, roughness: 0.95 });
+  const geos = [];
   for (let k = 0; k < 4; k++) {
-    const tx = texFachada(0.3 + k * 0.05);
-    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, map: tx.mapa, emissive: 0xffffff, emissiveMap: tx.emisivo, emissiveIntensity: 1.3, roughness: 0.95 });
-    const geos = [];
     for (let j = 0; j < por; j++) {
       const i = Math.random() * N, m = muestras[Math.round(i)];
       const w = 10 + Math.random() * 12, d = 10 + Math.random() * 10;
@@ -211,8 +213,8 @@ function crearEdificios(scene) {
       if (Math.random() < 0.5) { const q = loc(w * 0.22, -d * 0.2); techos.push(pos(pintar(new THREE.CylinderGeometry(1.3, 1.3, 2.2, 9), 0x7a6a58, 1), q, 0, y0 + 2.4)); for (const [dx, dz] of [[-0.9, -0.9], [0.9, 0.9]]) techos.push(pos(pintar(new THREE.BoxGeometry(0.2, 1.3, 0.2), 0x4a4e54, 1), { x: q.x + dx, z: q.z + dz }, 0, y0 + 0.65)); }
       if (Math.random() < 0.35 || h > 45) { const q = loc(w * 0.3, d * 0.25); techos.push(pos(pintar(new THREE.CylinderGeometry(0.06, 0.08, 7, 4), 0x30343a, 1), q, 0, y0 + 3.5)); if (h > 45) luzP.push(q.x, y0 + 7.1, q.z); }
     }
-    scene.add(new THREE.Mesh(unir(geos), mat));
   }
+  scene.add(new THREE.Mesh(unir(geos), mat));
   scene.add(new THREE.Mesh(unir(techos), new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.85 })));
   const gl = new THREE.BufferGeometry(); gl.setAttribute('position', new THREE.Float32BufferAttribute(luzP, 3));
   const luces = new THREE.Points(gl, new THREE.PointsMaterial({ map: brilloTex('rgba(255,40,30,1)'), size: 7, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
@@ -266,7 +268,7 @@ export function unir(geos) {
   bg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); bg.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); bg.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   return bg;
 }
-function hornear(scene, grupo) {
+export function hornear(scene, grupo) {
   grupo.updateMatrixWorld(true);
   const cubetas = new Map();
   grupo.traverse(o => {
@@ -312,18 +314,19 @@ function crearChatarra(scene) {
   const cajaBus = [{ cx: pb.x, cz: pb.z, c: Math.cos(bus.rotation.y), s: Math.sin(bus.rotation.y), hx: 6, hz: 1.3, y0: 1.2, y1: 5.0 }];
   for (let s = -5; s <= 5; s += 2.5) col.push({ x: pb.x + dir.x * s, z: pb.z + dir.z * s, r: 1.7, top: 1.2 + 3.8, metal: true, cajas: cajaBus });
   // fuego
-  const tex = brilloTex('rgba(255,140,40,1)'), llamas = [];
-  for (let i = 0; i < 6; i++) {
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
-    s.position.set(fuego.x + (Math.random() - .5) * 2, 2.6 + Math.random(), fuego.z + (Math.random() - .5) * 1.5);
-    scene.add(s); llamas.push(s);
-  }
+  // fuego del auto: 6 llamas en un solo Points (antes 6 sprites = 6 draw calls); titilan por color y suben
+  const tex = brilloTex('rgba(255,140,40,1)'), llamas = [], lPos = new Float32Array(18), lCol = new Float32Array(18);
+  for (let i = 0; i < 6; i++) llamas.push({ x: fuego.x + (Math.random() - .5) * 2, z: fuego.z + (Math.random() - .5) * 1.5 });
+  const gLl = new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(lPos, 3)).setAttribute('color', new THREE.BufferAttribute(lCol, 3));
+  const pLl = new THREE.Points(gLl, new THREE.PointsMaterial({ map: tex, size: 4.4, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+  pLl.frustumCulled = false; scene.add(pLl);
   const luzFuego = new THREE.PointLight(0xff7a20, 50, 35, 1.6); luzFuego.position.set(fuego.x, 4, fuego.z); scene.add(luzFuego);
   hornear(scene, grupoChatarra);
   return {
     colisiones: col,
     update(t) {
-      llamas.forEach((s, i) => { const k = 2 + Math.sin(t * 9 + i * 2) * 0.8 + Math.random() * 0.6; s.scale.set(k * 1.2, k * 1.8, 1); s.position.y = 2.6 + ((t * 1.5 + i * 0.3) % 1.2); });
+      llamas.forEach((s, i) => { const k = (2 + Math.sin(t * 9 + i * 2) * 0.8 + Math.random() * 0.6) / 2.6; lPos[i * 3] = s.x; lPos[i * 3 + 1] = 2.6 + ((t * 1.5 + i * 0.3) % 1.2); lPos[i * 3 + 2] = s.z; lCol[i * 3] = lCol[i * 3 + 1] = lCol[i * 3 + 2] = k; });
+      gLl.attributes.position.needsUpdate = gLl.attributes.color.needsUpdate = true;
       luzFuego.intensity = 40 + Math.sin(t * 13) * 10 + Math.random() * 15;
     }
   };
@@ -442,16 +445,21 @@ export function crearMundo(scene, movil) {
   scene.add(disco);
   const mar = crearMar(scene, movil), rambla = crearRambla(scene);
   const edif = crearEdificios(scene);
-  const cerro = crearCerro(scene), chatarra = crearChatarra(scene), props = crearProps(scene), puerto = crearPuerto(scene), amb = crearAmbiente(scene);
+  const cerro = crearCerro(scene), chatarra = crearChatarra(scene), props = crearProps(scene), puerto = crearPuerto(scene), amb = crearAmbiente(scene), zonas = crearZonas(scene);
   let alba = 0, objetivo = 0;
   const FOG_N = new THREE.Color(0x1a2444);
   return {
-    colisiones: chatarra.colisiones.concat(props.colisiones, puerto.colisiones, amb.colisiones), puerto,
+    colisiones: chatarra.colisiones.concat(props.colisiones, puerto.colisiones, amb.colisiones, zonas.colisiones), puerto,
     fuegos: (n, c) => props.fuegos(n, c), alSonarFuegos: null,
     setAlba(v) { objetivo = v; },
+    setAtmo(a, id) { // clima de cada mapa: color de la noche, niebla, horizonte y luz ambiente (y se prende su utilería)
+      zonas.mostrar(id);
+      NOCHE.setHex(a.noche); FOG_N.setHex(a.niebla); scene.fog.density = a.densidad; cielo.material.uniforms.horizonte.value.setHex(a.horizonte);
+      ambiente.color.setHex(a.cielo); ambiente.groundColor.setHex(a.suelo);
+    },
     get alba() { return alba; },
     update(t, dt, renderer, jugador) {
-      mar.update(t); edif.update(t); amb.update(t, dt, jugador); rambla.update(t, dt, jugador); cerro.update(t); chatarra.update(t); puerto.update(t, dt, jugador); props.update(t, dt, this.alSonarFuegos);
+      mar.update(t); edif.update(t); zonas.update(t); amb.update(t, dt, jugador); rambla.update(t, dt, jugador); cerro.update(t); chatarra.update(t); puerto.update(t, dt, jugador); props.update(t, dt, this.alSonarFuegos);
       alba += (objetivo - alba) * Math.min(1, dt * 0.5);
       cielo.material.uniforms.alba.value = alba;
       cielo.position.copy(jugador || cielo.position);

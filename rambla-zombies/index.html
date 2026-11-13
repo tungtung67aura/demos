@@ -74,6 +74,8 @@
   <div class="menu">
     <button id="b-jugar" class="pri">¡Dale, a matar zombis!</button>
     <button id="b-infinito" class="sec inf">♾ Modo Infinito</button>
+    <button id="b-play" class="sec play">🧪 Playground</button>
+    <div id="mapas-sel" class="opc mapas-sel"></div>
     <div id="modos" class="opc"><button data-modo="normal" class="sel">Normal</button><button data-modo="pesadilla">Pesadilla</button></div>
     <div class="fila-bt">
       <button id="b-como" class="sec">Cómo se juega</button>
@@ -82,7 +84,7 @@
     </div>
   </div>
   <div id="record"></div>
-  <div class="pie">v3 · hecho a mano en Montevideo</div>
+  <div class="pie">v7 · hecho a mano en Montevideo</div>
 </div>
 
 <div id="como" class="pantalla panel oculto">
@@ -146,6 +148,21 @@
   <div id="inf-armas"></div>
   <div id="inf-record"></div>
   <div class="menu"><button id="b-inf-jugar" class="pri">¡A la rambla!</button><button class="sec volver">Volver</button></div>
+</div>
+
+<div id="playground" class="pantalla panel oculto">
+  <h2>🧪 Playground</h2>
+  <p class="sub pg-sub">Armá la partida como quieras: mapa, zombis, armas y dificultad. No cuenta para récords ni logros.</p>
+  <div id="pg-form">
+    <section><h3>Mapa</h3><div class="opc" id="pg-mapa"></div></section>
+    <section><h3>Zombis por oleada <b id="pg-cant-v"></b></h3><input type="range" id="pg-cant" min="5" max="120" step="5"></section>
+    <section><h3>Duración de la oleada <b id="pg-dur-v"></b></h3><input type="range" id="pg-dur" min="10" max="180" step="10"></section>
+    <section><h3>Dificultad</h3><div class="opc" id="pg-dif"></div></section>
+    <section><h3>Tipos de zombi</h3><div class="chips" id="pg-tipos"></div></section>
+    <section><h3>Armas</h3><div class="chips" id="pg-armas"></div></section>
+    <section><h3>Extras</h3><div class="chips" id="pg-extras"></div></section>
+  </div>
+  <div class="menu"><button id="b-pg-jugar" class="pri">¡A jugar!</button><button class="sec volver">Volver</button></div>
 </div>
 
 <div id="mods" class="pantalla panel oculto">

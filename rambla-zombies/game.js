@@ -1,12 +1,13 @@
 // Zombis en la Rambla — juego principal
 import * as THREE from 'https://esm.sh/three@0.160.0';
-import { crearMundo, local, aMundo, piso, NM, brilloTex, muestras, PUERTO_I0 } from './world.js';
+import { crearMundo, local, aMundo, piso, NM, brilloTex, muestras, PUERTO_I0, unir } from './world.js';
 import { crearFisica, rayoCaja, sacarPunto, adentro, crearGrillaDin } from './fisica.js';
 import { ARMAS, crearModelos } from './armas.js';
 import { Horda, crearZombi, prepararZombi, animarZombi, TIPOS } from './zombis.js';
 import { iniciarAudio, sonido, volumen, musica } from './audio.js';
 import { crearEfectos } from './efectos.js';
 import { MOD, SINERGIAS, RAREZA, calcular, ofrecer, cantidadInf, jefeInf, vidaInf, eventoInf, mezclaInf, EVENTOS } from './infinito.js';
+import { MAPAS, ORDEN_MAPAS } from './mapas.js';
 import { OLEADAS_TOTAL, mezcla, cantidad, JEFES, MEJORAS, precioMejora, EQUIPO, VENTAJAS, PESOS, LOGROS, cargarPerfil, guardarPerfil } from './datos.js';
 
 const $ = id => document.getElementById(id);
@@ -46,6 +47,7 @@ const luzJugador = new THREE.PointLight(0xffd8a8, 3.5, 16, 1.5); camera.add(luzJ
 const vmScene = new THREE.Scene(), vmCam = new THREE.PerspectiveCamera(60, 1, 0.01, 10);
 vmScene.add(new THREE.HemisphereLight(0xa0b0e0, 0x403020, 2.2));
 const vmLuz = new THREE.DirectionalLight(0xffd8b0, 2.2); vmLuz.position.set(1, 2, 1); vmScene.add(vmLuz);
+const vmRelleno = new THREE.DirectionalLight(0x9ab4ff, 1.5); vmRelleno.position.set(-1.6, 0.7, 0.6); vmScene.add(vmRelleno); // luz de recorte fría del lado izquierdo: el arma no queda negra contra la noche
 const vmFlashLuz = new THREE.PointLight(0xffb050, 0, 3); vmFlashLuz.position.set(0.2, 0, -0.8); vmScene.add(vmFlashLuz);
 const soporte = new THREE.Group(); vmScene.add(soporte); soporte.scale.setScalar(0.8);
 const modelos = crearModelos();
@@ -139,27 +141,32 @@ function trazar(a, b, color = 0xffe0a0) {
 }
 
 // ---------- Pickups (balas y chivitos que sueltan los zombis) — pool fijo, sin crear mallas en juego ----------
-const texGlow = { balas: brilloTex('rgba(120,255,120,1)'), chivito: brilloTex('rgba(255,90,90,1)') };
-function mallaPickup(tipo) {
-  const g = new THREE.Group();
-  if (tipo === 'chivito') { // pan, carne, huevo: un chivito como la gente
-    const pan = new THREE.MeshStandardMaterial({ color: 0xd9a050 });
-    const a = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.1, 0.32), pan); a.position.y = 0.05; g.add(a);
-    const c = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.06, 0.3), new THREE.MeshStandardMaterial({ color: 0x6a3018 })); c.position.y = 0.13; g.add(c);
-    const h = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.03, 0.2), new THREE.MeshStandardMaterial({ color: 0xfff6e0, emissive: 0x332200 })); h.position.y = 0.17; g.add(h);
-    const b = a.clone(); b.position.y = 0.23; g.add(b);
-  } else {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.35, 0.5), new THREE.MeshStandardMaterial({ color: 0x3a5a2a, emissive: 0x0a2000 }));
-    m.position.y = 0.18; g.add(m);
-    const f = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.08, 0.52), new THREE.MeshStandardMaterial({ color: 0x222222 })); f.position.y = 0.18; g.add(f);
+// Instanciados: 2 mallas (cajas de balas, chivitos) + 1 nube de puntos para el brillo, sin importar cuántos haya (antes 3-5 draw calls por pickup)
+function geoPickup(tipo) {
+  const pz = (w, h, d, y, hex) => { const g = new THREE.BoxGeometry(w, h, d).translate(0, y, 0).toNonIndexed(), c = new THREE.Color(hex), n = g.attributes.position.count, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) a.set([c.r, c.g, c.b], i * 3); g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g; };
+  return tipo === 'chivito' ? unir([pz(0.5, 0.1, 0.32, 0.05, 0xd9a050), pz(0.46, 0.06, 0.3, 0.13, 0x6a3018), pz(0.2, 0.03, 0.2, 0.17, 0xfff6e0), pz(0.5, 0.1, 0.32, 0.23, 0xd9a050)])
+    : unir([pz(0.5, 0.35, 0.5, 0.18, 0x3f6a2c), pz(0.52, 0.08, 0.52, 0.18, 0x222222)]);
+}
+const PICK_MAX = 6, matPick = new THREE.MeshStandardMaterial({ vertexColors: true, emissive: 0x0a1400 });
+const imPick = { balas: new THREE.InstancedMesh(geoPickup('balas'), matPick, PICK_MAX), chivito: new THREE.InstancedMesh(geoPickup('chivito'), matPick, PICK_MAX) };
+for (const k in imPick) { imPick[k].count = 0; imPick[k].frustumCulled = false; scene.add(imPick[k]); }
+const glowPick = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array(PICK_MAX * 6), 3)).setAttribute('color', new THREE.BufferAttribute(new Float32Array(PICK_MAX * 6), 3)),
+  new THREE.PointsMaterial({ map: brilloTex('rgba(255,255,255,1)'), size: 2.2 / Math.tan(THREE.MathUtils.degToRad(35)), vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+glowPick.frustumCulled = false; scene.add(glowPick);
+const COL_GLOW = { balas: new THREE.Color(0.47, 1, 0.47), chivito: new THREE.Color(1, 0.35, 0.35) };
+function mallaPickup() { const g = new THREE.Object3D(); g.visible = false; return g; } // solo guarda posición/giro: se dibuja instanciado
+function dibujarPickups() {
+  const n = { balas: 0, chivito: 0 }, gp = glowPick.geometry.attributes.position, gc = glowPick.geometry.attributes.color; let q = 0;
+  for (const p of poolPick) {
+    if (!p.g.visible) continue;
+    p.g.updateMatrix(); imPick[p.tipo].setMatrixAt(n[p.tipo]++, p.g.matrix);
+    gp.setXYZ(q, p.g.position.x, p.g.position.y + 0.6, p.g.position.z); const c = COL_GLOW[p.tipo]; gc.setXYZ(q, c.r, c.g, c.b); q++;
   }
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: texGlow[tipo], blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
-  s.position.y = 0.6; s.scale.setScalar(2.2); g.add(s);
-  g.visible = false; scene.add(g);
-  return g;
+  for (const k in imPick) { imPick[k].count = n[k]; imPick[k].instanceMatrix.needsUpdate = true; }
+  glowPick.geometry.setDrawRange(0, q); glowPick.visible = q > 0; gp.needsUpdate = gc.needsUpdate = true;
 }
 const poolPick = [];
-for (let i = 0; i < 6; i++) { poolPick.push({ g: mallaPickup('balas'), tipo: 'balas', t: 0 }); poolPick.push({ g: mallaPickup('chivito'), tipo: 'chivito', t: 0 }); }
+for (let i = 0; i < PICK_MAX; i++) { poolPick.push({ g: mallaPickup('balas'), tipo: 'balas', t: 0 }); poolPick.push({ g: mallaPickup('chivito'), tipo: 'chivito', t: 0 }); }
 function soltarPickup(tipo, x, z) {
   const p = poolPick.find(p => p.t <= 0 && p.tipo === tipo); if (!p) return;
   const l = local(x, z);
@@ -174,6 +181,7 @@ let zombis = [];
 const J = { pos: new THREE.Vector3(), yaw: 0, pitch: 0, vida: 100, vidaMax: 100, blindaje: 0, velY: 0, bob: 0, mov: 0, lento: 0 };
 let dios = false, estado = 'inicio', oleada = 0, puntos = 0, pesos = 0, bajas = 0, porSalir = 0, spawnT = 0, descanso = 0, tiempo = 0;
 let modoInf = false, armasInf = ['pistola', 'termo'], modsInf = {}, statsInf = {}, regenInf = 0, eventoInfAct = null, tiradasInf = 0, opcionesInf = [], modsHecho = false, explT = 0; /* Modo Infinito */
+let modoPlay = false, cfgPlay = null; /* Modo Playground (sandbox) */
 const colaExpl = [];
 let armaSel = 'pistola', tiene = new Set(), cargador = {}, reserva = {}, niveles = {}, ventajas = new Set();
 let cdArma = 0, recargaT = 0, recargaTotal = 1, cambioT = 0, swingT = 0, swingHecho = true, disparando = false, autoDisparo = false;
@@ -183,9 +191,12 @@ let jefe = null, jefePendiente = null, jefeT = 0, comboN = 0, comboT = 0, finT =
 let S = {}; // estadísticas de la partida
 const BASE = id => ARMAS.find(a => a.id === id);
 const A = id => (modoInf && statsInf[id]) || BASE(id); /* en Infinito: estadísticas con mods */
-const jefeDe = n => modoInf ? jefeInf(n) : JEFES[n];
-const LIM_I0 = NM / 2 - 70, LIM_I1 = NM / 2 + 128; /* U4: se suma el Puerto del Buceo */
-const MODO = () => AJ.modo === 'pesadilla' ? { vida: 1.5, dano: 1.4, pesos: 1.25 } : { vida: 1, dano: 1, pesos: 1 };
+const jefeDe = n => modoPlay ? (cfgPlay.jefes && n % 3 === 0 ? (n % 6 === 0 ? 'cerro' : 'patovica') : null) : modoInf ? jefeInf(n) : JEFES[n];
+let LIM_I0 = NM / 2 - 70, LIM_I1 = NM / 2 + 128, MAPA = MAPAS.rambla;
+const mapaLibre = M => modoPlay || (perfil.mejorOleada || 0) >= M.desbloq; /* U4: se suma el Puerto del Buceo */
+const DIF_PLAY = { facil: { vida: 0.6, dano: 0.5, pesos: 1, vel: 0.85 }, normal: { vida: 1, dano: 1, pesos: 1, vel: 1 }, dificil: { vida: 1.6, dano: 1.5, pesos: 1, vel: 1.12 }, infierno: { vida: 2.6, dano: 2.2, pesos: 1, vel: 1.25 } };
+const MODO_PES = { vida: 1.5, dano: 1.4, pesos: 1.25 }, MODO_NOR = { vida: 1, dano: 1, pesos: 1 }; // fijos: MODO() no crea objetos por llamada
+const MODO = () => modoPlay ? DIF_PLAY[cfgPlay.dif] || DIF_PLAY.normal : AJ.modo === 'pesadilla' ? MODO_PES : MODO_NOR;
 
 // stats de arma con mejoras y ventajas
 const nv = (id, k) => (niveles[id] && niveles[id][k]) || 0;
@@ -196,17 +207,24 @@ const tRecarga = a => a.recarga * (1 - 0.2 * nv(a.id, 'recarga')) * (ventajas.ha
 const cadenciaDe = a => a.cadencia / (1 + 0.15 * nv(a.id, 'cadencia'));
 const empujeDe = a => (a.empuje || 0) * (a.tipo === 'cuerpo' && ventajas.has('garra') ? 1.35 : 1);
 
+const _vm = new THREE.Vector3();
 function reiniciar() {
   camVictoria = false;
   for (const z of zombis) poolZ.push(z); zombis = [];
   for (const p of poolPick) { p.t = 0; p.g.visible = false; }
   ef.limpiar(); fis.limpiar(); sVida.fill(0); sPos.fill(-999); parada = 0; lenta = 0;
-  aMundo(NM / 2, 2, J.pos); J.pos.y = piso(2); eventoPuerto = false; GRITO[2] = -1; mundo.puerto.cerrar();
-  J.yaw = 0; J.pitch = -0.03; J.vidaMax = 100; J.vida = 100; J.blindaje = 0; J.lento = 0;
+  MAPA = MAPAS[modoPlay ? cfgPlay.mapa : perfil.mapa] || MAPAS.rambla; if (!modoPlay && !mapaLibre(MAPA)) MAPA = MAPAS.rambla;
+  LIM_I0 = MAPA.i0; LIM_I1 = MAPA.i1; mundo.setAtmo(MAPA.atmo, MAPA.id);
+  camera.far = MAPA.atmo.lejos || 2200; camera.updateProjectionMatrix(); /* con niebla espesa no se dibuja lo que no se ve */
+  aMundo(MAPA.ini, MAPA.iniD ?? 2, J.pos); J.pos.y = piso(MAPA.iniD ?? 2); eventoPuerto = false; GRITO[2] = -1; mundo.puerto.cerrar();
+  J.yaw = 0; J.pitch = -0.03; if (MAPA.mirar) { aMundo(MAPA.mirar[0], MAPA.mirar[1], _vm); J.yaw = Math.atan2(-(_vm.x - J.pos.x), -(_vm.z - J.pos.z)); J.pitch = 0.05; } // de entrada, mirando a lo que identifica el mapa
+  J.vidaMax = 100; J.vida = 100; J.blindaje = 0; J.lento = 0;
   oleada = 0; puntos = 0; pesos = 0; bajas = 0; porSalir = 0; descanso = 2.5; tiempo = 0; jefe = null; jefePendiente = null; tiendaT = 0; comboN = 0; comboT = 0;
-  tiene = new Set(modoInf ? armasInf : ['pistola', 'termo']); niveles = {}; ventajas = new Set();
-  modsInf = {}; regenInf = 0; tiradasInf = 0; eventoInfAct = null; modsHecho = false; colaExpl.length = 0; scene.fog.density = 0.0042; recalcInf();
+  tiene = new Set(modoPlay ? cfgPlay.armas : modoInf ? armasInf : ['pistola', 'termo']); dios = modoPlay && cfgPlay.invencible; niveles = {}; ventajas = new Set();
+  modsInf = {}; regenInf = 0; tiradasInf = 0; eventoInfAct = null; modsHecho = false; colaExpl.length = 0; scene.fog.density = MAPA.atmo.densidad; recalcInf();
   for (const a0 of ARMAS) if (a0.tipo === 'fuego') { const a = A(a0.id); cargador[a.id] = cargMax(a); reserva[a.id] = a.reserva === Infinity ? Infinity : a.cargador * 2; }
+  if (modoPlay && cfgPlay.municion) for (const a0 of ARMAS) if (a0.tipo === 'fuego') reserva[a0.id] = Infinity;
+  if (modoPlay) pesos = 99999;
   S = { disparos: 0, aciertos: 0, cabezas: 0, recibido: 0, gastado: 0, porArma: {}, olaSinDano: true, explosionMax: 0, inicio: performance.now(), jefes: 0, logrosNuevos: [] };
   armaSel = ''; elegirArma(tiene.has('pistola') ? 'pistola' : [...tiene][0], true); recargaT = 0; vineta = 0;
   mundo.setAlba(0); armarBarra(); hud();
@@ -774,13 +792,14 @@ function elegirMod(o) {
 
 // ---------- Oleadas ----------
 function empezarOleada() {
-  oleada++; porSalir = modoInf ? cantidadInf(oleada) : cantidad(oleada); spawnT = 0.5; S.olaSinDano = true; S.vidaInicioOla = J.vida;
+  oleada++; porSalir = modoPlay ? cfgPlay.cantidad : modoInf ? cantidadInf(oleada) : cantidad(oleada); spawnT = 0.5; S.olaSinDano = true; S.vidaInicioOla = J.vida;
   const j = jefeDe(oleada);
   if (modoInf) {
-    eventoInfAct = j ? null : eventoInf(oleada); scene.fog.density = eventoInfAct === 'niebla' ? 0.012 : 0.0042;
+    eventoInfAct = j ? null : eventoInf(oleada); scene.fog.density = eventoInfAct === 'niebla' ? 0.012 : MAPA.atmo.densidad;
     if (oleada > 5 && oleada % 5 === 1) { eventoPuerto = false; mundo.puerto.cerrar(); } // el contenedor del puerto se vuelve a cargar
     if (!j) { const e = eventoInfAct && EVENTOS[eventoInfAct]; mensaje('Oleada ' + oleada, e ? e.nombre + ' · ' + e.sub : oleada < 8 ? 'Esto recién empieza' : 'Seguís vivo. Raro', !!e); sonido.oleada(); hud(); return; }
   }
+  if (modoPlay && !j) { mensaje('Oleada ' + oleada, 'Playground · ' + MAPA.nombre); sonido.oleada(); hud(); return; }
   if (j) {
     mensaje(oleada === OLEADAS_TOTAL && !modoInf ? 'Última oleada' : 'Oleada ' + oleada, j === 'cerro' ? (modoInf ? 'Bajó el Zombi del Cerro. Y vino con amigos' : 'Bajó el Zombi del Cerro. Aguantá hasta que salga el sol') : 'Viene el Patovica del Cordón. Hacelo chocar contra un auto', true);
     jefePendiente = j; jefeT = 2.2;
@@ -793,6 +812,7 @@ function empezarOleada() {
   hud();
 }
 function oleadaTerminada() {
+  if (modoPlay) { mensaje('¡Oleada ' + oleada + ' superada!', 'La próxima arranca en unos segundos'); descanso = cfgPlay.pausa; sonido.oleada(); hud(); return; }
   const bonus = Math.round(oleada * 60 * MODO().pesos);
   pesos += bonus; puntos += oleada * 250;
   if (S.olaSinDano) { logro('perfecta'); pesos += 100; }
@@ -806,6 +826,7 @@ function oleadaTerminada() {
   hud();
 }
 function elegirTipo() {
+  if (modoPlay) { const L = cfgPlay.tipos; return L[Math.random() * L.length | 0] || 'normal'; }
   const m = modoInf ? mezclaInf(oleada, eventoInfAct) : mezcla(oleada); let total = 0;
   for (const k in m) total += m[k];
   let r = Math.random() * total;
@@ -813,24 +834,40 @@ function elegirTipo() {
   return 'normal';
 }
 const _l = {};
+// Aparición: anillo de 15-34 m alrededor del jugador, preferentemente fuera de la vista, en piso válido y sin props encima
+// (antes podían salir a 40-50 m por la punta del mapa y había que ir a buscarlos)
+const SPAWN_R0 = 15, SPAWN_R1 = 34;
 function ubicar(z, cerca) {
-  const pl = local(J.pos.x, J.pos.z, _l);
-  z.sube = false;
-  for (let intento = 0; intento < 12; intento++) {
-    const r = Math.random(); let i, d, sube = false;
+  const pl = local(J.pos.x, J.pos.z, _l), fx = -Math.sin(J.yaw), fz = -Math.cos(J.yaw);
+  z.sube = false; z.deambDesde = tiempo; z.trancado = 0; z.distPrev = undefined;
+  let mejor = null;
+  for (let intento = 0; intento < 18; intento++) {
+    let i, d, sube = false;
     if (cerca) { i = pl.i + (Math.random() - .5) * 24; d = -8 + Math.random() * 26; }
-    else if (r < 0.45) { i = pl.i + (Math.random() - .5) * 60; d = -31 - Math.random() * 6; sube = true; }
-    else if (r < 0.8) { i = pl.i + (Math.random() - .5) * 70; d = 23 + Math.random() * 7; }
-    else { i = pl.i + (Math.random() < .5 ? -1 : 1) * (18 + Math.random() * 12); d = -8 + Math.random() * 19; }
-    i = Math.max(LIM_I0 - 4, Math.min(LIM_I1 + 4, i));
-    aMundo(i, d, _o);
-    const lejos = _o.distanceTo(J.pos);
-    if ((lejos > (cerca ? 8 : 16) && libre(_o.x, _o.z, 0.6)) || intento === 11) {
-      z.sube = sube; z.g.position.set(_o.x, sube ? -2.6 : piso(d), _o.z); break;
+    else if (Math.random() < 0.3) { i = pl.i + (Math.random() - .5) * 30; d = -31 - Math.random() * 3; sube = true; } // salen del río
+    else {
+      const an = Math.random() * 6.283, r = SPAWN_R0 + Math.random() * (SPAWN_R1 - SPAWN_R0);
+      local(J.pos.x + Math.cos(an) * r, J.pos.z + Math.sin(an) * r, _l2); i = _l2.i; d = Math.max(-9.5, Math.min(29, _l2.d));
     }
+    i = Math.max(LIM_I0 - 2, Math.min(LIM_I1 + 2, i));
+    aMundo(i, d, _o);
+    const dx = _o.x - J.pos.x, dz = _o.z - J.pos.z, lejos = Math.hypot(dx, dz) || 1;
+    if (!libre(_o.x, _o.z, 0.6)) continue;
+    if (cerca) { if (lejos > 8) { mejor = [_o.x, _o.z, d, sube]; break; } continue; }
+    if (lejos < SPAWN_R0 - 1 || lejos > SPAWN_R1 + 4) continue;
+    mejor = [_o.x, _o.z, d, sube];
+    if (intento >= 10 || (fx * dx + fz * dz) / lejos < 0.6) break; // fuera del cono de visión (o ya probó bastante)
   }
+  if (!mejor) { aMundo(Math.max(LIM_I0, Math.min(LIM_I1, pl.i + (Math.random() < .5 ? -1 : 1) * 20)), 2 + Math.random() * 8, _o); mejor = [_o.x, _o.z, null, false]; }
+  const [x, q, d, sube] = mejor;
+  z.sube = sube; z.g.position.set(x, sube ? -2.6 : piso(d === null ? local(x, q, _l2).d : d), q);
 }
-function libre(x, z, r) { for (const c of colisiones) if ((c.x - x) ** 2 + (c.z - z) ** 2 < (c.r + r) ** 2) return false; return true; }
+const _l2 = {};
+// cuántos quedan en la oleada (vivos + por salir): cuando son pocos, todos vienen derecho al jugador
+let quedanOla = 99;
+const _candCol = new Array(64).fill(null);
+// obstáculos cercanos por la grilla de la física (antes recorría los ~700 obstáculos en cada llamada)
+function libre(x, z, r) { const n = fis.grilla.buscar(x, z, r, _candCol); for (let k = 0; k < n; k++) { const c = _candCol[k], dx = c.x - x, dz = c.z - z, rr = c.r + r; if (dx * dx + dz * dz < rr * rr) return false; } return true; }
 function spawn(tipo, cerca) {
   let z = poolZ.pop();
   if (!z) { // sin lugar: se recicla el cadáver más viejo
@@ -847,6 +884,7 @@ function spawn(tipo, cerca) {
   return z;
 }
 function eventoContenedor() { /* U4: al entrar al puerto se abre un contenedor y sale parte de la oleada */
+  if (!MAPA.puerto) return;
   const pu = mundo.puerto.puerta; if (!pu || local(J.pos.x, J.pos.z, _l).i < PUERTO_I0 + 8) return;
   eventoPuerto = true; mundo.puerto.abrir();
   const n = Math.min(5, porSalir); porSalir -= n;
@@ -887,8 +925,7 @@ const colisiones = mundo.colisiones;
 function posValida(x, z) {
   const l = local(x, z, _l);
   if (l.i < LIM_I0 || l.i > LIM_I1 || l.d < -10.4 || l.d > 20) return false;
-  for (const c of colisiones) if ((c.x - x) ** 2 + (c.z - z) ** 2 < (c.r + 0.45) ** 2) return false;
-  return true;
+  return libre(x, z, 0.45);
 }
 const teclas = {}, joy = { x: 0, y: 0 };
 function moverJugador(dt) {
@@ -953,7 +990,9 @@ function simular(dt) {
     p.g.visible = p.t > 0 && (p.t > 5 || Math.sin(tiempo * 20) > 0);
     if (p.t > 0 && estado === 'jugando' && (p.g.position.x - J.pos.x) ** 2 + (p.g.position.z - J.pos.z) ** 2 < 2.4 ** 2) { agarrar(p); p.t = 0; p.g.visible = false; }
   }
+  dibujarPickups();
   if (comboT > 0) { comboT -= dt; if (comboT <= 0) { comboN = 0; $('combo').style.opacity = 0; } }
+  { let v = 0; for (const z of zombis) v += z.vivo; quedanOla = porSalir + v + (jefePendiente ? 1 : 0); }
   // los zombis siguen moviéndose también en el menú y en la pantalla de fin
   simZombis(dt);
   if (colaExpl.length && (explT -= dt) <= 0) { explosionMod(colaExpl[0], colaExpl[1], colaExpl[2], colaExpl[3]); colaExpl.splice(0, 4); explT = 0.08; }
@@ -966,7 +1005,7 @@ function simular(dt) {
   else if (porSalir > 0) {
     spawnT -= dt;
     let vivos = 0; for (const z of zombis) vivos += z.vivo;
-    if (spawnT <= 0 && vivos < CAL[AJ.calidad].maxZ) { if (spawn()) porSalir--; spawnT = Math.max(0.4, 1.9 - oleada * 0.14) * (0.6 + Math.random() * 0.8); }
+    if (spawnT <= 0 && vivos < CAL[AJ.calidad].maxZ) { if (spawn()) porSalir--; spawnT = modoPlay ? cfgPlay.dur / cfgPlay.cantidad * (0.6 + Math.random() * 0.8) : Math.max(0.4, 1.9 - oleada * 0.14) * (0.6 + Math.random() * 0.8); }
   } else if (oleada > 0 && !jefePendiente && !zombis.some(z => z.vivo)) oleadaTerminada();
   if (!eventoPuerto && porSalir > 2 && oleada >= 2) eventoContenedor();
   if (jefePendiente && (jefeT -= dt) <= 0) { spawnJefe(jefePendiente); jefePendiente = null; }
@@ -1045,23 +1084,49 @@ const RUIDO = new Float64Array(4); // x, z, radio, tiempo
 function oir(x, z, r) { if (r >= RUIDO[2] || tiempo - RUIDO[3] > 0.3) { RUIDO[0] = x; RUIDO[1] = z; RUIDO[2] = r; } RUIDO[3] = tiempo; }
 const GRITO = new Float64Array([0, 0, -1]); let eventoPuerto = false; /* U4: grito del Gritón (x, z, hasta) y el contenedor del puerto */
 const IA_ALERTA = 32; // m: más cerca de esto, cualquiera persigue
+// al entrar a 10 m, cada zombi elige el sector libre del cerco (8 sectores) más cercano al lado por donde viene:
+// los que llegan del mismo lado se abren hacia los flancos y la espalda en vez de hacer fila adelante
+const _occ = new Float32Array(8);
+function elegirLugar(z, p) {
+  _occ.fill(0);
+  for (let i = 0; i < zombis.length; i++) {
+    const o = zombis[i]; if (o === z || !o.vivo || o.rag) continue;
+    const ox = o.g.position.x - J.pos.x, oz = o.g.position.z - J.pos.z; if (ox * ox + oz * oz > 144) continue;
+    const a = o.slotOk ? o.slot : Math.atan2(oz, ox); _occ[((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8] += 1;
+  }
+  const a0 = Math.atan2(p.z - J.pos.z, p.x - J.pos.x); let mejor = 0, costo = 1e9;
+  for (let k = 0; k < 8; k++) {
+    let da = k * Math.PI / 4 - a0; da = Math.abs(Math.atan2(Math.sin(da), Math.cos(da)));
+    const c = _occ[k] * 1.6 + da * 0.9 + (posValida(J.pos.x + Math.cos(k * Math.PI / 4) * 1.2, J.pos.z + Math.sin(k * Math.PI / 4) * 1.2) ? 0 : 6); // pared o banco: ese lugar no sirve
+    if (c < costo) { costo = c; mejor = k; }
+  }
+  z.slot = mejor * Math.PI / 4 + (Math.random() - 0.5) * 0.4; z.slotOk = true;
+}
 function decidir(z, p, dist, dx, dz) {
   const T = z.T;
   // ¿oyó algo? (el ruido dura 0,4 s)
   if (tiempo - RUIDO[3] < 0.4 && z.tipo !== 'tanque') { const rx = RUIDO[0] - p.x, rz = RUIDO[1] - p.z; if (rx * rx + rz * rz < RUIDO[2] * RUIDO[2]) { if (z.alerta <= 0) z.velMult = Math.min(z.velMult, 0.6); z.alerta = 9; } }
-  let tx, tz, mod = 1;
-  if (dist > IA_ALERTA && dist < 60 && z.alerta <= 0 && !T.jefe) { /* más de 60 m (mapa largo con el puerto): vuelven derecho */ // deambula: hacia un punto corrido del jugador, lento
+  z.deambula = false; let tx, tz, mod = 1; if (dist > 13) z.slotOk = false;
+  const pocos = quedanOla <= 4 || modoPlay; // últimos de la oleada (o Playground): nadie deambula
+  if (dist > IA_ALERTA && dist < 60 && z.alerta <= 0 && !T.jefe && !pocos && tiempo - (z.deambDesde || 0) < 8) { /* deambula como mucho 8 s */ /* más de 60 m (mapa largo con el puerto): vuelven derecho */ // deambula: hacia un punto corrido del jugador, lento
     const a = z.slot + tiempo * 0.05, ox = J.pos.x + Math.cos(a) * 14 - p.x, oz = J.pos.z + Math.sin(a) * 14 - p.z, ol = Math.hypot(ox, oz) || 1;
-    tx = ox / ol; tz = oz / ol; mod = 0.55;
-  } else if (dist > 7 || T.jefe) { // persigue: abanico (flanco) para no venir todos en fila
+    tx = ox / ol; tz = oz / ol; mod = 0.55; z.deambula = true;
+  } else if (dist > 10 || T.jefe) { // persigue: abanico (flanco) para no venir todos en fila
     tx = dx / dist; tz = dz / dist;
     if (dist > 3.5 && !T.jefe) {
       const lado = z.flanco * Math.min(9, dist * 0.45);
       const ex = J.pos.x - tz * lado - p.x, ez = J.pos.z + tx * lado - p.z, el = Math.hypot(ex, ez) || 1; tx = ex / el; tz = ez / el;
     }
   } else { // cerca: cada uno va a su lugar del cerco alrededor del jugador (rodean en vez de amontonarse adelante)
-    const r = Math.min(dist, Math.max(0.6, T.alcance * 0.7)), sx = J.pos.x + Math.cos(z.slot) * r - p.x, sz = J.pos.z + Math.sin(z.slot) * r - p.z, sl = Math.hypot(sx, sz) || 1;
-    const k = Math.min(1, (7 - dist) / 4); tx = dx / dist * (1 - k) + sx / sl * k; tz = dz / dist * (1 - k) + sz / sl * k;
+    if (!z.slotOk && !T.jefe) elegirLugar(z, p);
+    // si su lugar queda del otro lado, lo rodea a ~3 m (de a 55° por vez) en vez de cruzar por adelante del jugador
+    let ang = z.slot, r = Math.min(dist, Math.max(0.6, T.alcance * 0.7)); z.orbita = false;
+    if (!T.jefe && dist < 7) { const ac = Math.atan2(p.z - J.pos.z, p.x - J.pos.x); let da = z.slot - ac; da = Math.atan2(Math.sin(da), Math.cos(da));
+      if (Math.abs(da) > 0.7 && z.orbT > 2.5) { z.slot = ac; da = 0; } // lleva 2,5 s rodeando (algo lo tapa: poste, banco, otro zombi): se queda con el lado donde está y ataca
+      if (Math.abs(da) > 0.7) { ang = ac + Math.sign(da) * Math.min(Math.abs(da), 0.95); r = Math.max(2.9, Math.min(dist, 4)); z.orbita = true; } }
+    z.orbT = z.orbita ? z.orbT + 0.05 : 0; // decidir corre cada 0,05 s a menos de 12 m
+    const sx = J.pos.x + Math.cos(ang) * r - p.x, sz = J.pos.z + Math.sin(ang) * r - p.z, sl = Math.hypot(sx, sz) || 1;
+    /* desde 10 m ya se abren hacia su lugar del cerco (antes 7 m: llegaban todos del mismo lado) */ const k = Math.min(1, (10 - dist) / 5); tx = dx / dist * (1 - k) + sx / sl * k; tz = dz / dist * (1 - k) + sz / sl * k;
     const l = Math.hypot(tx, tz) || 1; tx /= l; tz /= l;
   }
   // por tipo
@@ -1071,6 +1136,7 @@ function decidir(z, p, dist, dx, dz) {
   } else if (z.tipo === 'escupidor' && dist < 12 && dist > 4.5) { // a distancia: se mueve de costado para no ser blanco fijo
     const s = Math.sin(tiempo * 0.7 + z.slot) > 0 ? 1 : -1; tx = -dz / dist * s; tz = dx / dist * s; mod = 0.5;
   } else if (z.tipo === 'gateador' && dist > 6) mod = 1.1;
+  if (!T.jefe && !z.deambula && estado === 'jugando' && (dist > 30 || (pocos && dist > 14))) mod = Math.max(mod, 1.45); // lejos: se apura para llegar (no hay que ir a buscarlo)
   // obstáculos adelante (grilla estática): si el camino corta un auto/contenedor/banco, sale por la tangente del lado que ya eligió
   const rz = (T.jefe ? 0.3 * z.esc : 0.3) + 0.2, L = 2.2 + rz;
   const nc = fis.grilla.buscar(p.x + tx * L * 0.5, p.z + tz * L * 0.5, L * 0.5 + 1.2, _candZ);
@@ -1125,7 +1191,7 @@ function simZombis(dt) {
       if ((z.quemaE = (z.quemaE || 0) - dt) <= 0) { z.quemaE = 0.1; ef.llama(p.x + (Math.random() - .5) * 0.4, p.y + (0.5 + Math.random()) * z.esc, p.z + (Math.random() - .5) * 0.4); if (z.T.jefe) hudJefe(); }
       if (z.vida <= 0) { _d.set(-dx / dist, 0, -dz / dist); matar(z, false, _d, false, z.quemaArma, false); continue; }
     }
-    let v = T.vel * (T.jefe ? 1 : ola) * z.velMult * (z.rengo ? 0.62 : 1);
+    let v = T.vel * (T.jefe ? 1 : ola) * z.velMult * (z.rengo ? 0.62 : 1) * (modoPlay ? MODO().vel : 1);
     if (!enJuego) v *= 0.4;
     if (z.sube) { p.y += dt * 1.3; v *= 0.35; if (p.y >= -0.5) z.sube = false; }
     if (z.prep > 0 || z.ataque > 0 || z.aturdido > 0) v = 0;
@@ -1133,7 +1199,7 @@ function simZombis(dt) {
     if (z.alerta > 0) z.alerta -= dt;
     if ((z.decT -= dt) <= 0 || z.dirX === undefined) decidir(z, p, dist, dx, dz);
     let tx = z.dirX, tz = z.dirZ; v *= z.modV;
-    if (dist < 2.5) { tx = dx / dist; tz = dz / dist; } // pegado: directo
+    if (dist < 2.5 && !z.orbita) { tx = dx / dist; tz = dz / dist; } // pegado: directo (salvo que esté rodeando hacia su lugar)
     let mira = Math.atan2(dx, dz);
     z.golpeT -= dt; if (z.ataque > 0) z.ataque -= dt; if (z.aturdido > 0) z.aturdido -= dt;
     const alcance = T.alcance;
@@ -1141,7 +1207,7 @@ function simZombis(dt) {
     if (z.tipo === 'escupidor' && enJuego && !z.sube) {
       z.timerIA -= dt;
       if (dist < 14 && dist > 4.5 && local(p.x, p.z, _l).d > -10.4) { // en la arena no se planta: primero sube a la rambla
-        v *= dist < 10 ? 0 : 0.6; // se planta a distancia
+        v *= dist < (quedanOla <= 2 ? 6 : 10) ? 0 : 0.6; // se planta a distancia (si es de los últimos, se arrima: que no quede escondido escupiendo detrás de un auto)
         if (z.timerIA <= 0 && z.prep <= 0) { z.prep = z.prepTotal = T.prep; z.accion = 'escupir'; z.timerIA = 3 + Math.random() * 1.5; }
       }
     }
@@ -1250,8 +1316,10 @@ function simZombis(dt) {
       z.chequeoT = 2;
       if (!cerca && enJuego && !z.sube && z.prep <= 0 && z.aturdido <= 0 && dist > (z.distPrev || 1e9) - 0.6) {
         z.trancado = (z.trancado || 0) + 1; z.rodeo = -z.rodeo || 1; z.rodeoT = 2; z.flanco = (Math.random() * 2 - 1) * 0.3;
-        if (z.trancado >= 4 && !T.jefe && dist > 15) { ubicar(z, false); z.trancado = 0; }
+        if (z.trancado >= (quedanOla <= 4 ? 2 : 3) && !T.jefe && dist > 15) { ubicar(z, false); z.trancado = 0; }
       } else z.trancado = 0;
+      // muy lejos (se fue por la punta del mapa o quedó atrás): reaparece en el anillo, fuera de la vista
+      if (enJuego && !T.jefe && !z.sube && dist > 48) ubicar(z, false);
       z.distPrev = dist;
     }
     // límites del mapa (los del río pueden estar en la arena)
@@ -1403,7 +1471,7 @@ $('b-seguir-ola').addEventListener('click', () => { sonido.clic(); cerrarTienda(
 const logroCola = [];
 let logroMostrando = false;
 function logro(id) {
-  if (perfil.logros[id]) return;
+  if (perfil.logros[id] || modoPlay) return; /* el Playground no da logros */
   perfil.logros[id] = Date.now(); guardarPerfil(perfil);
   S.logrosNuevos && S.logrosNuevos.push(id);
   logroCola.push(id); if (!logroMostrando) siguienteLogro();
@@ -1422,11 +1490,13 @@ function pintarLogros() {
 
 // ---------- Fin de partida ----------
 function cerrarPartida(gano) {
-  perfil.partidas++; perfil.bajas += bajas;
-  let nuevo;
-  if (modoInf) { const I = perfil.inf; I.partidas++; I.bajas += bajas; I.mejorOleada = Math.max(I.mejorOleada, oleada - 1); nuevo = puntos > I.record; if (nuevo) I.record = puntos; }
+  let nuevo = false;
+  if (modoPlay) { /* sandbox: no toca récords ni progreso */ }
+  else { perfil.partidas++; perfil.bajas += bajas; }
+  if (modoPlay) { }
+  else if (modoInf) { const I = perfil.inf; I.partidas++; I.bajas += bajas; I.mejorOleada = Math.max(I.mejorOleada, oleada - 1); nuevo = puntos > I.record; if (nuevo) I.record = puntos; }
   else { perfil.mejorOleada = Math.max(perfil.mejorOleada, gano ? OLEADAS_TOTAL : oleada - 1); nuevo = puntos > perfil.record; if (nuevo) perfil.record = puntos; }
-  if (gano) { perfil.victorias++; perfil.pesadilla = true; }
+  if (gano && !modoPlay) { perfil.victorias++; perfil.pesadilla = true; }
   guardarPerfil(perfil); try { localStorage.setItem('rz-record', perfil.record); } catch (e) { }
   const seg = Math.round((performance.now() - S.inicio) / 1000), pre = S.disparos ? Math.round(S.aciertos / S.disparos * 100) : 0;
   const fav = Object.entries(S.porArma).sort((a, b) => b[1].bajas - a[1].bajas)[0];
@@ -1444,7 +1514,7 @@ function finDelJuego() {
   cerrarPartida(false);
   $('fin').classList.remove('victoria');
   $('fin-titulo').textContent = ['Te comieron, bo', 'Fuiste almuerzo', 'Se terminó la noche'][Math.floor(Math.random() * 3)];
-  $('fin-sub').innerHTML = modoInf ? `Modo Infinito: caíste en la oleada <b>${oleada}</b>. Tu mejor marca: oleada ${perfil.inf.mejorOleada}.` : `Aguantaste hasta la oleada <b>${oleada}</b> de ${OLEADAS_TOTAL}.`;
+  $('fin-sub').innerHTML = modoPlay ? `Playground en ${MAPA.nombre}: llegaste a la oleada <b>${oleada}</b>.` : modoInf ? `Modo Infinito: caíste en la oleada <b>${oleada}</b>. Tu mejor marca: oleada ${perfil.inf.mejorOleada}.` : `Aguantaste hasta la oleada <b>${oleada}</b> de ${OLEADAS_TOTAL}.`;
   $('jefe').classList.add('oculto'); musica.set(0, false, true);
   setTimeout(() => { mostrar('fin'); capaJuego(false); }, 1400);
 }
@@ -1466,7 +1536,7 @@ function victoria() {
 const prevHud = {};
 function poner(id, prop, val) { const k = id + prop; if (prevHud[k] === val) return; prevHud[k] = val; const el = $(id); if (prop === 'text') el.textContent = val; else if (prop === 'w') el.style.width = val; else el[prop] = val; }
 function hud() {
-  poner('oleada', 'text', oleada ? modoInf ? `Oleada ${oleada} ♾` : (oleada === OLEADAS_TOTAL ? 'Última oleada' : `Oleada ${oleada}/${OLEADAS_TOTAL}`) : 'Preparate');
+  poner('oleada', 'text', oleada ? modoPlay ? `Oleada ${oleada} · Playground` : modoInf ? `Oleada ${oleada} ♾` : (oleada === OLEADAS_TOTAL ? 'Última oleada' : `Oleada ${oleada}/${OLEADAS_TOTAL}`) : 'Preparate');
   poner('puntos', 'text', String(puntos));
   $('pesos').querySelector('span').textContent = pesos;
   let vivos = 0; for (const z of zombis) vivos += z.vivo;
@@ -1620,7 +1690,7 @@ function capaJuego(si) {
   $('tactil').classList.toggle('oculto', !(si && movil));
   $('b-pausa').classList.toggle('oculto', !(si && movil));
 }
-const PANTALLAS = ['inicio', 'como', 'logros', 'pausa', 'tienda', 'fin', 'ajustes', 'infinito', 'mods'];
+const PANTALLAS = ['inicio', 'como', 'logros', 'pausa', 'tienda', 'fin', 'ajustes', 'infinito', 'mods', 'playground'];
 function mostrar(id) { PANTALLAS.forEach(p => $(p).classList.toggle('oculto', p !== id)); }
 function ocultar(id) { $(id).classList.add('oculto'); }
 function telon(fn) { $('telon').classList.add('on'); setTimeout(() => { fn(); $('telon').classList.remove('on'); }, 340); }
@@ -1633,7 +1703,7 @@ function jugar() {
     capaJuego(true);
     $('jefe').classList.add('oculto');
     if (!movil) pedirLock();
-    if (modoInf) mensaje('Modo Infinito', 'Hasta donde aguantes. Después de cada oleada, el taller', false); else mensaje('Zombis en la Rambla', AJ.modo === 'pesadilla' ? 'Modo Pesadilla. Que Dios te ayude' : 'Aguantá hasta que amanezca', false);
+    if (modoPlay) mensaje('Playground', MAPA.nombre + ' · ' + cfgPlay.cantidad + ' zombis por oleada', false); else if (modoInf) mensaje('Modo Infinito', 'Hasta donde aguantes. Después de cada oleada, el taller', false); else mensaje(MAPA.id === 'rambla' ? 'Zombis en la Rambla' : MAPA.nombre, AJ.modo === 'pesadilla' ? 'Modo Pesadilla. Que Dios te ayude' : 'Aguantá hasta que amanezca', false);
     revisarGiro();
   });
   if (movil && primeraVez && document.documentElement.requestFullscreen && !document.fullscreenElement && !matchMedia('(display-mode: standalone)').matches)
@@ -1660,7 +1730,7 @@ function seguir() {
 function aMenu() {
   if (modoInf && oleada > 1 && estado !== 'fin' && estado !== 'inicio') cerrarPartida(false); /* Infinito: salir también cuenta la marca */
   telon(() => {
-    estado = 'inicio'; PANTALLAS.forEach(ocultar); mostrar('inicio');
+    estado = 'inicio'; modoPlay = false; PANTALLAS.forEach(ocultar); mostrar('inicio'); pintarMapas();
     capaJuego(false); $('girar').classList.add('oculto');
     reiniciar(); poblarMenu(); mostrarRecord(); musica.pausa(false); musica.set(0, false, true);
   });
@@ -1676,10 +1746,56 @@ const clic = (id, fn) => {
   el.addEventListener('pointerup', ir);
   el.addEventListener('click', ir);
 };
-clic('b-jugar', () => { if (modoInf) { modoInf = false; recalcInf(); } jugar(); });
+clic('b-jugar', () => { modoPlay = false; if (modoInf) { modoInf = false; recalcInf(); } jugar(); });
 clic('b-infinito', () => { volverA = 'inicio'; pintarInfinito(); mostrar('infinito'); });
-clic('b-inf-jugar', () => { if (!armasInf.length) return; modoInf = true; perfil.infArmas = armasInf.slice(); guardarPerfil(perfil); jugar(); });
+clic('b-inf-jugar', () => { if (!armasInf.length) return; modoPlay = false; modoInf = true; perfil.infArmas = armasInf.slice(); guardarPerfil(perfil); jugar(); });
 $('b-mods-tirar').addEventListener('click', () => { const pr = precioTirada(); if (pesos < pr) return; pesos -= pr; S.gastado += pr; tiradasInf++; sonido.comprar(); opcionesInf = ofrecer(armasInf, modsInf, oleada); pintarMods(); hud(); });
+
+// ---------- Mapas (menú principal) ----------
+function pintarMapas() {
+  const L = $('mapas-sel'); if (!L) return; L.innerHTML = '';
+  const sel = MAPAS[perfil.mapa] && mapaLibre(MAPAS[perfil.mapa]) ? perfil.mapa : 'rambla';
+  for (const id of ORDEN_MAPAS) {
+    const M = MAPAS[id], ok = mapaLibre(M), b = document.createElement('button');
+    b.className = id === sel ? 'sel' : ''; b.disabled = !ok;
+    b.innerHTML = `${ok ? '' : '🔒 '}${M.nombre}<small>${ok ? M.sub.split(',')[0] : 'Llegá a la oleada ' + M.desbloq}</small>`;
+    b.addEventListener('click', () => { if (!ok || perfil.mapa === id) return; perfil.mapa = id; guardarPerfil(perfil); sonido.clic(); reiniciar(); poblarMenu(); pintarMapas(); });
+    L.appendChild(b);
+  }
+}
+// ---------- Playground: partida a medida (no toca récords ni progreso) ----------
+const TIPOS_PLAY = [['normal', 'Comunes'], ['corredor', 'Corredores'], ['gateador', 'Gateadores'], ['escupidor', 'Escupidores'], ['explosivo', 'Explosivos'], ['griton', 'Gritones'], ['tanque', 'Tanques']];
+const DIF_NOM = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', infierno: 'Infierno' };
+function cargarPlay() {
+  let c = {}; try { c = JSON.parse(localStorage.getItem('rz-play') || '{}') || {}; } catch (e) { }
+  const base = { mapa: 'rambla', cantidad: 25, dur: 60, dif: 'normal', tipos: ['normal', 'corredor', 'gateador'], armas: ['pistola', 'escopeta', 'termo'], municion: true, invencible: false, jefes: false, pausa: 5 };
+  c = Object.assign(base, c);
+  if (!MAPAS[c.mapa]) c.mapa = 'rambla';
+  c.tipos = c.tipos.filter(t => TIPOS[t]); if (!c.tipos.length) c.tipos = ['normal'];
+  c.armas = c.armas.filter(a => ARMAS.some(x => x.id === a)); if (!c.armas.length) c.armas = ['pistola'];
+  return c;
+}
+function guardarPlay() { try { localStorage.setItem('rz-play', JSON.stringify(cfgPlay)); } catch (e) { } }
+function pintarPlay() {
+  const c = cfgPlay;
+  const opc = (id, lista, actual, fn) => { const L = $(id); L.innerHTML = ''; for (const [k, t] of lista) { const b = document.createElement('button'); b.textContent = t; b.className = k === actual ? 'sel' : ''; b.onclick = () => { sonido.clic(); fn(k); guardarPlay(); pintarPlay(); }; L.appendChild(b); } };
+  const chips = (id, lista, tiene, fn) => { const L = $(id); L.innerHTML = ''; for (const [k, t] of lista) { const b = document.createElement('button'); b.textContent = t; b.className = tiene(k) ? 'sel' : ''; b.onclick = () => { sonido.clic(); fn(k); guardarPlay(); pintarPlay(); }; L.appendChild(b); } };
+  const alternar = (arr, k) => { const i = arr.indexOf(k); if (i >= 0) { if (arr.length > 1) arr.splice(i, 1); } else arr.push(k); };
+  opc('pg-mapa', ORDEN_MAPAS.map(id => [id, MAPAS[id].nombre]), c.mapa, k => c.mapa = k);
+  opc('pg-dif', Object.entries(DIF_NOM), c.dif, k => c.dif = k);
+  chips('pg-tipos', TIPOS_PLAY, k => c.tipos.includes(k), k => alternar(c.tipos, k));
+  chips('pg-armas', ARMAS.map(a => [a.id, a.nombre]), k => c.armas.includes(k), k => alternar(c.armas, k));
+  chips('pg-extras', [['municion', 'Munición infinita'], ['invencible', 'Invencible'], ['jefes', 'Jefe cada 3 oleadas']], k => c[k], k => c[k] = !c[k]);
+  $('pg-cant').value = c.cantidad; $('pg-cant-v').textContent = c.cantidad;
+  $('pg-dur').value = c.dur; $('pg-dur-v').textContent = c.dur + ' s';
+  $('b-pg-jugar').textContent = `¡A jugar! · ${MAPAS[c.mapa].nombre}`;
+}
+cfgPlay = cargarPlay();
+$('pg-cant').oninput = e => { cfgPlay.cantidad = +e.target.value; $('pg-cant-v').textContent = cfgPlay.cantidad; guardarPlay(); };
+$('pg-dur').oninput = e => { cfgPlay.dur = +e.target.value; $('pg-dur-v').textContent = cfgPlay.dur + ' s'; guardarPlay(); };
+clic('b-play', () => { volverA = 'inicio'; pintarPlay(); mostrar('playground'); });
+clic('b-pg-jugar', () => { modoPlay = true; if (modoInf) { modoInf = false; recalcInf(); } guardarPlay(); jugar(); });
+pintarMapas();
 function pintarInfinito() {
   const L = $('inf-armas'); L.innerHTML = '';
   armasInf = (perfil.infArmas || []).filter(id => perfil.armasCamp.includes(id)); if (!armasInf.length) armasInf = ['pistola', 'termo'];
@@ -1753,7 +1869,7 @@ function animarArma(dt) {
   lookDX = 0; lookDY = 0;
   const bobX = Math.cos(J.bob) * 0.012 * J.mov, bobY = -Math.abs(Math.sin(J.bob)) * 0.016 * J.mov + Math.sin(tiempo * 1.6) * 0.003;
   kick *= Math.exp(-dt * 14);
-  let px = b.x * k + bobX + swayX, py = b.y + bobY + swayY, pz = b.z, rx = 0, ry = 0, rz = 0;
+  let px = b.x * k + bobX + swayX, py = b.y + bobY + swayY, pz = b.z, rx = 0, ry = a.id === 'pistola' || a.id === 'revolver' ? 0.16 : 0, rz = 0; // las cortas, giradas hacia el centro: se ve el costado y no solo la cola
   if (a.tipo === 'fuego') {
     pz += kick * 0.07; rx += kick * (a.retroceso * 1.6 + 0.08); py += kick * 0.015;
     const car = m.userData.car || (m.userData.car = m.getObjectByName('cargador') || null), tam = m.userData.tam || (m.userData.tam = m.getObjectByName('tambor') || null);
@@ -1865,7 +1981,7 @@ function cuadro(ahora, sinRender) {
   const cSim = performance.now() - c0;
   if (estado === 'inicio') { // cámara paseando en el menú
     const t = ahora / 1000;
-    aMundo(NM / 2 + Math.sin(t * 0.05) * 30, 1 + Math.sin(t * 0.08) * 5, J.pos); J.pos.y = piso(1);
+    aMundo(MAPA.ini + Math.sin(t * 0.05) * 30, 1 + Math.sin(t * 0.08) * 5, J.pos); J.pos.y = piso(1);
     J.yaw = Math.sin(t * 0.11) * 0.9 + 0.2; J.pitch = 0.04 + Math.sin(t * 0.07) * 0.04;
   }
   if (camVictoria && estado === 'fin') { // gira despacio hacia el sol
@@ -1961,7 +2077,7 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') { /* actuali
 }
 
 // ganchos para las pruebas automáticas
-window.__rz = {
+window.__rz = { get escena() { return scene; },
   get estado() { return estado; }, get oleada() { return oleada; }, set oleada(v) { oleada = v; }, get puntos() { return puntos; }, get bajas() { return bajas; },
   get pesos() { return pesos; }, set pesos(v) { pesos = v; hud(); }, get jefe() { return jefe && { tipo: jefe.tipo, vida: jefe.vida, max: jefe.vidaMax }; },
   get vida() { return J.vida; }, set vida(v) { J.vida = v; }, set dios(v) { dios = v; }, get arma() { return armaSel; }, get desbloq() { return [...tiene]; },
@@ -2012,6 +2128,9 @@ window.__rz = {
     for (const z of zombis) if (z.vivo) { z.vivo = false; z.muerteT = 4.9; } porSalir = 0; jefe = null; jefePendiente = null; $('jefe').classList.add('oculto');
     oleada = n - 1; descanso = 0.05; tiendaT = 0; if (estado === 'tienda') { ocultar('tienda'); estado = 'jugando'; }
   },
+  spawnLejos(tipo) { const z = spawn(tipo, false); if (!z) return null; const p = z.g.position; return { d: Math.hypot(p.x - J.pos.x, p.z - J.pos.z), libre: libre(p.x, p.z, 0.55), sube: z.sube }; },
+  limpiar() { for (const z of zombis) if (z.vivo) { z.vivo = false; z.muerteT = 4.9; } },
+  porSalirSet(n) { porSalir = n; }, zRaw(i) { return zombis[i]; }, ponerVivosAnillo(r) { let k = 0; for (const z of zombis) { if (!z.vivo) continue; const a = k++ * 0.8; z.g.position.set(J.pos.x + Math.cos(a) * r, J.pos.y, J.pos.z + Math.sin(a) * r); z.sube = false; } }, get NM() { return NM; }, get quedanOla() { return quedanOla; },
   spawn(tipo, cerca = true) { const z = spawn(tipo, cerca); if (z) { z.sube = false; window.__rzZ = z; } return !!z; },
   rayoPrueba() { ojoJugador(_o, _f, _r, _u); return rayo(_o, _f, 200, []).map(h => ({ t: h.t, cab: h.cab, yo: h.z === window.__rzZ })); },
   obstaculo() { ojoJugador(_o, _f, _r, _u); const c = rayoObstaculos(_o, _f, 200); return { t: c.t, metal: c.c && c.c.metal }; },
@@ -2057,7 +2176,7 @@ window.__rz = {
   // avanza 'seg' segundos de simulación a paso fijo (sin rAF) y deja posados los cuerpos
   avanzar(seg, hornearCada = 60) { const n = Math.round(seg / PASO); for (let i = 0; i < n; i++) { simular(PASO); if (hornearCada && i % hornearCada === 0) fis.sangre.hornear(renderer, J.pos.x, J.pos.z); } fis.posarTodos(1); fis.sangre.hornear(renderer, J.pos.x, J.pos.z); return tiempo; },
   escopetazo() { tiene.add('escopeta'); if (armaSel !== 'escopeta') elegirArma('escopeta', true); cargador.escopeta = 99; cdArma = 0; disparar(); },
-  alturaTorso() { const z = window.__rzZ, P = z && fis.puntos(z); if (!P) return null; let m = 0; for (const i of [0, 1, 2, 3]) { const d = local(P[i * 3], P[i * 3 + 2], {}).d, r = fis.RAD[i] * z.esc; m = Math.max(m, P[i * 3 + 1] - Math.max(piso(d - r), piso(d), piso(d + r))); } return m; }, // piso de apoyo: el escalón más alto bajo la esfera (puede apoyarse en el cordón)
+  alturaTorso() { const z = window.__rzZ, P = z && fis.puntos(z); if (!P) return null; let m = 0; for (const i of [0, 1, 2, 3]) { const x = P[i * 3], y = P[i * 3 + 1], w = P[i * 3 + 2], r = fis.RAD[i] * z.esc, d = local(x, w, {}).d; let sop = Math.max(piso(d - r), piso(d), piso(d + r)); for (const c of colisiones) if (Math.hypot(c.x - x, c.z - w) < (c.rb || c.r) + r + 1) { const t = fis.techoEn(c, x, w, r); if (t > sop && t <= y - r + 0.15) sop = t; } m = Math.max(m, y - sop); } return m; }, // piso o techo de obstáculo bajo el torso (cordón, banco, auto)
   hundirViejos(n = 1) { for (let k = 0; k < n; k++) { let v = null; for (const z of zombis) if (!z.vivo && !z.hundir && z.yaRag && (!v || z.muerteT > v.muerteT)) v = z; if (v) empezarHundir(v, true); } },
   soporte() { // ¿algún cadáver dormido quedó en el aire? (sin piso, techo de obstáculo ni otro cuerpo debajo)
     const malos = []; const R = fis.RAD;

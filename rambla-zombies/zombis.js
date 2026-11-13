@@ -124,10 +124,14 @@ const PARTES = {
   onda: { geo: new THREE.TorusGeometry(0.2, 0.012, 4, 20), n: DET_N.onda, basic: true }
 };
 
+const GRUPO = ['caja', 'cilindro', 'esfera', 'pua', 'jiron', 'zapato'];
 // MeshStandard + borde de luz de luna, para que la silueta se separe del fondo
-function materialZombi() {
+function materialZombi(seleccion = false) {
   const m = new THREE.MeshStandardMaterial({ roughness: 0.85, metalness: 0, vertexColors: true });
+  m.customProgramCacheKey = () => seleccion ? 'zombi-sel' : 'zombi'; // mismo onBeforeCompile en texto: sin esto three reusa el programa sin selección
   m.onBeforeCompile = sh => {
+    if (seleccion) sh.vertexShader = sh.vertexShader.replace('void main() {', 'attribute float pieza;\nattribute float sel;\nvoid main() {')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\n if (abs(pieza - sel) > 0.5) transformed = vec3(0.0);'); // las otras piezas del grupo quedan en un punto (no se dibujan)
     sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>',
       `#include <emissivemap_fragment>
        float rim = 1.0 - abs(dot(normal, normalize(vViewPosition)));
@@ -138,9 +142,19 @@ function materialZombi() {
 
 export class Horda {
   constructor(scene, max) {
-    this.max = max; this.meshes = {};
+    this.max = max; this.meshes = {}; this.alias = {}; this.selDe = {};
     const lit = materialZombi();
+    // piezas chicas que comparten material: una sola InstancedMesh con las geometrías juntas; cada instancia elige la suya (5 draw calls menos)
+    { const geos = GRUPO.map(k => PARTES[k].geo.index ? PARTES[k].geo.toNonIndexed() : PARTES[k].geo); let n = 0, tot = 0; for (const g of geos) n += g.attributes.position.count;
+      const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3), pie = new Float32Array(n); let o = 0;
+      geos.forEach((g, gi) => { const c = g.attributes.position.count; pos.set(g.attributes.position.array, o * 3); nor.set(g.attributes.normal.array, o * 3); col.set(g.attributes.color.array, o * 3); pie.fill(gi, o, o + c); o += c; });
+      const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.BufferAttribute(pos, 3)); bg.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); bg.setAttribute('color', new THREE.BufferAttribute(col, 3)); bg.setAttribute('pieza', new THREE.BufferAttribute(pie, 1));
+      GRUPO.forEach((k, gi) => { this.alias[k] = 'grupo'; this.selDe[k] = gi; tot += PARTES[k].n; });
+      const im = new THREE.InstancedMesh(bg, materialZombi(true), max * tot); this.sel = new Float32Array(max * tot); bg.setAttribute('sel', new THREE.InstancedBufferAttribute(this.sel, 1).setUsage(THREE.DynamicDrawUsage));
+      im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.setColorAt(0, new THREE.Color()); im.instanceColor.setUsage(THREE.DynamicDrawUsage);
+      im.frustumCulled = false; im.count = 0; scene.add(im); this.meshes.grupo = im; }
     for (const k in PARTES) {
+      if (this.alias[k]) continue;
       const P = PARTES[k];
       const mat = k === 'onda' ? new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }) : P.basic ? new THREE.MeshBasicMaterial() :
         k === 'mancha' ? new THREE.MeshStandardMaterial({ roughness: 0.4, polygonOffset: true, polygonOffsetFactor: -3, side: THREE.DoubleSide }) :
@@ -167,13 +181,13 @@ export class Horda {
     const H = x => new THREE.Color(x);
     this.K = { hueso: H(0xcfc8b0), tajo: H(0x4a0a0a), venda: H(0xc8c0a4), negro: H(0x101012), blanco: H(0xd8d8d0), oro: H(0xc8a030), metal: H(0x9aa0a8), cuero: H(0x2a1c12), piedra: H(0x5a6458), traje: H(0x0e0e14), plata: H(0xcfd4da), naranja: H(0xd2621a) };
     this.cOnda = H(0x9fe6ff); this._tmp = new THREE.Color();
-    this.v = new THREE.Vector3(); this.cnt = {}; for (const k in PARTES) this.cnt[k] = 0;
+    this.v = new THREE.Vector3(); this.cnt = {}; for (const k in this.meshes) this.cnt[k] = 0;
   }
   dibujar(lista) {
-    const cnt = this.cnt; for (const k in PARTES) cnt[k] = 0;
+    const cnt = this.cnt; for (const k in cnt) cnt[k] = 0;
     const M = this.meshes;
-    const put = this._put || (this._put = (k, obj, color) => { const i = this.cnt[k]++; this.meshes[k].setMatrixAt(i, obj.matrixWorld); this.meshes[k].setColorAt(i, color); });
-    const nada = this._nada || (this._nada = k => this.meshes[k].setMatrixAt(this.cnt[k]++, this.cero));
+    const put = this._put || (this._put = (k, obj, color) => { const a = this.alias[k], mk = a || k, i = this.cnt[mk]++; if (a) this.sel[i] = this.selDe[k]; this.meshes[mk].setMatrixAt(i, obj.matrixWorld); this.meshes[mk].setColorAt(i, color); });
+    const nada = this._nada || (this._nada = k => { const mk = this.alias[k] || k; this.meshes[mk].setMatrixAt(this.cnt[mk]++, this.cero); });
     let ne = 0;
     for (const z of lista) {
       if (!z.mOk) { z.g.updateMatrixWorld(true); if (z.dormido) z.mOk = true; } // los cadáveres quietos no recalculan matrices
@@ -215,7 +229,8 @@ export class Horda {
     }
     for (let i = ne; i < this.max * 2; i++) this.pOjos[i * 3 + 1] = -999;
     this.brillo.geometry.attributes.position.needsUpdate = true; this.brillo.geometry.attributes.color.needsUpdate = true;
-    for (const k in PARTES) { const im = M[k]; im.count = cnt[k]; im.instanceMatrix.needsUpdate = true; im.instanceColor.needsUpdate = true; }
+    for (const k in M) { const im = M[k]; im.count = cnt[k]; im.instanceMatrix.needsUpdate = true; im.instanceColor.needsUpdate = true; }
+    this.meshes.grupo.geometry.attributes.sel.needsUpdate = true;
   }
 }
 
@@ -255,7 +270,7 @@ export function prepararZombi(z, tipo) {
   z.snap = 0; z.tamb = 0; z.tambLado = 0; z.tropiezo = 0; z.tropLado = 0; z.rengo = 0; z.danoPiernas = 0; z.rastro = 0; z.parte = 1;
   z.hombros[0].rotation.set(0, 0, 0); z.hombros[1].rotation.set(0, 0, 0); z.caderas[0].rotation.set(0, 0, 0); z.caderas[1].rotation.set(0, 0, 0);
   z.mandibula.rotation.set(0, 0, 0);
-  z.sinBrazo[0] = z.sinBrazo[1] = false; z.flanco = (Math.random() * 2 - 1); z.slot = (slotZ = (slotZ + 2.39996) % 6.2832); z.alerta = 0; z.quemaT = 0; z.quemaD = 0; z.decT = Math.random() * 0.1; z.dirX = undefined; z.modV = 1; z.rugidoT = 8; z.piedraT = 5; z.explotado = false; z.rodeo = 1; z.rodeoT = 0; z.chequeoT = 2; z.distPrev = 1e9; z.trancado = 0; z.accion = ''; z.cargaT = 0;
+  z.sinBrazo[0] = z.sinBrazo[1] = false; z.flanco = (Math.random() * 2 - 1); z.slot = (slotZ = (slotZ + 2.39996) % 6.2832); z.slotOk = false; z.orbita = false; z.orbT = 0; z.alerta = 0; z.quemaT = 0; z.quemaD = 0; z.decT = Math.random() * 0.1; z.dirX = undefined; z.modV = 1; z.rugidoT = 8; z.piedraT = 5; z.explotado = false; z.rodeo = 1; z.rodeoT = 0; z.chequeoT = 2; z.distPrev = 1e9; z.trancado = 0; z.accion = ''; z.cargaT = 0;
   z.g.rotation.set(0, 0, 0); z.cuerpo.rotation.set(0, 0, 0); z.cabeza.rotation.set(0, 0, 0); z.cuerpo.position.set(0, 0.86, 0);
   z.torso.scale.set(1, 1, 1); z.cab.scale.set(1, 1, 1); z.cadera.position.set(0, 0.9, 0); z.cadera.rotation.set(0, 0, 0);
   z.cPiel.setHex(elegir(PIEL)).offsetHSL(0, 0, (Math.random() - 0.5) * 0.08);
