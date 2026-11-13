@@ -1,5 +1,5 @@
 // Service worker: guarda el juego y three.js para jugar sin conexión.
-const VERSION = 'rz-v7-2';
+const VERSION = 'rz-v7-3';
 const ARCHIVOS = ['./', 'index.html', 'style.css', 'game.js', 'world.js', 'props.js', 'zombis.js', 'armas.js', 'audio.js', 'efectos.js', 'datos.js', 'fisica.js', 'sangre.js', 'infinito.js', 'mapas.js', 'zonas.js', 'autos.js', 'texturas.js', 'ambiente.js',
   'manifest.webmanifest', 'iconos/icono-192.png', 'iconos/icono-512.png', 'iconos/apple-touch-icon.png', 'iconos/icono-maskable-512.png',
   'fuentes/butcherman.woff2', 'fuentes/bangers.woff2', 'fuentes/barlow-medium.woff2', 'fuentes/barlow-bold.woff2'];

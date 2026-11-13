@@ -157,12 +157,15 @@
     <section><h3>Mapa</h3><div class="opc" id="pg-mapa"></div></section>
     <section><h3>Zombis por oleada <b id="pg-cant-v"></b></h3><input type="range" id="pg-cant" min="5" max="120" step="5"></section>
     <section><h3>Duración de la oleada <b id="pg-dur-v"></b></h3><input type="range" id="pg-dur" min="10" max="180" step="10"></section>
+    <section><h3>Oleadas <b id="pg-olas-v"></b></h3><input type="range" id="pg-olas" min="0" max="30" step="1"><p class="pg-hint">0 es sin límite: se termina cuando te comen.</p></section>
     <section><h3>Dificultad</h3><div class="opc" id="pg-dif"></div></section>
     <section><h3>Tipos de zombi</h3><div class="chips" id="pg-tipos"></div></section>
     <section><h3>Armas</h3><div class="chips" id="pg-armas"></div></section>
-    <section><h3>Extras</h3><div class="chips" id="pg-extras"></div></section>
+    <section><h3>Extras</h3><div class="chips" id="pg-extras"></div>
+      <div id="pg-jefe-fila" class="pg-fila-rango oculto"><h3>Jefe cada <b id="pg-jefe-v"></b></h3><input type="range" id="pg-jefe" min="2" max="10" step="1"></div>
+    </section>
   </div>
-  <div class="menu"><button id="b-pg-jugar" class="pri">¡A jugar!</button><button class="sec volver">Volver</button></div>
+  <div class="menu pg-pie"><button id="b-pg-jugar" class="pri">¡A jugar!</button><button class="sec volver">Volver</button></div>
 </div>
 
 <div id="mods" class="pantalla panel oculto">

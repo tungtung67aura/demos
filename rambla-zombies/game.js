@@ -191,7 +191,7 @@ let jefe = null, jefePendiente = null, jefeT = 0, comboN = 0, comboT = 0, finT =
 let S = {}; // estadísticas de la partida
 const BASE = id => ARMAS.find(a => a.id === id);
 const A = id => (modoInf && statsInf[id]) || BASE(id); /* en Infinito: estadísticas con mods */
-const jefeDe = n => modoPlay ? (cfgPlay.jefes && n % 3 === 0 ? (n % 6 === 0 ? 'cerro' : 'patovica') : null) : modoInf ? jefeInf(n) : JEFES[n];
+const jefeDe = n => { if (!modoPlay) return modoInf ? jefeInf(n) : JEFES[n]; if (!cfgPlay.jefes) return null; const cada = cfgPlay.jefeCada || 3; return n % cada === 0 ? (n % (cada * 2) === 0 ? 'cerro' : 'patovica') : null; };
 let LIM_I0 = NM / 2 - 70, LIM_I1 = NM / 2 + 128, MAPA = MAPAS.rambla;
 const mapaLibre = M => modoPlay || (perfil.mejorOleada || 0) >= M.desbloq; /* U4: se suma el Puerto del Buceo */
 const DIF_PLAY = { facil: { vida: 0.6, dano: 0.5, pesos: 1, vel: 0.85 }, normal: { vida: 1, dano: 1, pesos: 1, vel: 1 }, dificil: { vida: 1.6, dano: 1.5, pesos: 1, vel: 1.12 }, infierno: { vida: 2.6, dano: 2.2, pesos: 1, vel: 1.25 } };
@@ -812,7 +812,21 @@ function empezarOleada() {
   hud();
 }
 function oleadaTerminada() {
-  if (modoPlay) { mensaje('¡Oleada ' + oleada + ' superada!', 'La próxima arranca en unos segundos'); descanso = cfgPlay.pausa; sonido.oleada(); hud(); return; }
+  if (modoPlay) {
+    if (cfgPlay.olas > 0 && oleada >= cfgPlay.olas) {
+      estado = 'fin'; disparando = false; autoDisparo = false;
+      if (document.pointerLockElement) document.exitPointerLock();
+      mundo.setAlba(1); sonido.victoria(); camVictoria = true;
+      mensaje('¡Playground superado!', 'Completaste las ' + cfgPlay.olas + ' oleadas en ' + MAPA.nombre);
+      cerrarPartida(true);
+      $('fin').classList.add('victoria');
+      $('fin-titulo').textContent = '¡Playground superado!';
+      $('fin-sub').innerHTML = `Playground en ${MAPA.nombre}: completaste las <b>${cfgPlay.olas}</b> oleadas.`;
+      musica.set(0, false, true);
+      setTimeout(() => { mostrar('fin'); capaJuego(false); }, 2000); return;
+    }
+    mensaje('¡Oleada ' + oleada + ' superada!', 'La próxima arranca en unos segundos'); descanso = cfgPlay.pausa; sonido.oleada(); hud(); return;
+  }
   const bonus = Math.round(oleada * 60 * MODO().pesos);
   pesos += bonus; puntos += oleada * 250;
   if (S.olaSinDano) { logro('perfecta'); pesos += 100; }
@@ -1536,7 +1550,7 @@ function victoria() {
 const prevHud = {};
 function poner(id, prop, val) { const k = id + prop; if (prevHud[k] === val) return; prevHud[k] = val; const el = $(id); if (prop === 'text') el.textContent = val; else if (prop === 'w') el.style.width = val; else el[prop] = val; }
 function hud() {
-  poner('oleada', 'text', oleada ? modoPlay ? `Oleada ${oleada} · Playground` : modoInf ? `Oleada ${oleada} ♾` : (oleada === OLEADAS_TOTAL ? 'Última oleada' : `Oleada ${oleada}/${OLEADAS_TOTAL}`) : 'Preparate');
+  poner('oleada', 'text', oleada ? modoPlay ? (cfgPlay.olas > 0 ? `Oleada ${oleada}/${cfgPlay.olas} · Playground` : `Oleada ${oleada} · Playground`) : modoInf ? `Oleada ${oleada} ♾` : (oleada === OLEADAS_TOTAL ? 'Última oleada' : `Oleada ${oleada}/${OLEADAS_TOTAL}`) : 'Preparate');
   poner('puntos', 'text', String(puntos));
   $('pesos').querySelector('span').textContent = pesos;
   let vivos = 0; for (const z of zombis) vivos += z.vivo;
@@ -1768,11 +1782,13 @@ const TIPOS_PLAY = [['normal', 'Comunes'], ['corredor', 'Corredores'], ['gateado
 const DIF_NOM = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', infierno: 'Infierno' };
 function cargarPlay() {
   let c = {}; try { c = JSON.parse(localStorage.getItem('rz-play') || '{}') || {}; } catch (e) { }
-  const base = { mapa: 'rambla', cantidad: 25, dur: 60, dif: 'normal', tipos: ['normal', 'corredor', 'gateador'], armas: ['pistola', 'escopeta', 'termo'], municion: true, invencible: false, jefes: false, pausa: 5 };
+  const base = { mapa: 'rambla', cantidad: 25, dur: 60, dif: 'normal', tipos: ['normal', 'corredor', 'gateador'], armas: ['pistola', 'escopeta', 'termo'], municion: true, invencible: false, jefes: false, jefeCada: 3, olas: 0, pausa: 5 };
   c = Object.assign(base, c);
   if (!MAPAS[c.mapa]) c.mapa = 'rambla';
-  c.tipos = c.tipos.filter(t => TIPOS[t]); if (!c.tipos.length) c.tipos = ['normal'];
-  c.armas = c.armas.filter(a => ARMAS.some(x => x.id === a)); if (!c.armas.length) c.armas = ['pistola'];
+  c.tipos = (c.tipos || []).filter(t => TIPOS[t]); if (!c.tipos.length) c.tipos = ['normal'];
+  c.armas = (c.armas || []).filter(a => ARMAS.some(x => x.id === a)); if (!c.armas.length) c.armas = ['pistola'];
+  c.jefeCada = Math.max(2, Math.min(10, +c.jefeCada || 3));
+  c.olas = Math.max(0, Math.min(30, +c.olas || 0));
   return c;
 }
 function guardarPlay() { try { localStorage.setItem('rz-play', JSON.stringify(cfgPlay)); } catch (e) { } }
@@ -1785,14 +1801,19 @@ function pintarPlay() {
   opc('pg-dif', Object.entries(DIF_NOM), c.dif, k => c.dif = k);
   chips('pg-tipos', TIPOS_PLAY, k => c.tipos.includes(k), k => alternar(c.tipos, k));
   chips('pg-armas', ARMAS.map(a => [a.id, a.nombre]), k => c.armas.includes(k), k => alternar(c.armas, k));
-  chips('pg-extras', [['municion', 'Munición infinita'], ['invencible', 'Invencible'], ['jefes', 'Jefe cada 3 oleadas']], k => c[k], k => c[k] = !c[k]);
+  chips('pg-extras', [['municion', 'Munición infinita'], ['invencible', 'Invencible'], ['jefes', 'Jefes']], k => c[k], k => c[k] = !c[k]);
   $('pg-cant').value = c.cantidad; $('pg-cant-v').textContent = c.cantidad;
   $('pg-dur').value = c.dur; $('pg-dur-v').textContent = c.dur + ' s';
+  $('pg-olas').value = c.olas; $('pg-olas-v').textContent = c.olas > 0 ? c.olas : 'sin límite';
+  $('pg-jefe').value = c.jefeCada; $('pg-jefe-v').textContent = c.jefeCada + ' oleadas';
+  $('pg-jefe-fila').classList.toggle('oculto', !c.jefes);
   $('b-pg-jugar').textContent = `¡A jugar! · ${MAPAS[c.mapa].nombre}`;
 }
 cfgPlay = cargarPlay();
 $('pg-cant').oninput = e => { cfgPlay.cantidad = +e.target.value; $('pg-cant-v').textContent = cfgPlay.cantidad; guardarPlay(); };
 $('pg-dur').oninput = e => { cfgPlay.dur = +e.target.value; $('pg-dur-v').textContent = cfgPlay.dur + ' s'; guardarPlay(); };
+$('pg-olas').oninput = e => { cfgPlay.olas = +e.target.value; $('pg-olas-v').textContent = cfgPlay.olas > 0 ? cfgPlay.olas : 'sin límite'; guardarPlay(); };
+$('pg-jefe').oninput = e => { cfgPlay.jefeCada = +e.target.value; $('pg-jefe-v').textContent = cfgPlay.jefeCada + ' oleadas'; guardarPlay(); };
 clic('b-play', () => { volverA = 'inicio'; pintarPlay(); mostrar('playground'); });
 clic('b-pg-jugar', () => { modoPlay = true; if (modoInf) { modoInf = false; recalcInf(); } guardarPlay(); jugar(); });
 pintarMapas();
@@ -2080,7 +2101,8 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') { /* actuali
 window.__rz = { get escena() { return scene; },
   get estado() { return estado; }, get oleada() { return oleada; }, set oleada(v) { oleada = v; }, get puntos() { return puntos; }, get bajas() { return bajas; },
   get pesos() { return pesos; }, set pesos(v) { pesos = v; hud(); }, get jefe() { return jefe && { tipo: jefe.tipo, vida: jefe.vida, max: jefe.vidaMax }; },
-  get vida() { return J.vida; }, set vida(v) { J.vida = v; }, set dios(v) { dios = v; }, get arma() { return armaSel; }, get desbloq() { return [...tiene]; },
+  get vida() { return J.vida; }, set vida(v) { J.vida = v; }, get dios() { return dios; }, set dios(v) { dios = v; }, get arma() { return armaSel; }, get desbloq() { return [...tiene]; },
+  get play() { return { modo: modoPlay, cfg: cfgPlay && { ...cfgPlay, tipos: cfgPlay.tipos.slice(), armas: cfgPlay.armas.slice() } }; }, get reserva() { return { ...reserva }; },
   get blindaje() { return J.blindaje; }, get ventajas() { return [...ventajas]; }, get niveles() { return JSON.parse(JSON.stringify(niveles)); },
   get vivos() { return zombis.filter(z => z.vivo).length; }, get porSalir() { return porSalir; }, get descanso() { return descanso; }, get S() { return S; }, perfil,
   get vista() { const v = new THREE.Vector2(); renderer.getSize(v); return { rw: v.x, rh: v.y, cw: lienzo.clientWidth, ch: lienzo.clientHeight, iw: innerWidth, ih: innerHeight, bw: renderer.domElement.width, bh: renderer.domElement.height }; },
