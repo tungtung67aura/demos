@@ -421,7 +421,8 @@ function dispararProyectil(a) {
   _fin.copy(_o).addScaledVector(_f, t); const yp = pisoEn(_fin.x, _fin.z); if (_fin.y < yp) _fin.y = yp;
   _u2.copy(_o).addScaledVector(_r, 0.14).addScaledVector(_u, -0.08).addScaledVector(_f, 0.7);
   const garrafa = a.proyectil === 'garrafa', vuelo = garrafa ? Math.max(0.35, t / 24) : Math.max(0.12, t / 42);
-  ef.lanzar(a.proyectil, _u2, _fin, vuelo, garrafa ? 40 : 16, a.radio || 2.4, yp, true, garrafa ? 9 : 3);
+  const fd = danoDe(a) / (BASE(a.id).dano || 1); /* mods de daño también en bengala y garrafa */
+  ef.lanzar(a.proyectil, _u2, _fin, vuelo, (garrafa ? 40 : 16) * fd, a.radio || 2.4, yp, true, garrafa ? 9 : 3);
   if (garrafa) vibrar(40);
   if (cargador[a.id] === 0 && reserva[a.id] > 0) setTimeout(() => { if (armaSel === a.id && estado === 'jugando') recargar(); }, 300);
 }
@@ -707,7 +708,9 @@ const MM = {
   oro: new THREE.MeshStandardMaterial({ color: 0xd8a830, roughness: 0.35, metalness: 0.35, emissive: 0x2a1800 }),
   rojo: new THREE.MeshStandardMaterial({ color: 0x501010, emissive: 0xff2010, emissiveIntensity: 0.7 }),
   naranja: new THREE.MeshStandardMaterial({ color: 0x3a1a08, emissive: 0xff6a10, emissiveIntensity: 0.9 }),
-  azul: new THREE.MeshStandardMaterial({ color: 0x203040, emissive: 0x3090ff, emissiveIntensity: 0.9 })
+  azul: new THREE.MeshStandardMaterial({ color: 0x203040, emissive: 0x3090ff, emissiveIntensity: 0.9 }),
+  gris: new THREE.MeshStandardMaterial({ color: 0xc8c8c8, roughness: 0.4, metalness: 0.5 }),
+  azulR: new THREE.MeshStandardMaterial({ color: 0x1a4a90, emissive: 0x2a78d8, emissiveIntensity: 0.5 })
 };
 const modCaja = (g, w, h, d, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); g.add(m); return m; };
 const modCil = (g, r1, r2, h, mat, x, y, z, rx = Math.PI / 2, rz = 0) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, h, 12), mat); m.position.set(x, y, z); m.rotation.x = rx; m.rotation.z = rz; g.add(m); return m; };
@@ -733,14 +736,32 @@ function vestirArma(id) {
     if (s.fuego && !s.dragon) modCaja(g, 0.052, 0.012, 0.03, MM.naranja, 0, 0.042, p0.z * 0.4);
     if (s.cadena) modCaja(g, 0.052, 0.012, 0.03, MM.azul, 0, 0.042, p0.z * 0.4 + 0.035);
     if (s.explos) modCaja(g, 0.052, 0.012, 0.03, MM.rojo, 0, 0.042, p0.z * 0.4 - 0.035);
-    if (s.auto && id === 'pistola') modCaja(g, 0.02, 0.05, 0.1, MM.negro, 0, -0.03, 0.08);
+    if (s.auto && (id === 'pistola' || id === 'fal')) modCaja(g, 0.02, 0.05, 0.1, MM.negro, 0, -0.03, 0.08);
   } else {
-    if (s.llamas) modCil(g, 0.036, 0.036, 0.5, MM.naranja, 0, 0.4, 0, 0);
-    if (s.electro) modCil(g, 0.04, 0.04, 0.46, MM.azul, 0, 0.38, 0, 0);
+    const fino = id === 'espeto' || id === 'cana';
+    if (s.llamas) modCil(g, fino ? 0.012 : 0.036, fino ? 0.012 : 0.036, 0.5, MM.naranja, 0, 0.4, 0, 0);
+    if (s.electro) modCil(g, fino ? 0.012 : 0.04, fino ? 0.012 : 0.04, 0.46, MM.azul, 0, 0.38, 0, 0);
     if (s.vampiro) modCaja(g, 0.06, 0.03, 0.06, MM.rojo, 0, 0.08, 0);
+  }
+  // todo mod que no tiene pieza propia igual se ve: una franja del color de su rareza (gris común, azul rara, oro legendaria)
+  const ms = modsInf[id]; if (ms) {
+    const fuego = BASE(id).tipo === 'fuego', fino = id === 'espeto' || id === 'cana'; let k = 0;
+    for (const mid in ms) {
+      if (CON_PIEZA[mid] && CON_PIEZA[mid](fuego, id, m)) continue;
+      const mat = MM[{ c: 'gris', r: 'azulR', l: 'oro' }[(MOD(mid) || {}).r] || 'gris'];
+      for (let n = 0; n < ms[mid]; n++, k++) {
+        if (fuego) { const rr = RADIO_ANILLO[id] || 0.024; modCil(g, rr, rr, 0.011, mat, p0.x, p0.y - (id === 'pistola' || id === 'revolver' ? 0.012 : 0), p0.z + 0.05 + 0.02 * k); } /* anillos en el caño, detrás de la boca */
+        else modCil(g, fino ? 0.013 : 0.027, fino ? 0.013 : 0.027, 0.014, mat, 0, 0.1 + 0.024 * k, 0, 0); /* anillos en el mango */
+      }
+    }
   }
   u.punta.set(p0.x, p0.y, tip); if (u.flash) u.flash.position.copy(u.punta);
 }
+const RADIO_ANILLO = { pistola: 0.031, revolver: 0.027, bengalera: 0.03, lanzagarrafas: 0.06, recortada: 0.034, escopeta: 0.03 };
+// mods que ya tienen su pieza o efecto propio en el arma
+const CON_PIEZA = { silen: f => f, choke: f => f, dragon: () => true, laser: f => f, gomlaser: f => f, tambor: f => f, estab: f => f, incend: f => f, cadena: f => f, explos: f => f,
+  rafaga: (f, id) => id === 'pistola', falauto: () => true, cargext: (f, id, m) => !!m.getObjectByName('cargador'), suerte: (f, id, m) => !!m.getObjectByName('tambor'), pesado: () => true, llamas: f => !f, brasa: f => !f, electro: f => !f, vampiro: f => !f,
+  chivito: () => true, chaleco: () => true, mate: () => true };
 // mira láser: un rayo en el mundo desde el arma hasta lo primero que toca, con un punto rojo
 const laserRayo = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.01, 1).translate(0, 0, -0.5), new THREE.MeshBasicMaterial({ color: 0xff2a20, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
 const laserPunto = new THREE.Sprite(new THREE.SpriteMaterial({ map: brilloTex('rgba(255,40,30,1)'), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
@@ -2395,6 +2416,7 @@ window.__rz = { get escena() { return scene; },
     stats: id => ({ ...A(id), reserva: A(id).reserva === Infinity ? -1 : A(id).reserva, cargMax: A(id).tipo === 'fuego' ? cargMax(A(id)) : 0 }),
     mods: () => JSON.parse(JSON.stringify(modsInf)), opciones: () => opcionesInf.map(o => ({ ...o })),
     abrirMods() { modsHecho = false; abrirMods(); }, elegir(k) { elegirMod(opcionesInf[k]); },
+    vis: id => { const u = modelos[id].userData; const car = modelos[id].getObjectByName('cargador'), tam = modelos[id].getObjectByName('tambor'); return { piezas: u.mods ? u.mods.children.length : 0, escala: modelos[id].scale.x, car: car ? car.scale.y : 0, tam: tam ? tam.material.uuid : '', laser: u.laser, llamas: u.llamas, electro: u.electro }; },
     darMod(arma, mod) { const t = modsInf[arma] || (modsInf[arma] = {}); t[mod] = (t[mod] || 0) + 1; recalcInf(); const a = A(arma); if (a.tipo === 'fuego') cargador[a.id] = cargMax(a); },
     cola: () => colaExpl.length / 4, laser: () => laserRayo.visible, pintar() { pintarInfinito(); },
     calmar() { colaExpl.length = 0; for (const z of zombis) z.quemaT = 0; },
