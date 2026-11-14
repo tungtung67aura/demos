@@ -1,0 +1,16 @@
+{
+  "name": "Párate de mano ñeri",
+  "short_name": "Párate ñeri",
+  "description": "Beat 'em up de barrio montevideano: piñas, bizcochos y candombe.",
+  "lang": "es-UY",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#120a18",
+  "theme_color": "#2d2b5e",
+  "icons": [
+    { "src": "iconos/icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "iconos/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

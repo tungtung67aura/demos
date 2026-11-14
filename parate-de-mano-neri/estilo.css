@@ -1,0 +1,25 @@
+@font-face { font-family: 'PS2P'; src: url('fuentes/PressStart2P-Regular.ttf'); font-display: swap; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: #120a18; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; overscroll-behavior: none; }
+#raiz { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left); }
+#juego { image-rendering: crisp-edges; image-rendering: pixelated; display: block; }
+#tactil { position: fixed; inset: 0; pointer-events: none; display: none; }
+body.en-juego.tactil #tactil { display: block; }
+#zona-stick { position: absolute; left: 0; top: 18%; bottom: 0; width: 48%; pointer-events: auto; }
+#stick { position: absolute; width: 110px; height: 110px; margin: -55px 0 0 -55px; border-radius: 50%; border: 3px solid rgba(255,255,255,.25); background: rgba(20,10,30,.25); opacity: 0; transition: opacity .1s; pointer-events: none; left: 120px; top: 70%; }
+body.en-juego.tactil #stick { opacity: .4; }
+#stick.activo { opacity: .9 !important; }
+#perilla { position: absolute; left: 50%; top: 50%; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,210,58,.85); border: 3px solid #1b1220; transform: translate(-50%,-50%); }
+#botones { position: absolute; right: calc(14px + env(safe-area-inset-right)); bottom: calc(12px + env(safe-area-inset-bottom)); width: 172px; height: 150px; pointer-events: none; transition: opacity .15s; }
+body.tapado #botones { opacity: .38; } /* hay un luchador debajo de los botones: se vuelven casi transparentes */
+.b { position: absolute; pointer-events: auto; border-radius: 50%; border: 3px solid #1b1220; font: 9px 'PS2P', monospace; color: #fff; text-shadow: 1px 1px 0 #1b1220; box-shadow: inset 0 -4px 0 rgba(0,0,0,.3), 0 2px 0 rgba(0,0,0,.3); opacity: .42; padding: 0; }
+.b.on { transform: translateY(2px) scale(.95); opacity: 1; filter: brightness(1.25); }
+.b-pin { width: 60px; height: 60px; right: 0; bottom: 26px; background: #d8303a; font-size: 9px; }
+.b-pat { width: 50px; height: 50px; right: 68px; bottom: 2px; background: #2f6fc0; font-size: 7px; }
+.b-sal { width: 48px; height: 48px; right: 58px; bottom: 64px; background: #3a9a4a; font-size: 7px; }
+.b-esp { width: 40px; height: 40px; right: 8px; bottom: 94px; background: #e0a020; font-size: 7px; }
+.b-pausa { position: absolute; pointer-events: auto; top: calc(6px + env(safe-area-inset-top)); right: calc(8px + env(safe-area-inset-right)); width: 38px; height: 34px; border-radius: 8px; border: 3px solid #1b1220; background: rgba(60,40,80,.7); color: #fff; font: 10px 'PS2P', monospace; }
+#girar { display: none; position: fixed; inset: 0; background: #2d2b5e; color: #ffd23a; font: 14px/2 'PS2P', monospace; text-align: center; align-items: center; justify-content: center; z-index: 9; }
+#girar span { font-size: 40px; }
+body.vertical #girar { display: flex; }
+@media (hover: hover) and (pointer: fine) { body:not(.tactil) #tactil { display: none; } }

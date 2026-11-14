@@ -1,0 +1,2 @@
+Press Start 2P — de CodeMan38, licencia SIL Open Font License 1.1 (OFL). Uso y redistribución libres dentro del juego.
+Los glifos también están "horneados" en js/fuente-datos.js (generado con tools/fuente.py).

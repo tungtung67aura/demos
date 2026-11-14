@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es-UY">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#2d2b5e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Párate de mano">
+<title>Párate de mano ñeri</title>
+<meta name="description" content="Beat 'em up de barrio montevideano: piñas, bizcochos y candombe.">
+<meta property="og:title" content="Párate de mano ñeri">
+<meta property="og:description" content="Beat 'em up de barrio montevideano: piñas, bizcochos y candombe.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="iconos/icono-512.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="iconos/icono-192.png">
+<link rel="apple-touch-icon" href="iconos/icono-180.png">
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<div id="raiz">
+  <canvas id="juego" width="480" height="270"></canvas>
+  <div id="tactil">
+    <div id="zona-stick"></div>
+    <div id="stick"><div id="perilla"></div></div>
+    <div id="botones">
+      <button data-b="especial" class="b b-esp">ESP</button>
+      <button data-b="salto" class="b b-sal">SALTO</button>
+      <button data-b="patada" class="b b-pat">PATADA</button>
+      <button data-b="pina" class="b b-pin">PIÑA</button>
+    </div>
+    <button data-b="pausa" class="b-pausa">II</button>
+  </div>
+  <div id="girar"><div>Girá el teléfono<br><span>⟳</span></div></div>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
