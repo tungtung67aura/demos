@@ -23,14 +23,18 @@ h3{font-family:Bangers,Impact,sans-serif;font-weight:400;letter-spacing:1px;font
 .sub{max-width:560px;opacity:.85;font-size:clamp(15px,2.2vw,18px);line-height:1.35;margin:10px 0 6px;text-shadow:0 1px 3px #000}
 
 /* logo */
-.logo{display:flex;flex-direction:column;align-items:center;line-height:.82;transform:rotate(-3deg);animation:latido 3.2s ease-in-out infinite;filter:drop-shadow(0 6px 0 rgba(0,0,0,.6))}
-.logo-z{font-family:Butcherman,Impact,serif;font-size:clamp(54px,13vw,130px);color:#d7f2a6;letter-spacing:3px;
+.logo{display:flex;flex-direction:column;align-items:center;line-height:.86;transform:rotate(-3deg);animation:latido 3.2s ease-in-out infinite;filter:drop-shadow(0 6px 0 rgba(0,0,0,.6))}
+.logo-r{font-family:Bangers,Impact,sans-serif;font-size:clamp(50px,12.5vw,118px);color:var(--acento);letter-spacing:.09em;padding-left:.09em;
+  background:linear-gradient(180deg,#ffe08a 0%,#ffb02e 38%,#ff6a00 72%,#c8380a 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  text-shadow:none;filter:drop-shadow(0 3px 0 #7a2c06) drop-shadow(3px 5px 0 #000) drop-shadow(0 0 18px rgba(255,110,0,.55));position:relative;white-space:nowrap}
+.logo-dp{color:#d7f2a6;-webkit-text-fill-color:#d7f2a6;margin-left:.04em}
+.logo-z{font-family:Butcherman,Impact,serif;font-size:clamp(40px,10.4vw,104px);color:#d7f2a6;letter-spacing:.03em;white-space:nowrap;margin-top:.08em;
   text-shadow:0 2px 0 #6a8a3a,0 5px 0 #3a5a1a,4px 9px 0 #3a0606,0 0 40px rgba(140,255,90,.35)}
-.logo-en{font-family:Bangers,sans-serif;font-size:clamp(20px,4vw,34px);color:#fff3dc;letter-spacing:6px;margin:4px 0 2px;text-shadow:2px 2px 0 #000}
-.logo-r{font-family:Bangers,Impact,sans-serif;font-size:clamp(46px,11vw,108px);color:var(--acento);letter-spacing:8px;
-  text-shadow:0 3px 0 #a04a10,4px 7px 0 #000,0 0 34px rgba(255,110,0,.6);position:relative}
-.logo-r::after{content:'';position:absolute;left:12%;right:12%;bottom:-6px;height:5px;border-radius:3px;background:linear-gradient(90deg,transparent,#ff6a00,transparent);opacity:.8}
-.logo.chico{animation:none}.logo.chico .logo-z{font-size:56px}.logo.chico .logo-r{font-size:44px}
+.logo-mvd{display:flex;align-items:center;gap:.45em;margin-top:.55em;font-family:Bangers,sans-serif;font-size:clamp(14px,2.6vw,24px);letter-spacing:.32em;color:#fff3dc;text-shadow:2px 2px 0 #000;line-height:1}
+.logo-mvd span{padding-left:.32em}
+.logo-mvd i{display:block;width:clamp(28px,7vw,74px);height:.62em;background:repeating-linear-gradient(180deg,#fff 0 20%,#2f6fd6 20% 40%);border-radius:2px;box-shadow:1px 2px 0 #000;opacity:.92}
+.logo-sol{width:1.6em;height:1.6em;vertical-align:middle;filter:drop-shadow(0 0 6px rgba(255,200,60,.7))}
+.logo.chico{animation:none}.logo.chico .logo-r{font-size:46px}.logo.chico .logo-z{font-size:36px}
 @keyframes latido{0%,100%{transform:rotate(-3deg) scale(1)}50%{transform:rotate(-3deg) scale(1.035)}}
 
 .menu{display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:14px}
@@ -230,7 +234,7 @@ body.apaisado #feed{top:calc(130px + env(safe-area-inset-top))}
 body.apaisado #jefe{top:calc(8px + env(safe-area-inset-top))}
 body.apaisado .pantalla{justify-content:flex-start}
 body.apaisado #inicio{justify-content:center}
-body.apaisado .logo-z{font-size:60px}body.apaisado .logo-r{font-size:50px}body.apaisado .logo-en{font-size:18px}
+body.apaisado .logo-r{font-size:54px}body.apaisado .logo-z{font-size:42px}body.apaisado .logo-mvd{font-size:13px;margin-top:.45em}
 body.apaisado .sub{font-size:14px;margin:6px 0 0}
 body.apaisado .menu{margin-top:6px;gap:6px}
 body.apaisado .pantalla button.pri{font-size:22px;padding:8px 26px}
@@ -304,3 +308,29 @@ button.play{border-color:#3fb6a8!important}
   #playground .pg-pie{padding:6px 8px calc(8px + env(safe-area-inset-bottom));gap:6px}
 }
 @media (max-width:560px){#pg-form h3{font-size:17px}}
+/* v8: menú de inicio en celu apaisado, en dos columnas (antes se cortaba arriba y abajo) */
+body.apaisado #inicio{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);grid-template-areas:"logo menu" "sub menu" "rec menu";
+  align-content:safe center;align-items:center;overflow-y:auto;column-gap:clamp(12px,3vw,36px);row-gap:4px;padding-top:calc(10px + env(safe-area-inset-top));padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+body.apaisado #inicio .logo{grid-area:logo;justify-self:center}
+body.apaisado #inicio .sub{grid-area:sub;justify-self:center;max-width:360px;font-size:13px}
+body.apaisado #inicio #record{grid-area:rec;justify-self:center}
+body.apaisado #inicio .menu{grid-area:menu;margin:0;align-self:center}
+body.apaisado #inicio .mapas-sel button{padding:5px 10px!important;font-size:14px!important}
+body.apaisado #inicio .mapas-sel button small{font-size:10px}
+body.apaisado #inicio .opc button{padding:6px 12px!important;font-size:14px!important}
+body.apaisado #inicio .pie{left:0;right:0}
+
+/* v8: presentación de jefes (tarjeta) y marcas de fase en la barra */
+#jefe-barra .jf{position:absolute;top:0;bottom:0;width:2px;background:rgba(0,0,0,.75);z-index:3}
+#jefe-intro{position:absolute;left:0;right:0;top:30%;text-align:center;pointer-events:none;opacity:0;transform:translateX(-30px)}
+#jefe-intro.on{animation:jIntro 3.4s cubic-bezier(.2,.8,.2,1) both}
+@keyframes jIntro{0%{opacity:0;transform:translateX(-60px) skewX(-8deg)}10%{opacity:1;transform:none}85%{opacity:1;transform:translateX(10px)}100%{opacity:0;transform:translateX(60px)}}
+.ji-franja{position:absolute;left:-5%;right:-5%;top:-14px;bottom:-14px;background:linear-gradient(90deg,transparent,rgba(120,0,0,.78) 18%,rgba(20,0,0,.88) 50%,rgba(120,0,0,.78) 82%,transparent);transform:skewY(-3deg);z-index:-1;border-top:3px solid #ffb02e;border-bottom:3px solid #ffb02e}
+#ji-nombre{font-family:Butcherman,Impact,serif;font-size:clamp(34px,7.5vw,78px);color:#ffe08a;letter-spacing:2px;text-shadow:0 3px 0 #7a2c06,4px 6px 0 #000,0 0 30px rgba(255,90,0,.6);line-height:1}
+#ji-epiteto{font-family:Bangers,sans-serif;font-size:clamp(16px,3vw,28px);letter-spacing:4px;color:#fff3dc;text-shadow:2px 2px 0 #000;margin-top:2px}
+#ji-tip{font-family:Barlow,sans-serif;font-weight:700;font-size:clamp(13px,1.9vw,18px);color:#ffd2a0;max-width:min(640px,90vw);margin:8px auto 0;text-shadow:0 1px 3px #000}
+body.apaisado #jefe-intro{top:22%}body.apaisado #ji-nombre{font-size:42px}body.apaisado #ji-epiteto{font-size:18px}body.apaisado #ji-tip{font-size:13px}
+
+/* v8: ventanas apaisadas muy bajitas (menos de 340 px): logo más chico y el menú se puede desplazar en vez de cortarse */
+@media (max-height:340px){body.apaisado #inicio .logo-r{font-size:34px}body.apaisado #inicio .logo-z{font-size:27px}body.apaisado #inicio .logo-mvd{font-size:10px}
+  body.apaisado #inicio .sub{font-size:11px}body.apaisado #inicio .menu{align-self:start}}

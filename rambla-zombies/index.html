@@ -7,9 +7,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Zombis Rambla">
-<meta name="description" content="Shooter de zombis en 3D en la rambla de Montevideo. Aguantá hasta que amanezca.">
-<title>Zombis en la Rambla</title>
+<meta name="apple-mobile-web-app-title" content="Zona Cero">
+<meta name="description" content="Rambla: Zona Cero. Shooter de zombis en 3D en la rambla de Montevideo. Aguantá hasta que amanezca.">
+<title>Rambla: Zona Cero</title>
+<meta property="og:title" content="Rambla: Zona Cero">
+<meta property="og:description" content="Shooter de zombis en 3D en la rambla de Montevideo. Aguantá hasta que amanezca, bo.">
+<meta property="og:image" content="iconos/icono-512.png">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="iconos/icono-192.png">
 <link rel="apple-touch-icon" href="iconos/apple-touch-icon.png">
@@ -29,6 +32,7 @@
     <symbol id="i-corazon" viewBox="0 0 48 48"><path d="M24 42S5 30 5 17a10 10 0 0 1 19-4 10 10 0 0 1 19 4c0 13-19 25-19 25z" fill="currentColor"/></symbol>
     <symbol id="i-escudo" viewBox="0 0 48 48"><path d="M24 4l17 6v12c0 11-7 19-17 22C14 41 7 33 7 22V10z" fill="currentColor"/></symbol>
     <symbol id="i-trofeo" viewBox="0 0 48 48"><path d="M14 6h20v10a10 10 0 0 1-20 0zM14 9H6c0 7 4 10 8 10M34 9h8c0 7-4 10-8 10M20 26h8v8h-8zM14 38h20v5H14z" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-sol" viewBox="-12 -12 24 24"><g fill="#f6c431" stroke="#a8650a" stroke-width=".5"><path d="M0 -11.5L1.5 -6.3L-1.5 -6.3Z" transform="rotate(0.0)"/><path d="M0 -11C2.4 -9.4-1.6 -8 0 -6.3C-.9 -8 2.2 -9.4 0 -11Z" transform="rotate(22.5)"/><path d="M0 -11.5L1.5 -6.3L-1.5 -6.3Z" transform="rotate(45.0)"/><path d="M0 -11C2.4 -9.4-1.6 -8 0 -6.3C-.9 -8 2.2 -9.4 0 -11Z" transform="rotate(67.5)"/><path d="M0 -11.5L1.5 -6.3L-1.5 -6.3Z" transform="rotate(90.0)"/><path d="M0 -11C2.4 -9.4-1.6 -8 0 -6.3C-.9 -8 2.2 -9.4 0 -11Z" transform="rotate(112.5)"/><path d="M0 -11.5L1.5 -6.3L-1.5 -6.3Z" transform="rotate(135.0)"/><path d="M0 -11C2.4 -9.4-1.6 -8 0 -6.3C-.9 -8 2.2 -9.4 0 -11Z" transform="rotate(157.5)"/><path d="M0 -11.5L1.5 -6.3L-1.5 -6.3Z" transform="rotate(180.0)"/><path d="M0 -11C2.4 -9.4-1.6 -8 0 -6.3C-.9 -8 2.2 -9.4 0 -11Z" transform="rotate(202.5)"/><path d="M0 -11.5L1.5 -6.3L-1.5 -6.3Z" transform="rotate(225.0)"/><path d="M0 -11C2.4 -9.4-1.6 -8 0 -6.3C-.9 -8 2.2 -9.4 0 -11Z" transform="rotate(247.5)"/><path d="M0 -11.5L1.5 -6.3L-1.5 -6.3Z" transform="rotate(270.0)"/><path d="M0 -11C2.4 -9.4-1.6 -8 0 -6.3C-.9 -8 2.2 -9.4 0 -11Z" transform="rotate(292.5)"/><path d="M0 -11.5L1.5 -6.3L-1.5 -6.3Z" transform="rotate(315.0)"/><path d="M0 -11C2.4 -9.4-1.6 -8 0 -6.3C-.9 -8 2.2 -9.4 0 -11Z" transform="rotate(337.5)"/><circle r="6" /></g><circle cx="-2" cy="-1" r=".8" fill="#7a4205"/><circle cx="2" cy="-1" r=".8" fill="#7a4205"/><path d="M-2 2.2Q0 3.4 2 2.2" fill="none" stroke="#7a4205" stroke-width=".7"/></symbol>
   </defs>
 </svg>
 
@@ -37,7 +41,7 @@
     <div class="izq"><div id="oleada">Oleada 1</div><div id="quedan"><svg><use href="#i-calavera"/></svg><span>0</span></div></div>
     <div class="der"><div id="puntos">0</div><div id="pesos"><svg><use href="#i-peso"/></svg><span>0</span></div></div>
   </div>
-  <div id="jefe" class="oculto"><div id="jefe-nombre"></div><div id="jefe-barra"><div id="jefe-rel"></div><div id="jefe-dano"></div></div></div>
+  <div id="jefe" class="oculto"><div id="jefe-nombre"></div><div id="jefe-barra"><div id="jefe-rel"></div><div id="jefe-dano"></div><i class="jf" style="left:33%"></i><i class="jf" style="left:66%"></i></div></div>
   <div id="barra-armas"></div>
   <div id="estado">
     <div id="blindaje" class="barra"><svg><use href="#i-escudo"/></svg><div class="fondo"><div id="blindaje-rel"></div></div></div>
@@ -49,6 +53,7 @@
   <div id="indicadores"></div>
   <div id="combo"></div>
   <div id="mensaje"></div>
+  <div id="jefe-intro"><div class="ji-franja"></div><div id="ji-nombre"></div><div id="ji-epiteto"></div><div id="ji-tip"></div></div>
   <div id="aviso"></div>
   <div id="feed"></div>
 </div>
@@ -65,10 +70,10 @@
 <div id="logro-toast"><svg><use href="#i-trofeo"/></svg><div><small>Logro desbloqueado</small><b id="logro-nombre"></b></div></div>
 
 <div id="inicio" class="pantalla">
-  <div class="logo">
-    <div class="logo-z">ZOMBIS</div>
-    <div class="logo-en">en la</div>
-    <div class="logo-r">RAMBLA</div>
+  <div class="logo" role="img" aria-label="Rambla: Zona Cero">
+    <div class="logo-r">RAMBLA<span class="logo-dp">:</span></div>
+    <div class="logo-z">ZONA CERO</div>
+    <div class="logo-mvd"><i></i><svg class="logo-sol" aria-hidden="true"><use href="#i-sol"/></svg><span>MONTEVIDEO</span><svg class="logo-sol" aria-hidden="true"><use href="#i-sol"/></svg><i></i></div>
   </div>
   <p class="sub">Montevideo, 3 de la mañana. Del río salen muertos y de los edificios también.<br>Aguantá diez oleadas hasta que amanezca, bo.</p>
   <div class="menu">
@@ -84,7 +89,7 @@
     </div>
   </div>
   <div id="record"></div>
-  <div class="pie">v7 · hecho a mano en Montevideo</div>
+  <div class="pie">v8 · hecho a mano en Montevideo</div>
 </div>
 
 <div id="como" class="pantalla panel oculto">
@@ -102,7 +107,8 @@
       <li>Flechas: cambiar arma · Círculo: recargar</li>
       <li>En Ajustes: ayuda de puntería y tiro automático</li></ul></div>
     <div><h3>La noche</h3><ul>
-      <li>Diez oleadas. En la <b>5</b> aparece el <b>Patovica del Cordón</b>; en la <b>10</b>, el <b>Zombi del Cerro</b>.</li>
+      <li>Diez oleadas y siete jefes: <b>Don Anzuelo</b> (3), el <b>Patovica del Cordón</b> (5), el <b>Garrafero</b> (6), el <b>Bengala</b> (7), el <b>Lubolo Mayor</b> (8), <b>Don Tablado</b> (9) y el <b>Zombi del Cerro</b> (10).</li>
+      <li>Los jefes avisan antes de atacar: una línea, un círculo, un cono o una onda en el piso. Leela y salí a tiempo.</li>
       <li>Matando ganás <b>pesos</b>. Entre oleadas se abre el <b>almacén</b>: armas, mejoras, chaleco, chivitos y ventajas.</li>
       <li>Los autos y contenedores frenan las balas. Usalos para cubrirte de los escupitajos.</li>
       <li>Si un zombi levanta los brazos, está por pegarte: <b>retrocedé</b>.</li>
@@ -163,6 +169,7 @@
     <section><h3>Armas</h3><div class="chips" id="pg-armas"></div></section>
     <section><h3>Extras</h3><div class="chips" id="pg-extras"></div>
       <div id="pg-jefe-fila" class="pg-fila-rango oculto"><h3>Jefe cada <b id="pg-jefe-v"></b></h3><input type="range" id="pg-jefe" min="2" max="10" step="1"></div>
+      <div id="pg-jefes-fila" class="oculto"><h3>Qué jefes</h3><div class="chips" id="pg-jefes"></div></div>
     </section>
   </div>
   <div class="menu pg-pie"><button id="b-pg-jugar" class="pri">¡A jugar!</button><button class="sec volver">Volver</button></div>
@@ -211,7 +218,7 @@
 </div>
 <div id="contador" class="oculto"></div>
 <div id="telon"></div>
-<div id="cargando"><div class="logo chico"><div class="logo-z">ZOMBIS</div><div class="logo-r">RAMBLA</div></div><div class="barra-carga"><i></i></div><div id="cargando-txt">cargando la rambla…</div></div>
+<div id="cargando"><div class="logo chico"><div class="logo-r">RAMBLA<span class="logo-dp">:</span></div><div class="logo-z">ZONA CERO</div></div><div class="barra-carga"><i></i></div><div id="cargando-txt">cargando la rambla…</div></div>
 <script>/* pruebas: ?semilla=N hace que Math.random sea repetible */(function () { const m = /[?&]semilla=(\d+)/.exec(location.search); if (!m) return; let a = +m[1] >>> 0; Math.random = function () { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; })();</script>
 <script type="module" src="game.js"></script>
 </body>

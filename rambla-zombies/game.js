@@ -1,11 +1,13 @@
-// Zombis en la Rambla — juego principal
+// Rambla: Zona Cero — juego principal
 import * as THREE from 'https://esm.sh/three@0.160.0';
 import { crearMundo, local, aMundo, piso, NM, brilloTex, muestras, PUERTO_I0, unir } from './world.js';
 import { crearFisica, rayoCaja, sacarPunto, adentro, crearGrillaDin } from './fisica.js';
 import { ARMAS, crearModelos } from './armas.js';
+import { modeloArma } from './armas-modelos.js'; // arte v8: modelos texturizados (null = usa el de armas.js)
 import { Horda, crearZombi, prepararZombi, animarZombi, TIPOS } from './zombis.js';
 import { iniciarAudio, sonido, volumen, musica } from './audio.js';
 import { crearEfectos } from './efectos.js';
+import { crearJefesFx, JEFES_INFO, ORDEN_JEFES } from './jefes.js';
 import { MOD, SINERGIAS, RAREZA, calcular, ofrecer, cantidadInf, jefeInf, vidaInf, eventoInf, mezclaInf, EVENTOS } from './infinito.js';
 import { MAPAS, ORDEN_MAPAS } from './mapas.js';
 import { OLEADAS_TOTAL, mezcla, cantidad, JEFES, MEJORAS, precioMejora, EQUIPO, VENTAJAS, PESOS, LOGROS, cargarPerfil, guardarPerfil } from './datos.js';
@@ -40,6 +42,7 @@ scene.add(camera);
 const mundo = crearMundo(scene, CAL[AJ.calidad].olasLivianas);
 mundo.alSonarFuegos = () => { if (estado !== 'inicio') sonido.fuegoArtificial(); };
 const ef = crearEfectos(scene);
+const jfx = crearJefesFx(scene); // v8: efectos telegrafiados de los jefes nuevos
 const fis = crearFisica(scene, mundo.colisiones, { alGolpe: golpeCuerpo, alDormir: charcoCuerpo, cuerpos: () => zombis });
 const luzJugador = new THREE.PointLight(0xffd8a8, 3.5, 16, 1.5); camera.add(luzJugador); // linterna tenue + fogonazo
 
@@ -50,13 +53,13 @@ const vmLuz = new THREE.DirectionalLight(0xffd8b0, 2.2); vmLuz.position.set(1, 2
 const vmRelleno = new THREE.DirectionalLight(0x9ab4ff, 1.5); vmRelleno.position.set(-1.6, 0.7, 0.6); vmScene.add(vmRelleno); // luz de recorte fría del lado izquierdo: el arma no queda negra contra la noche
 const vmFlashLuz = new THREE.PointLight(0xffb050, 0, 3); vmFlashLuz.position.set(0.2, 0, -0.8); vmScene.add(vmFlashLuz);
 const soporte = new THREE.Group(); vmScene.add(soporte); soporte.scale.setScalar(0.8);
-const modelos = crearModelos();
+const modelos = crearModelos(modeloArma);
 const texFlash = brilloTex('rgba(255,200,90,1)');
 for (const a of ARMAS) {
   const m = modelos[a.id]; m.visible = false; soporte.add(m);
   if (a.tipo === 'fuego') {
     const f = new THREE.Sprite(new THREE.SpriteMaterial({ map: texFlash, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
-    f.position.copy(m.userData.punta); f.scale.setScalar(a.id === 'escopeta' ? 0.5 : a.id === 'revolver' || a.id === 'rifle' ? 0.42 : 0.32); m.userData.flashE = f.scale.x; f.visible = false; m.add(f); m.userData.flash = f;
+    f.position.copy(m.userData.punta); f.scale.setScalar((a.id === 'escopeta' ? 0.5 : a.id === 'revolver' || a.id === 'rifle' ? 0.42 : 0.32) ); m.userData.flashE = f.scale.x; f.visible = false; m.add(f); m.userData.flash = f;
   }
 }
 
@@ -191,7 +194,7 @@ let jefe = null, jefePendiente = null, jefeT = 0, comboN = 0, comboT = 0, finT =
 let S = {}; // estadísticas de la partida
 const BASE = id => ARMAS.find(a => a.id === id);
 const A = id => (modoInf && statsInf[id]) || BASE(id); /* en Infinito: estadísticas con mods */
-const jefeDe = n => { if (!modoPlay) return modoInf ? jefeInf(n) : JEFES[n]; if (!cfgPlay.jefes) return null; const cada = cfgPlay.jefeCada || 3; return n % cada === 0 ? (n % (cada * 2) === 0 ? 'cerro' : 'patovica') : null; };
+const jefeDe = n => { if (!modoPlay) return modoInf ? jefeInf(n) : JEFES[n]; if (!cfgPlay.jefes) return null; const cada = cfgPlay.jefeCada || 3; if (n % cada) return null; const L = (cfgPlay.jefesTipos && cfgPlay.jefesTipos.length) ? cfgPlay.jefesTipos : ORDEN_JEFES; return L[(n / cada - 1) % L.length]; };
 let LIM_I0 = NM / 2 - 70, LIM_I1 = NM / 2 + 128, MAPA = MAPAS.rambla;
 const mapaLibre = M => modoPlay || (perfil.mejorOleada || 0) >= M.desbloq; /* U4: se suma el Puerto del Buceo */
 const DIF_PLAY = { facil: { vida: 0.6, dano: 0.5, pesos: 1, vel: 0.85 }, normal: { vida: 1, dano: 1, pesos: 1, vel: 1 }, dificil: { vida: 1.6, dano: 1.5, pesos: 1, vel: 1.12 }, infierno: { vida: 2.6, dano: 2.2, pesos: 1, vel: 1.25 } };
@@ -212,7 +215,7 @@ function reiniciar() {
   camVictoria = false;
   for (const z of zombis) poolZ.push(z); zombis = [];
   for (const p of poolPick) { p.t = 0; p.g.visible = false; }
-  ef.limpiar(); fis.limpiar(); sVida.fill(0); sPos.fill(-999); parada = 0; lenta = 0;
+  ef.limpiar(); jfx.limpiar(); fis.limpiar(); sVida.fill(0); sPos.fill(-999); parada = 0; lenta = 0;
   MAPA = MAPAS[modoPlay ? cfgPlay.mapa : perfil.mapa] || MAPAS.rambla; if (!modoPlay && !mapaLibre(MAPA)) MAPA = MAPAS.rambla;
   LIM_I0 = MAPA.i0; LIM_I1 = MAPA.i1; mundo.setAtmo(MAPA.atmo, MAPA.id);
   camera.far = MAPA.atmo.lejos || 2200; camera.updateProjectionMatrix(); /* con niebla espesa no se dibuja lo que no se ve */
@@ -359,8 +362,9 @@ function disparar() {
   const suerte = a.suerte && cargador[a.id] === 0; /* Infinito: la última del tambor */
   ojoJugador(_o, _f, _r, _u); // la bala sale antes de que el retroceso levante la mira
   sonido[a.sonido](); flashT = 0.05; kick = 1; retroceso += a.retroceso; shake = Math.max(shake, a.retroceso * 0.8);
-  { const fl = modelos[a.id].userData.flash; fl.scale.setScalar(fl.userData.e || (fl.userData.e = fl.scale.x)); fl.scale.multiplyScalar((0.8 + Math.random() * 0.45) * (a.flash || 1)); } // fogonazo distinto cada tiro
-  if (a.id !== 'revolver') ef.vaina(_o.x + _r.x * 0.25 + _f.x * 0.55, _o.y - 0.22, _o.z + _r.z * 0.25 + _f.z * 0.55, _r.x * 2.4 + _f.x * 0.4 + (Math.random() - .5) * 0.6, 1.1 + Math.random() * 0.6, _r.z * 2.4 + _f.z * 0.4 + (Math.random() - .5) * 0.6, a.id === 'escopeta');
+  { const fl = modelos[a.id].userData.flash; fl.scale.setScalar(fl.userData.e || (fl.userData.e = fl.scale.x)); fl.scale.multiplyScalar((0.8 + Math.random() * 0.45) * (a.flash ?? 1)); } // fogonazo distinto cada tiro
+  if (a.proyectil) { dispararProyectil(a); return; }
+  if (a.id !== 'revolver' && !a.sinVaina) ef.vaina(_o.x + _r.x * 0.25 + _f.x * 0.55, _o.y - 0.22, _o.z + _r.z * 0.25 + _f.z * 0.55, _r.x * 2.4 + _f.x * 0.4 + (Math.random() - .5) * 0.6, 1.1 + Math.random() * 0.6, _r.z * 2.4 + _f.z * 0.4 + (Math.random() - .5) * 0.6, a.id === 'escopeta');
   if (a.id === 'escopeta' || a.id === 'rifle') vibrar(25);
   danoAcum.clear();
   let acerto = false, rebotes = 0, maderas = 0, piedras = 0;
@@ -404,11 +408,23 @@ function disparar() {
   if (rebotes) Math.random() < 0.5 ? sonido.rebote() : sonido.chapa();
   if (maderas) sonido.madera(); else if (piedras && !rebotes) sonido.piedra();
   if (acerto) S.aciertos++;
-  danoAcum.forEach((v, z) => { impacto = v.p; perdigonesN = v.n; herir(z, v.d, v.cab, _f, a.empuje || (a.id === 'rifle' ? 2 : 0.6), false, a.id, v.parte); if (modoInf) { impacto = null; alPegar(z, a, v.p, suerte); } });
+  danoAcum.forEach((v, z) => { impacto = v.p; perdigonesN = v.n; herir(z, v.d, v.cab, _f, a.empuje || (a.id === 'rifle' ? 2 : 0.6), false, a.id, v.parte); if (a.aturde && z.vivo && !z.T.jefe) { z.aturdido = Math.max(z.aturdido, a.aturde); z.prep = 0; } if (modoInf) { impacto = null; alPegar(z, a, v.p, suerte); } });
   impacto = null; perdigonesN = 1;
   if (cargador[a.id] === 0 && reserva[a.id] > 0) setTimeout(() => { if (armaSel === a.id && estado === 'jugando') recargar(); }, 250);
 }
 
+// v8: armas que tiran un proyectil (lanzagarrafas en arco, bengala casi recta): apunta a lo primero que cruza la mira
+function dispararProyectil(a) {
+  rayo(_o, _f, a.alcance, golpes, 1); const ob = rayoObstaculos(_o, _f, a.alcance);
+  let t = Math.min(a.alcance, ob.t); if (golpes.length && golpes[0].t < t) t = golpes[0].t;
+  t = Math.max(2.5, t);
+  _fin.copy(_o).addScaledVector(_f, t); const yp = pisoEn(_fin.x, _fin.z); if (_fin.y < yp) _fin.y = yp;
+  _u2.copy(_o).addScaledVector(_r, 0.14).addScaledVector(_u, -0.08).addScaledVector(_f, 0.7);
+  const garrafa = a.proyectil === 'garrafa', vuelo = garrafa ? Math.max(0.35, t / 24) : Math.max(0.12, t / 42);
+  ef.lanzar(a.proyectil, _u2, _fin, vuelo, garrafa ? 40 : 16, a.radio || 2.4, yp, true, garrafa ? 9 : 3);
+  if (garrafa) vibrar(40);
+  if (cargador[a.id] === 0 && reserva[a.id] > 0) setTimeout(() => { if (armaSel === a.id && estado === 'jugando') recargar(); }, 300);
+}
 function golpear() { // cuerpo a cuerpo: arranca el swing, el impacto llega al 40%
   const a = A(armaSel);
   cdArma = cadenciaDe(a); swingT = cdArma; swingHecho = false; sonido.swing();
@@ -416,18 +432,21 @@ function golpear() { // cuerpo a cuerpo: arranca el swing, el impacto llega al 4
 function impactoMelee() {
   const a = A(armaSel); oir(J.pos.x, J.pos.z, 12);
   _f.set(-Math.sin(J.yaw), 0, -Math.cos(J.yaw));
-  let alguno = false;
-  for (const z of zombis) {
+  let alguno = false, nGolpes = 0;
+  const lista = a.atraviesa ? zombis.filter(z => z.vivo).sort((u, v) => u.g.position.distanceToSquared(J.pos) - v.g.position.distanceToSquared(J.pos)) : zombis; // el espeto: los más cercanos primero
+  for (const z of lista) {
     if (!z.vivo) continue;
     const dx = z.g.position.x - J.pos.x, dz = z.g.position.z - J.pos.z, dist = Math.hypot(dx, dz);
     if (dist > a.alcance + 0.35 * z.esc) continue;
     if ((dx * _f.x + dz * _f.z) / (dist || 1) < Math.cos(a.arco + 0.25)) continue;
+    if (a.atraviesa && nGolpes++ >= a.atraviesa) break;
     _d.set(dx / (dist || 1), 0, dz / (dist || 1));
     const cab = (J.pitch > 0.15 && a.id === 'machete') || (z.tipo === 'gateador' && a.id !== 'machete' && J.pitch < -0.3);
     const parte = z.tipo === 'gateador' ? (J.pitch < -0.3 ? 0 : 1) : J.pitch > 0.15 ? 0 : J.pitch < -0.32 ? 2 : 1;
     if (parte === 0 && a.id !== 'machete') sonido.crujido();
     impacto = _imp.set(z.g.position.x - _d.x * 0.25 * z.esc, z.g.position.y + (parte === 0 ? 1.65 : parte === 2 ? 0.5 : 1.15) * z.esc, z.g.position.z - _d.z * 0.25 * z.esc);
     herir(z, danoDe(a), cab, _d, empujeDe(a), true, a.id, parte); impacto = null;
+    if (a.engancha && z.vivo && !z.T.jefe) { z.aturdido = Math.max(z.aturdido, 0.8); z.prep = 0; if (dist > 1.8) { z.kb.x -= _d.x * Math.min(9, (dist - 1.2) * 3.2); z.kb.z -= _d.z * Math.min(9, (dist - 1.2) * 3.2); } } // la caña: lo trae para vos
     if (modoInf) alPegar(z, a, _imp, false);
     salpicar(z.g.position.x, z.g.position.y + 1.3 * z.esc, z.g.position.z, 12, 4, _d.x * 3, _d.z * 3);
     alguno = true;
@@ -455,6 +474,9 @@ function cortarBrazo(z, j, dir) {
 function herir(z, dano, cab, dir, empuje, melee, arma, parte = cab ? 0 : 1) {
   if (!z.vivo) return;
   if (z.aturdido > 0 && z.tipo === 'patovica') dano *= 1.6; // golpeado contra un auto: punto débil
+  if (z.tipo === 'garrafero' && z.cargaG > 0) z.rackDano += dano;
+  if (z.enganche > 0) z.engDano += dano; // si le pegás mientras te arrastra, te suelta // con la carga prendida, las garrafas de la espalda son el punto débil
+  if (z.aturdido > 0 && (z.tipo === 'garrafero' || z.tipo === 'lubolo')) dano *= 1.4;
   z.vida -= dano; z.flash = 0.1;
   const jefeZ = z.T.jefe;
   z.velMult = jefeZ ? 0.8 : melee ? 0.1 : 0.45;
@@ -801,7 +823,7 @@ function empezarOleada() {
   }
   if (modoPlay && !j) { mensaje('Oleada ' + oleada, 'Playground · ' + MAPA.nombre); sonido.oleada(); hud(); return; }
   if (j) {
-    mensaje(oleada === OLEADAS_TOTAL && !modoInf ? 'Última oleada' : 'Oleada ' + oleada, j === 'cerro' ? (modoInf ? 'Bajó el Zombi del Cerro. Y vino con amigos' : 'Bajó el Zombi del Cerro. Aguantá hasta que salga el sol') : 'Viene el Patovica del Cordón. Hacelo chocar contra un auto', true);
+    mensaje(oleada === OLEADAS_TOTAL && !modoInf ? 'Última oleada' : 'Oleada ' + oleada, j === 'cerro' ? (modoInf ? 'Bajó el Zombi del Cerro. Y vino con amigos' : 'Bajó el Zombi del Cerro. Aguantá hasta que salga el sol') : 'Se viene ' + JEFES_INFO[j].nombre + '…', true);
     jefePendiente = j; jefeT = 2.2;
     sonido.jefe();
   } else {
@@ -889,6 +911,7 @@ function spawn(tipo, cerca) {
     if (k < 0) return null; z = zombis[k]; fis.alHundir(z); fis.soltar(z); zombis.splice(k, 1);
   }
   prepararZombi(z, tipo || elegirTipo());
+  if (z.T.jefe) initJefe(z);
   ubicar(z, cerca);
   if (z.tipo === 'gateador') z.sube = false;
   if (z.sube && z.g.position.y > -2) z.sube = false;
@@ -913,18 +936,35 @@ function spawnJefe(tipo) {
   const z = spawn(tipo); if (!z) return;
   z.vida = z.vidaMax = TIPOS[tipo].vida * MODO().vida * (modoInf ? 1 + Math.floor((oleada - 1) / 10) * 0.6 : 1); z.sube = false;
   // aparece del lado de la ciudad, de frente
-  const pl = local(J.pos.x, J.pos.z, _l); aMundo(pl.i + (Math.random() - .5) * 10, 18, _o); z.g.position.set(_o.x, piso(18), _o.z);
-  jefe = z; z.rugidoT = 0.5; z.piedraT = 3; z.timerIA = 4; z.fase2 = false; z.fase3 = false;
+  // el del anzuelo sube de la escollera (del lado del río); el resto, del lado de la ciudad
+  const pl = local(J.pos.x, J.pos.z, _l), dJ = tipo === 'anzuelo' ? -9.5 : 18; aMundo(pl.i + (Math.random() - .5) * 10, dJ, _o); z.g.position.set(_o.x, piso(dJ), _o.z);
+  jefe = z; z.rugidoT = 0.5; z.piedraT = 3; z.timerIA = 4; z.fase2 = false; z.fase3 = false; initJefe(z);
   $('jefe').classList.remove('oculto'); $('jefe-nombre').textContent = TIPOS[tipo].nombre; hudJefe(true);
+  presentarJefe(tipo);
   shake = 0.8; vibrar([80, 60, 80]);
 }
+// v8: estado propio de cada jefe (timers de ataques y fases)
+function initJefe(z) {
+  z.t1 = 2.5 + Math.random(); z.t2 = 0; z.fase2 = false; z.fase3 = false; z.beatN = 0; z.beatT = 0; z.ganchoD = -1; z.enganche = 0; z.lances = 0;
+  z.cargaG = 0; z.rackDano = 0; z.sinRack = false; z.saludoN = 0; z.saludoT = 0; z.saludoAng = 0; z.llamaT = 0; z.mandaT = 0; z.mandaCD = 6;
+}
+// tarjeta de presentación: nombre grande, apodo y cómo pelearle (3,4 s)
+let introT = 0;
+function presentarJefe(tipo) {
+  const I = JEFES_INFO[tipo]; if (!I) return;
+  $('ji-nombre').textContent = I.nombre; $('ji-epiteto').textContent = I.epiteto; $('ji-tip').textContent = I.tip;
+  const el = $('jefe-intro'); el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); introT = 3.4;
+  ({ lubolo: () => sonido.tambor(1.2), tablado: () => sonido.murga(), bengala: () => sonido.pito(), anzuelo: () => sonido.latigo(), garrafero: () => sonido.tubo() }[tipo] || (() => { }))();
+}
 function jefeMuerto(z) {
-  S.jefes++; jefe = null; $('jefe').classList.add('oculto');
+  S.jefes++; jefe = null; $('jefe').classList.add('oculto'); jfx.tanza(null); z.enganche = 0;
   shake = 1.2; vibrar(200); sonido.rugido(z.tipo === 'cerro' ? 0.5 : 0.8);
   lenta = 1.1; // cámara lenta mientras se viene abajo; el golpe contra el piso lo pone golpeCuerpo()
   ef.explosion(_p.copy(z.g.position).setY(z.g.position.y + 1.2 * z.esc), 3);
-  mensaje(z.tipo === 'cerro' ? '¡Se cayó el Cerro!' : '¡Patovica afuera!', '+$' + PESOS[z.tipo] + ' para el almacén');
-  logro(z.tipo === 'cerro' ? 'cerro' : 'patovica');
+  const FRASE = { cerro: '¡Se cayó el Cerro!', patovica: '¡Patovica afuera!', anzuelo: '¡Don Anzuelo, a la bolsa!', garrafero: '¡Se quedó sin gas!', bengala: '¡Se apagó la tribuna!', lubolo: '¡Terminó la llamada!', tablado: '¡Bajó el telón!' };
+  mensaje(FRASE[z.tipo] || '¡Jefe afuera!', '+$' + (PESOS[z.tipo] || 300) + ' para el almacén');
+  logro(z.tipo);
+  if (!modoPlay) { const v = perfil.jefesVistos || (perfil.jefesVistos = []); if (!v.includes(z.tipo)) v.push(z.tipo); if (ORDEN_JEFES.every(t => v.includes(t))) logro('barrio'); }
   mundo.fuegos(4);
   // los zombis chicos que quedaban se desarman
 }
@@ -996,7 +1036,9 @@ function simular(dt) {
   simSangre(dt);
   fis.sim(dt, J.pos.x, J.pos.z); fis.sangre.sim(dt); fis.marcas.sim(dt);
   ef.sim(dt, pisoEn, colisionarPunto);
-  ef.simProy(dt, pisoEn, alCaerProyectil);
+  ef.simProy(dt, pisoEn, alCaerProyectil, choqueProyectil);
+  jfx.sim(dt, J.pos.x, J.pos.z, golpeOnda, llamaFx, enFuego);
+  if (introT > 0 && (introT -= dt) <= 0) $('jefe-intro').classList.remove('on');
   for (const tr of trazas) if (tr.t > 0) { tr.t -= dt; tr.l.material.opacity = Math.max(0, tr.t / 0.06) * 0.8; if (tr.t <= 0) tr.l.visible = false; }
   for (const p of poolPick) {
     if (p.t <= 0) continue;
@@ -1074,8 +1116,54 @@ function asistir(dt, a) {
     autoDisparo = golpes.length > 0 && rayoObstaculos(_o, _f, alcance).t > golpes[0].t;
   } else if (!AJ.autoFuego) autoDisparo = false;
 }
+// v8: ondas del tambor, fuego en el piso y proyectiles nuevos
+function golpeOnda(o, nx, nz) {
+  if (estado !== 'jugando') return;
+  recibirDano(o.dano * MODO().dano, o.x, o.z); empujarJugador(nx, nz, 1.6); J.lento = Math.max(J.lento, 0.6); shake = Math.max(shake, 0.6); aviso('¡Metete en el hueco de la onda!');
+}
+const llamaFx = (x, y, z) => ef.llama(x, y, z);
+function enFuego(f) { // cada 0,25 s por foco: quema al jugador y a los zombis que lo pisen
+  const r2 = f.r * f.r;
+  if (estado === 'jugando' && !f.deJugador && (J.pos.x - f.x) ** 2 + (J.pos.z - f.z) ** 2 < r2) { recibirDano(f.dano * 0.25 * MODO().dano, f.x, f.z); if (Math.random() < 0.3) aviso('¡Te estás quemando! Salí del fuego'); }
+  for (const o of zombis) { if (!o.vivo || o.T.jefe) continue; if ((o.g.position.x - f.x) ** 2 + (o.g.position.z - f.z) ** 2 < r2) { o.quemaT = 3; o.quemaD = Math.max(o.quemaD || 0, f.deJugador ? 28 : 12); o.quemaArma = f.deJugador ? 'bengalera' : null; } }
+}
+// proyectiles del jugador: revientan al tocar un zombi (no solo el piso)
+function choqueProyectil(pr) {
+  if (!pr.jugador) return false;
+  for (const z of zombis) { if (!z.vivo) continue; const dx = z.g.position.x - pr.p.x, dz = z.g.position.z - pr.p.z, r = 0.45 * z.esc; if (dx * dx + dz * dz < r * r && pr.p.y > z.g.position.y && pr.p.y < z.g.position.y + 1.9 * z.esc) { pr.blanco = z; return true; } }
+  const nc = fis.grilla.buscar(pr.p.x, pr.p.z, 0.3, _candZ); for (let q = 0; q < nc; q++) { const c = _candZ[q]; if ((c.x - pr.p.x) ** 2 + (c.z - pr.p.z) ** 2 < (c.r + 0.2) ** 2 && pr.p.y < fis.techoEn(c, pr.p.x, pr.p.z, 0.2) + 0.1) return true; }
+  return false;
+}
+// explosión de garrafa (del jefe o del lanzagarrafas): lastima al jugador si es del jefe, a los zombis siempre
+function explosionGarrafa(x, y, zz, R, danoJ, danoZ, porJugador, excluir) {
+  _p.set(x, y, zz); ef.explosion(_p, R * 1.35); sonido.explosion(); salpicar(x, y + 0.6, zz, 10, 5);
+  fis.sangre.charco(x, zz, R * 0.4, _cHollin, 6);
+  const dj = Math.hypot(J.pos.x - x, J.pos.z - zz); shake = Math.max(shake, Math.max(0.25, 1.1 - dj / 14)); vibrar(dj < 7 ? 110 : 30);
+  if (!porJugador && dj < R && estado === 'jugando') { recibirDano(danoJ * (1 - dj / R * 0.6) * MODO().dano, x, zz); empujarJugador((J.pos.x - x) / (dj || 1), (J.pos.z - zz) / (dj || 1), 1.4); }
+  let muertos = 0;
+  for (const o of zombis) {
+    if (!o.vivo || o === excluir) continue;
+    const d = Math.hypot(o.g.position.x - x, o.g.position.z - zz); if (d > R) continue;
+    _d.set((o.g.position.x - x) / (d || 1), 0, (o.g.position.z - zz) / (d || 1));
+    const dn = danoZ * (1 - d / R * 0.5) * (o.T.jefe ? (porJugador ? 0.6 : 0.25) : 1);
+    o.vida -= dn; o.flash = 0.15; if (!o.T.jefe) { o.kb.x += _d.x * 12; o.kb.z += _d.z * 12; }
+    if (o.T.jefe) hudJefe();
+    if (o.vida <= 0) { matar(o, false, _d, false, porJugador ? 'explosion' : null, true); muertos++; }
+  }
+  fis.explosion(x, y + 0.35, zz, R * 1.3, 7.5); ef.empujar(x, y + 0.35, zz, R * 1.3, 9);
+  if (porJugador) { S.explosionMax = Math.max(S.explosionMax, muertos); if (muertos >= 3) logro('explosion'); }
+  oir(x, zz, 30);
+}
 function alCaerProyectil(pr) {
   const dx = J.pos.x - pr.p.x, dz = J.pos.z - pr.p.z, d = Math.hypot(dx, dz);
+  if (pr.tipo === 'garrafa') { explosionGarrafa(pr.p.x, pisoEn(pr.p.x, pr.p.z), pr.p.z, pr.radio, pr.dano, pr.jugador ? 150 : 90, pr.jugador, null); return; }
+  if (pr.tipo === 'bengala') {
+    const y = pisoEn(pr.p.x, pr.p.z); sonido.fuego();
+    jfx.fuego(pr.p.x, y, pr.p.z, pr.radio, pr.jugador ? 4.5 : 5, pr.dano, pr.jugador);
+    for (let k = 0; k < 6; k++) ef.llama(pr.p.x + (Math.random() - .5), y + 0.2, pr.p.z + (Math.random() - .5));
+    if (pr.jugador && pr.blanco && pr.blanco.vivo) { const z = pr.blanco; _d.set(pr.v.x, 0, pr.v.z).normalize(); z.quemaT = 4; z.quemaD = Math.max(z.quemaD || 0, 34); z.quemaArma = 'bengalera'; herir(z, 40, false, _d, 1.5, false, 'bengalera', 1); }
+    pr.blanco = null; return;
+  }
   if (pr.piedra) {
     ef.golpeSuelo(pr.p, pr.radio * 1.5); ef.impacto(pr.p, 0, 0, false); sonido.pisoton();
     shake = Math.max(shake, Math.max(0.2, 0.9 - d / 30));
@@ -1111,7 +1199,7 @@ function elegirLugar(z, p) {
   const a0 = Math.atan2(p.z - J.pos.z, p.x - J.pos.x); let mejor = 0, costo = 1e9;
   for (let k = 0; k < 8; k++) {
     let da = k * Math.PI / 4 - a0; da = Math.abs(Math.atan2(Math.sin(da), Math.cos(da)));
-    const c = _occ[k] * 1.6 + da * 0.9 + (posValida(J.pos.x + Math.cos(k * Math.PI / 4) * 1.2, J.pos.z + Math.sin(k * Math.PI / 4) * 1.2) ? 0 : 6); // pared o banco: ese lugar no sirve
+    const c = _occ[k] * 2.4 + da * 0.6 + (posValida(J.pos.x + Math.cos(k * Math.PI / 4) * 1.2, J.pos.z + Math.sin(k * Math.PI / 4) * 1.2) ? 0 : 6); // pared o banco: ese lugar no sirve
     if (c < costo) { costo = c; mejor = k; }
   }
   z.slot = mejor * Math.PI / 4 + (Math.random() - 0.5) * 0.4; z.slotOk = true;
@@ -1137,7 +1225,7 @@ function decidir(z, p, dist, dx, dz) {
     let ang = z.slot, r = Math.min(dist, Math.max(0.6, T.alcance * 0.7)); z.orbita = false;
     if (!T.jefe && dist < 7) { const ac = Math.atan2(p.z - J.pos.z, p.x - J.pos.x); let da = z.slot - ac; da = Math.atan2(Math.sin(da), Math.cos(da));
       if (Math.abs(da) > 0.7 && z.orbT > 2.5) { z.slot = ac; da = 0; } // lleva 2,5 s rodeando (algo lo tapa: poste, banco, otro zombi): se queda con el lado donde está y ataca
-      if (Math.abs(da) > 0.7) { ang = ac + Math.sign(da) * Math.min(Math.abs(da), 0.95); r = Math.max(2.9, Math.min(dist, 4)); z.orbita = true; } }
+      if (Math.abs(da) > 0.7) { ang = ac + Math.sign(da) * Math.min(Math.abs(da), 0.95); r = Math.max(2.9, Math.min(dist, 4)); z.orbita = true; mod = 1.3; } } // rodeando se apura un poco: el cerco se cierra antes
     z.orbT = z.orbita ? z.orbT + 0.05 : 0; // decidir corre cada 0,05 s a menos de 12 m
     const sx = J.pos.x + Math.cos(ang) * r - p.x, sz = J.pos.z + Math.sin(ang) * r - p.z, sl = Math.hypot(sx, sz) || 1;
     /* desde 10 m ya se abren hacia su lugar del cerco (antes 7 m: llegaban todos del mismo lado) */ const k = Math.min(1, (10 - dist) / 5); tx = dx / dist * (1 - k) + sx / sl * k; tz = dz / dist * (1 - k) + sz / sl * k;
@@ -1176,7 +1264,8 @@ function golpeZombi(z, dist, dx, dz) {
   z.ataque = 0.4;
   if (dist < z.T.alcance + 0.55 && estado === 'jugando') {
     recibirDano(z.T.dano * MODO().dano, z.g.position.x, z.g.position.z);
-    empujarJugador(dx / dist, dz / dist, z.T.jefe ? 1.4 : 0.45);
+    if (z.T.jefe) empujarJugador(dx / dist, dz / dist, 1.4);
+    else { const seguido = tiempo - (J.ultEmp || -9) < 0.8; J.ultEmp = tiempo; empujarJugador(dx / dist, dz / dist, seguido ? 0.12 : 0.45); } // golpes en cadena de la horda: empujan menos (si no, una fila de un lado te arrastra y el cerco no se cierra)
   }
 }
 function simZombis(dt) {
@@ -1264,6 +1353,7 @@ function simZombis(dt) {
       if (!z.fase2 && k < 0.66) { z.fase2 = true; refuerzos(5); }
       if (!z.fase3 && k < 0.33) { z.fase3 = true; refuerzos(6); }
     }
+    if (T.jefe && enJuego && z.t1 !== undefined) { const r = iaJefe(z, p, dt, dist, dx, dz); if (r === 'quieto') v = 0; else if (r) v *= r; if (z.cargaT > 0 && z.tipo === 'garrafero') { mira = Math.atan2(z.cdx, z.cdz); } }
     if (z.rugidoT !== undefined && T.jefe) { z.rugidoT -= dt; if (z.rugidoT <= 0) { z.rugidoT = 7 + Math.random() * 5; if (enJuego) sonido.rugido(z.tipo === 'cerro' ? 0.55 : 0.8); } }
     // --- preparación y ataque cuerpo a cuerpo
     const cerca = dist < alcance + 0.2;
@@ -1291,7 +1381,7 @@ function simZombis(dt) {
           ef.lanzar('piedra', _p, _fin, 1.5, 28, 2.6, J.pos.y); sonido.tiraPiedra(); z.ataque = 0.4;
         } else if (z.accion === 'cargar' && enJuego) {
           z.cargaT = 1.6; z.cdx = dx / dist; z.cdz = dz / dist;
-        }
+        } else if (enJuego && z.T.jefe) ataqueJefe(z, p, dist, dx, dz);
       }
     }
     // separación entre zombis
@@ -1362,6 +1452,155 @@ function simZombis(dt) {
 function refuerzos(n) {
   sonido.rugido(0.5); mensaje('¡Llamó a los suyos!', '', true);
   for (let k = 0; k < n; k++) { const z = spawn(k % 2 ? 'gateador' : 'corredor', true); if (z) z.sube = false; }
+}
+// ---------- v8: IA de los jefes nuevos ----------
+// Todos telegrafían: línea en el piso (lance), círculo rojo (garrafa, bengala), onda con huecos (tambor), cono (murga).
+const _mano = new THREE.Vector3();
+function manoJefe(z, j = 1) { z.manos[j].updateWorldMatrix(true, false); return z.manos[j].getWorldPosition(_mano); }
+function refuerzosDe(n, tipo, vestir) { for (let k = 0; k < n; k++) { const o = spawn(tipo, true); if (o) { o.sube = false; o.alerta = 9; if (vestir) vestir(o, k); } } }
+const _ang = a => Math.atan2(Math.sin(a), Math.cos(a));
+const AP_SALUDO = 1.1, R_SALUDO = 12;
+function iaJefe(z, p, dt, dist, dx, dz) {
+  const k = z.vida / z.vidaMax, ocupado = z.prep > 0 || z.ataque > 0 || z.aturdido > 0;
+  z.t1 -= dt;
+  switch (z.tipo) {
+    case 'anzuelo': {
+      if (!z.fase2 && k < 0.5) { z.fase2 = true; mensaje('¡Salieron de la escollera!', 'Don Anzuelo llamó a los suyos', true); refuerzosDe(4, 'gateador'); sonido.rugido(0.7); }
+      if (z.ganchoD >= 0) { // el anzuelo vuela por la línea marcada
+        z.ganchoD += 30 * dt;
+        _p.set(p.x + z.gx * z.ganchoD, J.pos.y + 1.2, p.z + z.gz * z.ganchoD); jfx.tanza(manoJefe(z), _p);
+        if (Math.hypot(J.pos.x - _p.x, J.pos.z - _p.z) < 1.05) { z.ganchoD = -1; z.enganche = 1.5; z.engDano = 0; sonido.engancha(); aviso('¡Te enganchó! Tirale para soltarte'); vibrar([40, 30, 40]); }
+        else if (z.ganchoD > 19) { z.ganchoD = -1; jfx.tanza(null); if (--z.lances > 0) z.t1 = 0.35; }
+        return 'quieto';
+      }
+      if (z.enganche > 0) { // te arrastra hacia él
+        z.enganche -= dt;
+        if (dist > 2.6) empujarJugador(-dx / dist, -dz / dist, 7 * dt);
+        _p.set(J.pos.x, J.pos.y + 1.1, J.pos.z); jfx.tanza(manoJefe(z), _p);
+        if (dist <= 2.6 || z.enganche <= 0 || z.engDano > z.vidaMax * 0.05) {
+          if (dist <= 2.9) { recibirDano(z.T.dano * 1.2 * MODO().dano, p.x, p.z); empujarJugador(dx / dist, dz / dist, 1.6); shake = Math.max(shake, 0.8); sonido.golpe(); z.ataque = 0.4; }
+          else aviso('¡Te soltaste!');
+          z.enganche = 0; jfx.tanza(null); z.golpeT = 1.2;
+        }
+        return 'quieto';
+      }
+      if (!ocupado && z.t1 <= 0 && dist > 4.5 && dist < 18) {
+        z.t1 = (z.fase2 ? 3.6 : 4.8) + Math.random(); if (z.lances <= 0) z.lances = z.fase2 ? 2 : 1;
+        z.prep = z.prepTotal = 0.85; z.accion = 'lance'; z.gx = dx / dist; z.gz = dz / dist;
+        jfx.linea(p.x, p.y, p.z, Math.atan2(-z.gx, -z.gz), 19, 1.2, 0.85);
+      }
+      return dist < 7 ? 0.5 : 1; // se queda a distancia de lance
+    }
+    case 'garrafero': {
+      if (z.t2 > 0 && (z.t2 -= dt) <= 0) z.f.garrafaMano = true;
+      if (!z.fase2 && k < 0.6) { z.fase2 = true; mensaje('¡Reparto doble!', 'Ahora tira de a tres', true); }
+      if (!z.fase3 && k < 0.3 && !z.sinRack && !ocupado) { z.fase3 = true; z.prep = z.prepTotal = 1.1; z.accion = 'carga'; aviso('¡Prendió las garrafas! Tirale a la espalda'); sonido.mecha(); }
+      if (z.cargaT > 0) { // embestida con la carga de la espalda prendida
+        z.cargaT -= dt; z.cargaG = z.cargaT;
+        z.cdx += (dx / dist - z.cdx) * Math.min(1, dt * 1.4); z.cdz += (dz / dist - z.cdz) * Math.min(1, dt * 1.4); const l = Math.hypot(z.cdx, z.cdz) || 1; z.cdx /= l; z.cdz /= l;
+        p.x += z.cdx * 5.4 * dt; p.z += z.cdz * 5.4 * dt;
+        if ((z.llamaT -= dt) <= 0) { z.llamaT = 0.04; ef.llama(p.x - z.cdx * 0.6 * z.esc, p.y + 1.5 * z.esc, p.z - z.cdz * 0.6 * z.esc); if (Math.random() < 0.15) sonido.mecha(); }
+        if (z.rackDano > z.vidaMax * 0.07) reventarRack(z, true);
+        else if (dist < 2.7 || z.cargaT <= 0) reventarRack(z, false);
+        return 'quieto';
+      }
+      if (!ocupado && z.t1 <= 0 && dist > 5 && dist < 26) { z.t1 = (z.fase2 ? 2.7 : 3.4) + Math.random() * 0.8; z.prep = z.prepTotal = 0.8; z.accion = z.fase2 ? 'tirar3' : 'tirar'; }
+      return dist < 8 ? 0.5 : 1;
+    }
+    case 'bengala': {
+      if ((z.llamaT -= dt) <= 0) { z.llamaT = 0.07; const m = manoJefe(z, 1); ef.llama(m.x, m.y + 0.25 * z.esc, m.z); if (z.f.bengala2) { const m0 = manoJefe(z, 0); ef.llama(m0.x, m0.y + 0.25 * z.esc, m0.z); } }
+      if (!z.fase2 && k < 0.6 && !ocupado) { z.fase2 = true; z.f.bengala2 = true; z.prep = z.prepTotal = 1.0; z.accion = 'llamar'; z.llamarTipo = 'barra'; }
+      if (z.mandaT > 0) { z.mandaT -= dt; return 2.7; } // se manda de frente
+      z.mandaCD -= dt;
+      if (!ocupado && z.mandaCD <= 0 && dist > 7 && dist < 20) { z.mandaCD = 7 + Math.random() * 3; z.mandaT = 1.4; sonido.rugido(0.9); aviso('¡Se manda el Bengala!'); return 2.7; }
+      if (!ocupado && z.t1 <= 0 && dist > 4 && dist < 22) { z.t1 = (z.fase2 ? 2.3 : 3.0) + Math.random() * 0.8; z.prep = z.prepTotal = 0.6; z.accion = 'tirar'; }
+      return 1;
+    }
+    case 'lubolo': {
+      if (!z.fase2 && k < 0.5 && !ocupado && z.beatN <= 0) { z.fase2 = true; z.prep = z.prepTotal = 1.0; z.accion = 'llamar'; z.llamarTipo = 'cuerda'; }
+      if (z.beatN > 0) { // la llamada: golpes de tambor en ritmo, cada uno larga una onda
+        z.beatT -= dt;
+        if (z.beatT <= 0) { z.beatN--; z.beatT = z.fase2 ? 0.5 : 0.65; golpeTambor(z, p); }
+        return 'quieto';
+      }
+      if (!ocupado && z.t1 <= 0 && dist < 20) { z.t1 = (z.fase2 ? 4.4 : 5.8) + Math.random(); z.prep = z.prepTotal = 0.75; z.accion = 'tambor'; sonido.repique(); }
+      return 1;
+    }
+    case 'tablado': {
+      if (!z.fase2 && k < 0.66 && !ocupado && z.saludoN <= 0) { z.fase2 = true; z.prep = z.prepTotal = 1.1; z.accion = 'llamar'; z.llamarTipo = 'coro'; }
+      if (!z.fase3 && k < 0.33) { z.fase3 = true; mensaje('¡La retirada!', 'Don Tablado barre con todo', true); sonido.murga(); }
+      if (z.saludoN > 0) { // retirada: barre a los costados
+        z.saludoT -= dt;
+        if (z.saludoT <= 0) {
+          conoGolpe(z, z.saludoSig); z.saludoN--;
+          if (z.saludoN > 0) { z.saludoSig = z.saludoBase - 0.95; jfx.cono(p.x, p.y, p.z, z.saludoSig + Math.PI, AP_SALUDO, R_SALUDO, 0.5); z.saludoT = 0.5; z.ataque = 0.35; }
+        }
+        return 'quieto';
+      }
+      if (!ocupado && z.t1 <= 0 && dist < 12) {
+        z.t1 = (z.fase3 ? 4.2 : 4.8) + Math.random(); z.prep = z.prepTotal = 0.9; z.accion = 'saludo'; z.saludoAng = Math.atan2(dx, dz);
+        jfx.cono(p.x, p.y, p.z, z.saludoAng + Math.PI, AP_SALUDO, R_SALUDO, 0.9); sonido.pito();
+      }
+      return dist > 12 ? 1.35 : 1;
+    }
+  }
+  return 1;
+}
+function ataqueJefe(z, p, dist, dx, dz) {
+  const a = z.accion;
+  if (a === 'lance') { z.ganchoD = 0.6; sonido.latigo(); z.ataque = 0.4; }
+  else if (a === 'tirar' || a === 'tirar3') {
+    z.ataque = 0.4; const m = manoJefe(z); const ox = m.x, oy = m.y, oz = m.z, px = -dz / dist, pz = dx / dist;
+    if (z.tipo === 'garrafero') {
+      const n = a === 'tirar3' ? 3 : 1;
+      for (let i = 0; i < n; i++) { const off = n > 1 ? (i - 1) * 3.4 : 0; _p.set(ox, oy, oz); _fin.set(J.pos.x + px * off + (Math.random() - .5) * 1.2, J.pos.y, J.pos.z + pz * off + (Math.random() - .5) * 1.2); ef.lanzar('garrafa', _p, _fin, 1.05 + dist / 35 + i * 0.12, 30, 3.4, J.pos.y); }
+      sonido.tiraPiedra(); z.f.garrafaMano = false; z.t2 = 0.9;
+    } else {
+      const n = z.fase2 ? 2 : 1;
+      for (let i = 0; i < n; i++) { const off = n > 1 ? (i ? 2.2 : -2.2) : 0; _p.set(ox, oy, oz); _fin.set(J.pos.x + px * off + (Math.random() - .5), J.pos.y, J.pos.z + pz * off + (Math.random() - .5)); ef.lanzar('bengala', _p, _fin, 0.9 + dist / 45, 14, 2.2, J.pos.y); }
+      sonido.bengala();
+    }
+  }
+  else if (a === 'tambor') { z.beatN = z.fase2 ? 4 : 3; z.beatT = 0; }
+  else if (a === 'saludo') { conoGolpe(z, z.saludoAng); if (z.fase3) { z.saludoBase = z.saludoAng; z.saludoN = 2; z.saludoSig = z.saludoAng + 0.95; jfx.cono(p.x, p.y, p.z, z.saludoSig + Math.PI, AP_SALUDO, R_SALUDO, 0.5); z.saludoT = 0.5; } }
+  else if (a === 'llamar') llamarJefe(z);
+  else if (a === 'carga') { z.cargaT = 4.5; z.cdx = dx / dist; z.cdz = dz / dist; z.rackDano = 0; sonido.rugido(0.7); }
+}
+function reventarRack(z, porJugador) {
+  const p = z.g.position, bx = p.x - Math.sin(z.g.rotation.y) * 0.5 * z.esc, bz = p.z - Math.cos(z.g.rotation.y) * 0.5 * z.esc;
+  z.f.garrafas = false; z.sinRack = true; z.cargaT = 0; z.cargaG = 0;
+  explosionGarrafa(bx, p.y + 0.4, bz, 5.5, porJugador ? 26 : 44, 130, false, z);
+  z.vida -= z.vidaMax * (porJugador ? 0.16 : 0.08); z.aturdido = porJugador ? 3.2 : 1.2; z.flash = 0.3; hudJefe();
+  mensaje(porJugador ? '¡Le reventaste las garrafas!' : '¡Reventó todo!', porJugador ? 'Está mareado: dale con todo' : 'La próxima tirale a la espalda', !porJugador);
+  if (z.vida <= 0) { _d.set(Math.sin(z.g.rotation.y), 0, Math.cos(z.g.rotation.y)); matar(z, false, _d, false, porJugador ? 'explosion' : null, true); }
+}
+function golpeTambor(z, p) {
+  sonido.tambor(); z.ataque = 0.3; shake = Math.max(shake, 0.25); ef.golpeSuelo(p, 3);
+  let aj = Math.atan2(J.pos.z - p.z, J.pos.x - p.x); if (aj < 0) aj += Math.PI * 2;
+  const g1 = (aj + (Math.random() - .5) * 2.0 + Math.PI * 2) % (Math.PI * 2);
+  const dos = !z.fase2 || Math.random() < 0.4, g2 = dos ? (g1 + Math.PI * (0.7 + Math.random() * 0.6)) % (Math.PI * 2) : 9;
+  jfx.onda(p.x, p.y, p.z, [g1, g2, 9], 8.5, 24, 20, z.fase2 ? 0.34 : 0.42, z.beatN % 2 ? 0x5ab4ff : 0xff6a20);
+}
+function conoGolpe(z, ang) {
+  const p = z.g.position; z.ataque = 0.45; sonido.bombo();
+  ef.confeti(p.x + Math.sin(ang) * 1.2, p.y + 1.6 * z.esc, p.z + Math.cos(ang) * 1.2, Math.sin(ang), Math.cos(ang), 36);
+  const dx = J.pos.x - p.x, dz = J.pos.z - p.z, d = Math.hypot(dx, dz);
+  if (estado === 'jugando' && d < R_SALUDO && Math.abs(_ang(Math.atan2(dx, dz) - ang)) < AP_SALUDO / 2) {
+    recibirDano(26 * MODO().dano, p.x, p.z); J.lento = Math.max(J.lento, 1.5); empujarJugador(dx / (d || 1), dz / (d || 1), 1.2); aviso('¡Papelitos en los ojos! Salí del cono');
+  }
+}
+function llamarJefe(z) {
+  const p = z.g.position; z.ataque = 0.5;
+  if (z.llamarTipo === 'barra') {
+    mensaje('¡Avalancha!', 'El Bengala llamó a la barra', true); sonido.pito(); ef.humoColor(p.x, p.y + 1, p.z, 14, 0.9, 0.75, 0.12); ef.humoColor(p.x, p.y + 1, p.z, 10, 0.08, 0.08, 0.08);
+    refuerzosDe(6, 'corredor', (o, k) => { if (k % 2) { o.f.pena = true; o.cRemera.setHex(0xe0b818); o.cAcc1.setHex(0x121212); } else { o.f.nac = true; o.cRemera.setHex(0xe6e6ea); o.cAcc1.setHex(0x1a3a9a); } o.cRasgon.copy(o.cRemera).multiplyScalar(0.45); });
+  } else if (z.llamarTipo === 'cuerda') {
+    mensaje('¡Llegó la cuerda!', 'El Lubolo Mayor llamó a los tambores', true); sonido.repique();
+    refuerzosDe(4, 'normal', (o, k) => { o.f.tambor = true; o.f.pena = o.f.nac = false; o.cAcc1.setHex([0x2a6ad0, 0xd02a2a, 0x2aa04a, 0xe8c020][k % 4]); o.cAcc2.setHex(0xe8e8e8); o.cRemera.copy(o.cPiel); });
+  } else if (z.llamarTipo === 'coro') {
+    mensaje('¡Sube el coro!', 'Don Tablado trajo a la murga', true); sonido.murga();
+    refuerzosDe(5, 'normal', (o, k) => { o.f.murga = true; o.f.gorra = o.f.pena = o.f.nac = false; o.cPiel.setHex(0xe0dcd0); o.pelo.scale.setScalar(0.001); o.cAcc1.setHex([0xf0c020, 0xd02a6a, 0x2ab0d0, 0x8ad02a, 0xff7a20][k % 5]); o.cAcc2.setHex([0x6a1a8a, 0x1a8a9a, 0xb01a1a][k % 3]); o.cRemera.setHex(0x3a1a5a); });
+  }
 }
 // aviso en el piso antes del pisotón del Cerro
 const avisoPiso = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xff3010, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
@@ -1567,10 +1806,11 @@ function hud() {
 }
 function armarBarra() {
   const b = $('barra-armas'); b.innerHTML = ''; prevHud.sel = null;
-  ARMAS.forEach((a, i) => {
+  let i = 0;
+  ARMAS.forEach(a => {
     if (!tiene.has(a.id)) return;
-    const d = document.createElement('div'); d.dataset.id = a.id;
-    d.innerHTML = `<b>${i + 1}</b>${a.nombre.split(' ')[0]}`;
+    const d = document.createElement('div'); d.dataset.id = a.id; i++;
+    d.innerHTML = `<b>${i <= 10 ? i % 10 : ''}</b>${a.nombre.split(' ')[0]}`;
     d.addEventListener('pointerdown', e => { e.stopPropagation(); elegirArma(a.id); });
     b.appendChild(d);
   });
@@ -1598,7 +1838,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyR') recargar();
   if (e.code === 'KeyQ') ciclarArma(1);
   if (e.code === 'Escape' || e.code === 'KeyP') pausar();
-  const n = +e.key; if (n >= 1 && n <= ARMAS.length) elegirArma(ARMAS[n - 1].id);
+  const n = e.key === '0' ? 10 : +e.key; if (n >= 1) { const L = ARMAS.filter(x => tiene.has(x.id)); if (n <= L.length) elegirArma(L[n - 1].id); } // la n-ésima de las que tenés
 });
 addEventListener('keyup', e => { teclas[e.code] = false; });
 addEventListener('blur', () => { for (const k in teclas) teclas[k] = false; disparando = false; if (estado === 'jugando') pausar(); });
@@ -1717,7 +1957,7 @@ function jugar() {
     capaJuego(true);
     $('jefe').classList.add('oculto');
     if (!movil) pedirLock();
-    if (modoPlay) mensaje('Playground', MAPA.nombre + ' · ' + cfgPlay.cantidad + ' zombis por oleada', false); else if (modoInf) mensaje('Modo Infinito', 'Hasta donde aguantes. Después de cada oleada, el taller', false); else mensaje(MAPA.id === 'rambla' ? 'Zombis en la Rambla' : MAPA.nombre, AJ.modo === 'pesadilla' ? 'Modo Pesadilla. Que Dios te ayude' : 'Aguantá hasta que amanezca', false);
+    if (modoPlay) mensaje('Playground', MAPA.nombre + ' · ' + cfgPlay.cantidad + ' zombis por oleada', false); else if (modoInf) mensaje('Modo Infinito', 'Hasta donde aguantes. Después de cada oleada, el taller', false); else mensaje(MAPA.id === 'rambla' ? 'Rambla: Zona Cero' : MAPA.nombre, AJ.modo === 'pesadilla' ? 'Modo Pesadilla. Que Dios te ayude' : 'Aguantá hasta que amanezca', false);
     revisarGiro();
   });
   if (movil && primeraVez && document.documentElement.requestFullscreen && !document.fullscreenElement && !matchMedia('(display-mode: standalone)').matches)
@@ -1788,6 +2028,7 @@ function cargarPlay() {
   c.tipos = (c.tipos || []).filter(t => TIPOS[t]); if (!c.tipos.length) c.tipos = ['normal'];
   c.armas = (c.armas || []).filter(a => ARMAS.some(x => x.id === a)); if (!c.armas.length) c.armas = ['pistola'];
   c.jefeCada = Math.max(2, Math.min(10, +c.jefeCada || 3));
+  c.jefesTipos = (c.jefesTipos || ORDEN_JEFES.slice()).filter(t => ORDEN_JEFES.includes(t)); if (!c.jefesTipos.length) c.jefesTipos = ORDEN_JEFES.slice();
   c.olas = Math.max(0, Math.min(30, +c.olas || 0));
   return c;
 }
@@ -1807,6 +2048,8 @@ function pintarPlay() {
   $('pg-olas').value = c.olas; $('pg-olas-v').textContent = c.olas > 0 ? c.olas : 'sin límite';
   $('pg-jefe').value = c.jefeCada; $('pg-jefe-v').textContent = c.jefeCada + ' oleadas';
   $('pg-jefe-fila').classList.toggle('oculto', !c.jefes);
+  $('pg-jefes-fila').classList.toggle('oculto', !c.jefes);
+  chips('pg-jefes', ORDEN_JEFES.map(t => [t, JEFES_INFO[t].nombre]), k => c.jefesTipos.includes(k), k => alternar(c.jefesTipos, k));
   $('b-pg-jugar').textContent = `¡A jugar! · ${MAPAS[c.mapa].nombre}`;
 }
 cfgPlay = cargarPlay();
@@ -1901,18 +2144,26 @@ function animarArma(dt) {
       if (car) { const sale = p < 0.15 ? 0 : p < 0.4 ? (p - 0.15) / 0.25 : p < 0.55 ? 1 : p < 0.8 ? 1 - (p - 0.55) / 0.25 : 0; car.position.y = car.userData.y0 - sale * 0.22; car.visible = sale < 0.95; if (p > 0.8 && p < 0.86) py += 0.01; }
       if (tam) { const ab = Math.min(1, Math.min(p, 1 - p) * 6); tam.position.x = ab * 0.05; tam.rotation.z = p * 12; rz += ab * 0.35; }
     } else { if (car) { car.position.y = car.userData.y0; car.visible = true; } if (tam) { tam.position.x = 0; tam.rotation.z += Math.max(0, cdArma) * dt * 30; } }
+    const gr = m.userData.gr !== undefined ? m.userData.gr : (m.userData.gr = m.getObjectByName('garrafa') || null);
+    if (gr) gr.visible = cargador[a.id] > 0 && !(recargaT > 0 && recargaT / recargaTotal > 0.45);
+    const canos = m.userData.canos !== undefined ? m.userData.canos : (m.userData.canos = m.getObjectByName('canos') || null);
+    if (canos) { const p = recargaT > 0 ? 1 - recargaT / recargaTotal : 0; canos.rotation.x = -0.62 * Math.min(1, Math.min(p, 1 - p) * 5); } // la recortada se quiebra para recargar
     const bomba = m.getObjectByName('bomba');
     if (bomba) { const p = 1 - Math.max(0, cdArma) / cadenciaDe(a); bomba.position.z = -0.36 + (p > 0.35 && p < 0.75 ? Math.sin((p - 0.35) / 0.4 * Math.PI) * 0.1 : 0); }
     m.userData.flash.visible = flashT > 0; m.userData.flash.material.rotation = Math.random() * 6;
   } else {
     rx = -0.45; rz = 0.35;
-    if (swingT > 0) {
+    if (a.estocada) { rx = -1.1; rz = 0.25; py += 0.1; px -= 0.04; } // el espeto se lleva apuntando para adelante
+    if (swingT > 0 && a.estocada) { const p = 1 - swingT / cadenciaDe(a), s = p < 0.25 ? -p / 0.25 * 0.4 : p < 0.45 ? -0.4 + (p - 0.25) / 0.2 * 1.4 : 1 - (p - 0.45) / 0.55; pz -= s * 0.32; py += s * 0.03; px -= s * 0.06; }
+    else if (swingT > 0) {
       const p = 1 - swingT / cadenciaDe(a); // 0..1
       let s;
       if (p < 0.3) { s = p / 0.3; rz = 0.35 - s * 0.95; rx = -0.45 + s * 0.25; px += s * 0.08; py += s * 0.06; }         // carga
       else if (p < 0.5) { s = (p - 0.3) / 0.2; rz = -0.6 + s * 2.1; rx = -0.2 - s * 1.2; px += 0.08 - s * 0.42; py += 0.06 - s * 0.16; } // golpe
       else { s = (p - 0.5) / 0.5; const e = 1 - (1 - s) * (1 - s); rz = 1.5 - e * 1.15; rx = -1.4 + e * 0.95; px += -0.34 * (1 - e); py += -0.1 * (1 - e); }
     }
+    const tz = m.userData.tz !== undefined ? m.userData.tz : (m.userData.tz = m.getObjectByName('tanza') || null);
+    if (tz) { const p = swingT > 0 ? 1 - swingT / cadenciaDe(a) : 1; tz.scale.y = 1 + Math.sin(Math.min(1, p / 0.6) * Math.PI) * 2.5; } // la tanza de la caña se estira con el latigazo
     pz -= kick * 0.05;
   }
   if (cambioT > 0) { const q = cambioT / 0.3, s = Math.sin(q * Math.PI); py -= s * 0.35; rx -= s * 0.6; rz += (q > 0.5 ? 1 : -1) * s * 0.25; } // baja una, sube la otra con un giro
@@ -2077,6 +2328,15 @@ renderer.info.autoReset = true;
 aplicarCalidad(); pintarAjustes(); setVolumen();
 reiniciar(); estado = 'inicio'; poblarMenu(); mostrarRecord();
 requestAnimationFrame(bucle);
+// v8: precalentar shaders en el menú (efectos, jefes, proyectiles y armas están ocultos y si no se compilarían en el primer disparo o la primera explosión: tirón)
+function precalentar() {
+  const ocultos = [], ver = o => { if (!o.visible) { ocultos.push(o); o.visible = true; } };
+  scene.traverse(ver); vmScene.traverse(ver);
+  try { const par = renderer.compileAsync && renderer.extensions.has('KHR_parallel_shader_compile'); for (const [sc, cam] of [[scene, camera], [vmScene, vmCam]]) { if (par) renderer.compileAsync(sc, cam).catch(() => { }); else renderer.compile(sc, cam); } }
+  catch (e) { /* sin compilación previa: se compila al usarse */ }
+  for (const o of ocultos) o.visible = false;
+}
+setTimeout(() => { if (estado === 'inicio') precalentar(); }, 900);
 requestAnimationFrame(() => requestAnimationFrame(() => { $('cargando').classList.add('fuera'); setTimeout(() => $('cargando').classList.add('oculto'), 700); }));
 // la primera interacción arranca el audio (los navegadores lo exigen)
 addEventListener('pointerdown', function arrancar() { iniciarAudio(); setVolumen(); musica.iniciar(); musica.set(0, false, true); removeEventListener('pointerdown', arrancar); });
@@ -2092,8 +2352,9 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') { /* actuali
     const recargar = () => { if (recargado) return; recargado = true; location.reload(); };
     if (estado === 'inicio' || estado === 'fin') { recargar(); return; }
     const b = document.createElement('button'); b.textContent = 'Nueva versión · tocá para actualizar';
-    b.style.cssText = 'position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:9999;padding:8px 14px;border-radius:10px;background:#a0280c;color:#fff;border:1px solid #ffb020;font-size:15px';
-    b.addEventListener('click', recargar); document.body.appendChild(b);
+    b.style.cssText = 'position:fixed;top:calc(8px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:9999;padding:8px 14px;border-radius:10px;background:#a0280c;color:#fff;border:1px solid #ffb020;font-size:15px';
+    b.addEventListener('click', e => { e.stopPropagation(); recargar(); }); b.addEventListener('pointerdown', e => e.stopPropagation()); document.body.appendChild(b);
+    const vigia = setInterval(() => { if (estado === 'inicio' || estado === 'fin') { clearInterval(vigia); recargar(); } }, 1000); // si no tocó el botón, se actualiza solo al volver al menú (nunca a mitad de una partida)
   });
 }
 
@@ -2102,7 +2363,7 @@ window.__rz = { get escena() { return scene; },
   get estado() { return estado; }, get oleada() { return oleada; }, set oleada(v) { oleada = v; }, get puntos() { return puntos; }, get bajas() { return bajas; },
   get pesos() { return pesos; }, set pesos(v) { pesos = v; hud(); }, get jefe() { return jefe && { tipo: jefe.tipo, vida: jefe.vida, max: jefe.vidaMax }; },
   get vida() { return J.vida; }, set vida(v) { J.vida = v; }, get dios() { return dios; }, set dios(v) { dios = v; }, get arma() { return armaSel; }, get desbloq() { return [...tiene]; },
-  get play() { return { modo: modoPlay, cfg: cfgPlay && { ...cfgPlay, tipos: cfgPlay.tipos.slice(), armas: cfgPlay.armas.slice() } }; }, get reserva() { return { ...reserva }; },
+  get play() { return { modo: modoPlay, cfg: cfgPlay && { ...cfgPlay, tipos: cfgPlay.tipos.slice(), armas: cfgPlay.armas.slice(), jefesTipos: (cfgPlay.jefesTipos || []).slice() } }; }, get reserva() { return { ...reserva }; },
   get blindaje() { return J.blindaje; }, get ventajas() { return [...ventajas]; }, get niveles() { return JSON.parse(JSON.stringify(niveles)); },
   get vivos() { return zombis.filter(z => z.vivo).length; }, get porSalir() { return porSalir; }, get descanso() { return descanso; }, get S() { return S; }, perfil,
   get vista() { const v = new THREE.Vector2(); renderer.getSize(v); return { rw: v.x, rh: v.y, cw: lienzo.clientWidth, ch: lienzo.clientHeight, iw: innerWidth, ih: innerHeight, bw: renderer.domElement.width, bh: renderer.domElement.height }; },
@@ -2123,7 +2384,7 @@ window.__rz = { get escena() { return scene; },
   traerZombi(dist = 2, tipo) { const v = zombis.find(z => z.vivo && (!tipo || z.tipo === tipo)); if (!v) return false; _f.set(-Math.sin(J.yaw), 0, -Math.cos(J.yaw)); v.g.position.set(J.pos.x + _f.x * dist, J.pos.y, J.pos.z + _f.z * dist); v.sube = false; window.__rzZ = v; return { x: v.g.position.x, z: v.g.position.z, vida: v.vida, tipo: v.tipo }; },
   zombiPos() { const v = window.__rzZ; return v && { x: v.g.position.x, z: v.g.position.z, vida: v.vida, vivo: v.vivo, sinBrazo: [...v.sinBrazo], sinCabeza: v.sinCabeza }; },
   elegir: id => elegirArma(id), desbloquear: id => { tiene.add(id); const a = A(id); if (a.tipo === 'fuego') { cargador[id] = cargMax(a); reserva[id] = resMax(a); } armarBarra(); },
-  iaEstado() { return zombis.filter(z => z.vivo).map(z => ({ x: z.g.position.x, z: z.g.position.z, tipo: z.tipo, alerta: z.alerta, esc: z.esc, d: Math.hypot(z.g.position.x - J.pos.x, z.g.position.z - J.pos.z), tr: z.trancado })); },
+  iaEstado() { return zombis.filter(z => z.vivo).map(z => ({ x: z.g.position.x, z: z.g.position.z, tipo: z.tipo, alerta: z.alerta, esc: z.esc, d: Math.hypot(z.g.position.x - J.pos.x, z.g.position.z - J.pos.z), tr: z.trancado, slot: z.slotOk ? +z.slot.toFixed(2) : null, orb: !!z.orbita, orbT: +(z.orbT || 0).toFixed(1) })); },
   ponerZombiXZ(x, w) { const v = window.__rzZ; v.g.position.set(x, piso(local(x, w, {}).d), w); v.sube = false; v.dirX = undefined; },
   ponerZombiAt(i, d) { const v = window.__rzZ; aMundo(i, d, _o); v.g.position.set(_o.x, piso(d), _o.z); v.sube = false; v.dirX = undefined; },
   localDe(x, z) { return local(x, z, {}); },
@@ -2147,9 +2408,12 @@ window.__rz = { get escena() { return scene; },
   set fuego(v) { disparando = v; }, get armaLista() { return cambioT <= 0 && cdArma <= 0 && recargaT <= 0; }, /* pruebas: el arma terminó de cambiar/recargar */ recargar, ciclarArma, pausar, seguir, jugar, aMenu, cerrarTienda, abrirTienda,
   tab(t) { tab = t; pintarTienda(); },
   saltarA(n) { // salta a la oleada n (para probar jefes); limpia lo que haya
-    for (const z of zombis) if (z.vivo) { z.vivo = false; z.muerteT = 4.9; } porSalir = 0; jefe = null; jefePendiente = null; $('jefe').classList.add('oculto');
+    for (const z of zombis) if (z.vivo) { z.vivo = false; z.muerteT = 4.9; } porSalir = 0; jefe = null; jefePendiente = null; $('jefe').classList.add('oculto'); jfx.limpiar();
     oleada = n - 1; descanso = 0.05; tiendaT = 0; if (estado === 'tienda') { ocultar('tienda'); estado = 'jugando'; }
   },
+  jefeYa(tipo) { const z = spawn(tipo, true); if (!z) return null; jefe = z; z.sube = false; initJefe(z); $('jefe').classList.remove('oculto'); $('jefe-nombre').textContent = TIPOS[tipo].nombre; hudJefe(true); presentarJefe(tipo); window.__rzZ = z; return true; },
+  jefeEstado() { const z = jefe; if (!z) return null; return { tipo: z.tipo, vida: z.vida, max: z.vidaMax, accion: z.accion, prep: z.prep, fase2: z.fase2, fase3: z.fase3, beatN: z.beatN, gancho: z.ganchoD, enganche: z.enganche, carga: z.cargaT, sinRack: z.sinRack, saludoN: z.saludoN, d: Math.hypot(z.g.position.x - J.pos.x, z.g.position.z - J.pos.z), fx: jfx.activos, proy: ef.proyectiles.filter(p => p.vivo).map(p => p.tipo) }; },
+  danoJefe(f) { if (!jefe) return; _d.set(0, 0, 1); herir(jefe, jefe.vidaMax * f, false, _d, 1, false, 'pistola'); },
   spawnLejos(tipo) { const z = spawn(tipo, false); if (!z) return null; const p = z.g.position; return { d: Math.hypot(p.x - J.pos.x, p.z - J.pos.z), libre: libre(p.x, p.z, 0.55), sube: z.sube }; },
   limpiar() { for (const z of zombis) if (z.vivo) { z.vivo = false; z.muerteT = 4.9; } },
   porSalirSet(n) { porSalir = n; }, zRaw(i) { return zombis[i]; }, ponerVivosAnillo(r) { let k = 0; for (const z of zombis) { if (!z.vivo) continue; const a = k++ * 0.8; z.g.position.set(J.pos.x + Math.cos(a) * r, J.pos.y, J.pos.z + Math.sin(a) * r); z.sube = false; } }, get NM() { return NM; }, get quedanOla() { return quedanOla; },
@@ -2170,6 +2434,9 @@ window.__rz = { get escena() { return scene; },
   herirTodos(n = 99999) { _d.set(0, 0, 1); for (const z of zombis.slice()) if (z.vivo) herir(z, n, false, _d, 1, false, 'pistola'); },
   mirarPunto(i, d, h = 40) { aMundo(i, d, _o); const dx = _o.x - J.pos.x, dz = _o.z - J.pos.z; J.yaw = Math.atan2(-dx, -dz); J.pitch = Math.atan2(h, Math.hypot(dx, dz)); },
   mirarA(yaw, pitch) { J.yaw = yaw; J.pitch = pitch; },
+  fila(n = 3, dist = 6, sep = 1.1, tipo = 'normal') { window.__rzF = []; _f.set(-Math.sin(J.yaw), 0, -Math.cos(J.yaw)); for (let i = 0; i < n; i++) { const z = spawn(tipo, true); if (!z) continue; z.sube = false; z.g.position.set(J.pos.x + _f.x * (dist + i * sep), J.pos.y, J.pos.z + _f.z * (dist + i * sep)); window.__rzF.push(z); } window.__rzZ = window.__rzF[0]; return window.__rzF.length; },
+  filaEstado() { return (window.__rzF || []).map(z => ({ vida: Math.round(z.vida), vivo: z.vivo, at: +z.aturdido.toFixed(2), d: +Math.hypot(z.g.position.x - J.pos.x, z.g.position.z - J.pos.z).toFixed(2), quema: +(z.quemaT || 0).toFixed(2) })); },
+  get municion() { return [cargador[armaSel], reserva[armaSel]]; }, get proyActivos() { return ef.proyActivos ? ef.proyActivos() : -1; },
   despejar() { for (const z of zombis) if (z !== window.__rzZ && z.vivo) { z.g.position.x += 60; } },
   irAPickup() { const p = poolPick.find(p => p.t > 0); if (!p) return false; J.pos.x = p.g.position.x; J.pos.z = p.g.position.z; return true; },
   // --- física (pruebas) ---
@@ -2279,5 +2546,10 @@ window.__rz = { get escena() { return scene; },
     const fr = new THREE.Frustum().setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)), r = {};
     const ver = (o, tag) => { if (!o.visible) return; const t = o.name || tag; if (o.isMesh || o.isPoints || o.isSprite || o.isLine) { if (o.isInstancedMesh && o.count === 0) return; if (o.frustumCulled && o.geometry && !(o.geometry.boundingSphere || o.geometry.computeBoundingSphere(), fr.intersectsObject(o))) return; const k = (t || '?') + '|' + (o.material.customProgramCacheKey && o.material.customProgramCacheKey() === 'sangreTramo' ? 'TRAMO' : '') + o.type + (o.isInstancedMesh ? 'I' + o.count : '') + '|' + (o.material.type || 'multi') + '|' + o.geometry.type + '|' + (o.parent && o.parent.type) + '|' + (o.parent && o.parent.parent && o.parent.parent.type); r[k] = (r[k] || 0) + (Array.isArray(o.material) ? o.material.length : 1); } for (const c of o.children) ver(c, t); };
     ver(scene, ''); return Object.entries(r).sort((a, b) => b[1] - a[1]); },
+  dibujablesDet() { // pruebas: cada objeto visible en el frustum (tipo, vértices, posición, mapa, color)
+    const fr = new THREE.Frustum().setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)), out = [];
+    scene.traverseVisible(o => { if (!(o.isMesh || o.isPoints || o.isSprite || o.isLine)) return; if (o.isInstancedMesh && o.count === 0) return; if (o.frustumCulled && o.geometry && !(o.geometry.boundingSphere || o.geometry.computeBoundingSphere(), fr.intersectsObject(o))) return;
+      const m = o.material, p = new THREE.Vector3(); o.getWorldPosition(p); out.push([o.type + (o.isInstancedMesh ? o.count : ''), m.type, o.geometry.attributes.position.count, [Math.round(p.x), Math.round(p.y), Math.round(p.z)], m.color ? m.color.getHexString() : '', m.size || 0, m.blending, !!m.map, o.name || (o.parent && o.parent.name) || '']); });
+    return out; },
   info: () => ({ calls: medidas.ultCalls, tris: medidas.ultTris, geos: renderer.info.memory.geometries, texs: renderer.info.memory.textures, progs: renderer.info.programs.length })
 };

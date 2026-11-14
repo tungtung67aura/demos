@@ -2,11 +2,12 @@
 // y un borde de luz (rim) para que se lean de noche. Cada zombi es un esqueleto de Object3D vacíos
 // y toda la horda se dibuja con InstancedMesh: ~15 draw calls sin importar cuántos haya.
 import * as THREE from 'https://esm.sh/three@0.160.0';
+import { ARTE_DET, ARTE_FLAGS, instalarArte, vestirZombi } from './zombis-arte.js'; // arte v8: ropa uruguaya, caras y cuerpos
 
 const PIEL = [0x7f9a68, 0x8ea37a, 0x9aa486, 0x6f8a70, 0xa9ab90, 0x8a9a5a, 0xb0a890, 0x7a8e90];
 const REMERA = [0x8a2e2e, 0x2e4a80, 0x6a6a4a, 0x9a7a50, 0x3a6a4a, 0x7a3a7a, 0xa8a8a8, 0x7ab8e8, 0xd8b040, 0xd0d0c8, 0x4a4a4a, 0xc85a28];
 const PANT = [0x26304a, 0x4a3a24, 0x2e2e2e, 0x34507a, 0x5a5040];
-const OJO = { normal: 0xffe14a, corredor: 0xff3020, gateador: 0xfff0a0, escupidor: 0x80ff40, explosivo: 0xff7a10, tanque: 0xff8a00, griton: 0xd8f4ff, patovica: 0xff1010, cerro: 0xff2a00 };
+const OJO = { normal: 0xffe14a, corredor: 0xff3020, gateador: 0xfff0a0, escupidor: 0x80ff40, explosivo: 0xff7a10, tanque: 0xff8a00, griton: 0xd8f4ff, patovica: 0xff1010, cerro: 0xff2a00, anzuelo: 0x60e0ff, garrafero: 0xff8a10, bengala: 0xff2020, lubolo: 0xffd040, tablado: 0xff40c0 };
 
 // hit: esferas de impacto [altura, radio, adelanto] en unidades del modelo (se multiplican por la escala)
 const HIT_PARADO = [[1.74, 0.24, 0.04], [1.2, 0.38, 0], [0.5, 0.3, 0]];
@@ -21,7 +22,13 @@ export const TIPOS = {
   tanque: { nombre: 'Tanque', vida: 420, vel: 1.0, escala: 1.55, dano: 22, puntos: 400, alcance: 1.85, prep: 0.65, hit: HIT_PARADO },
   griton: { nombre: 'Gritón', vida: 55, vel: 1.6, escala: 0.97, dano: 7, puntos: 170, alcance: 1.2, prep: 1.1, hit: HIT_PARADO },
   patovica: { nombre: 'El Patovica del Cordón', vida: 2400, vel: 1.35, escala: 2.15, dano: 26, puntos: 3000, alcance: 2.4, prep: 0.7, hit: HIT_PARADO, jefe: true },
-  cerro: { nombre: 'El Zombi del Cerro', vida: 9000, vel: 1.25, escala: 3.4, dano: 30, puntos: 10000, alcance: 3.4, prep: 1.0, hit: HIT_PARADO, jefe: true }
+  cerro: { nombre: 'El Zombi del Cerro', vida: 9000, vel: 1.25, escala: 3.4, dano: 30, puntos: 10000, alcance: 3.4, prep: 1.0, hit: HIT_PARADO, jefe: true },
+  // v8: jefes nuevos (IA y ataques en game.js, efectos en jefes.js)
+  anzuelo: { nombre: 'Don Anzuelo', vida: 2000, vel: 1.25, escala: 2.0, dano: 22, puntos: 2500, alcance: 2.3, prep: 0.7, hit: HIT_PARADO, jefe: true },
+  garrafero: { nombre: 'El Garrafero', vida: 2900, vel: 1.15, escala: 2.1, dano: 24, puntos: 3500, alcance: 2.4, prep: 0.75, hit: HIT_PARADO, jefe: true },
+  bengala: { nombre: 'El Bengala', vida: 3400, vel: 1.55, escala: 2.05, dano: 24, puntos: 4000, alcance: 2.3, prep: 0.6, hit: HIT_PARADO, jefe: true },
+  lubolo: { nombre: 'El Lubolo Mayor', vida: 4400, vel: 1.1, escala: 2.35, dano: 26, puntos: 5000, alcance: 2.6, prep: 0.7, hit: HIT_PARADO, jefe: true },
+  tablado: { nombre: 'Don Tablado', vida: 5600, vel: 1.2, escala: 2.5, dano: 28, puntos: 6500, alcance: 2.8, prep: 0.75, hit: HIT_PARADO, jefe: true }
 };
 
 
@@ -90,12 +97,64 @@ const DET = [
   // el Escupidor: bultos hinchados
   ['esfera', 'torso', [-0.13, 0.2, 0.13], [0.17, 0.17, 0.17], [0, 0, 0], 'sangre', 'bultos', null],
   ['esfera', 'cab', [0.07, 0.07, 0.1], [0.1, 0.1, 0.1], [0, 0, 0], 'sangre', 'bultos', 'c'],
+  // ===== v8: jefes nuevos =====
+  // Don Anzuelo: sombrero de pescador y piloto amarillos, caña con reel, balde
+  ['cilindro', 'cab', [0, 0.17, -0.005], [0.3, 0.1, 0.3], [0, 0, 0], 'amarillo', 'pesca', 'c'],
+  ['cilindro', 'cab', [0, 0.125, -0.005], [0.48, 0.018, 0.48], [-0.08, 0, 0], 'amarillo', 'pesca', 'c'],
+  ['chaleco', 'torso', [0, -0.02, 0], [1.06, 1.12, 1.08], [0, 0, 0], 'amarillo', 'pesca', null],
+  ['caja', 'torso', [0, -0.02, 0.172], [0.02, 0.5, 0.012], [0, 0, 0], 'negro', 'pesca', null],
+  ['cilindro', 'mano1', [0, -0.02, 0.78], [0.028, 1.65, 0.028], [1.42, 0, 0], 'cana', 'pesca', 'b1'],
+  ['cilindro', 'mano1', [0.07, -0.04, 0.14], [0.09, 0.05, 0.09], [0, 0, 1.57], 'metal', 'pesca', 'b1'],
+  ['cilindro', 'mano0', [0, -0.16, 0], [0.24, 0.26, 0.24], [0, 0, 0], 'acc2', 'pesca', 'b0'],
+  ['toro', 'mano0', [0, -0.02, 0], [0.22, 0.22, 0.22], [1.57, 0, 0], 'metal', 'pesca', 'b0'],
+  // El Garrafero: tres garrafas en la espalda y una en la mano, mameluco y gorra
+  ['cilindro', 'torso', [-0.15, -0.02, -0.27], [0.25, 0.46, 0.25], [0, 0, 0], 'naranja', 'garrafas', null],
+  ['cilindro', 'torso', [0.15, -0.02, -0.27], [0.25, 0.46, 0.25], [0, 0, 0], 'naranja', 'garrafas', null],
+  ['cilindro', 'torso', [0, 0.06, -0.42], [0.25, 0.46, 0.25], [0, 0, 0], 'naranja', 'garrafas', null],
+  ['cilindro', 'torso', [-0.15, 0.25, -0.27], [0.08, 0.07, 0.08], [0, 0, 0], 'metal', 'garrafas', null],
+  ['cilindro', 'torso', [0.15, 0.25, -0.27], [0.08, 0.07, 0.08], [0, 0, 0], 'metal', 'garrafas', null],
+  ['cilindro', 'torso', [0, 0.33, -0.42], [0.08, 0.07, 0.08], [0, 0, 0], 'metal', 'garrafas', null],
+  ['caja', 'torso', [0, 0.0, -0.2], [0.5, 0.05, 0.08], [0, 0, 0], 'cuero', 'garrafas', null],
+  ['caja', 'torso', [-0.12, 0.05, 0.16], [0.05, 0.55, 0.02], [0, 0, 0], 'cuero', 'garrafas', null],
+  ['caja', 'torso', [0.12, 0.05, 0.16], [0.05, 0.55, 0.02], [0, 0, 0], 'cuero', 'garrafas', null],
+  ['cilindro', 'mano1', [0, -0.04, -0.2], [0.2, 0.32, 0.2], [1.57, 0, 0], 'naranja', 'garrafaMano', 'b1'],
+  ['cilindro', 'mano1', [0, -0.04, -0.02], [0.07, 0.05, 0.07], [1.57, 0, 0], 'metal', 'garrafaMano', 'b1'],
+  // El Bengala: piluso, pañuelo en la cara, bandera de capa y bengalas en las manos
+  ['cilindro', 'cab', [0, 0.17, 0], [0.31, 0.12, 0.31], [0, 0, 0], 'amarillo', 'barra', 'c'],
+  ['cilindro', 'cab', [0, 0.11, 0], [0.44, 0.06, 0.44], [0, 0, 0], 'amarillo', 'barra', 'c'],
+  ['caja', 'cab', [0, -0.045, 0.115], [0.27, 0.1, 0.12], [0, 0, 0], 'acc2', 'barra', 'c'],
+  ['caja', 'torso', [0, -0.08, -0.2], [0.52, 0.78, 0.02], [0.08, 0, 0], 'amarillo', 'barra', null],
+  ['caja', 'torso', [-0.13, -0.08, -0.212], [0.09, 0.78, 0.02], [0.08, 0, 0], 'negro', 'barra', null],
+  ['caja', 'torso', [0.13, -0.08, -0.212], [0.09, 0.78, 0.02], [0.08, 0, 0], 'negro', 'barra', null],
+  ['cilindro', 'mano1', [0, -0.08, 0.05], [0.05, 0.3, 0.05], [0, 0, 0], 'rojo', 'barra', 'b1'],
+  ['cilindro', 'mano0', [0, -0.08, 0.05], [0.05, 0.3, 0.05], [0, 0, 0], 'rojo', 'bengala2', 'b0'],
+  // El Lubolo Mayor: tambor piano colgado, palo, vincha y pintura blanca
+  ['cilindro', 'cuerpo', [-0.07, -0.02, 0.27], [0.38, 0.46, 0.38], [0.65, 0, 0.12], 'acc1', 'tambor', null],
+  ['cilindro', 'cuerpo', [-0.070, 0.167, 0.412], [0.39, 0.02, 0.39], [0.65, 0, 0.12], 'lonja', 'tambor', null],
+  ['toro', 'cuerpo', [-0.070, 0.107, 0.367], [0.4, 0.3, 0.4], [0.65, 0, 0.12], 'acc2', 'tambor', null],
+  ['toro', 'cuerpo', [-0.070, -0.147, 0.173], [0.4, 0.3, 0.4], [0.65, 0, 0.12], 'acc2', 'tambor', null],
+  ['caja', 'torso', [0, 0.05, 0.16], [0.06, 0.62, 0.02], [0, 0, 0.75], 'cuero', 'tambor', null],
+  ['cilindro', 'mano1', [0, -0.12, 0.06], [0.035, 0.38, 0.035], [0.4, 0, 0], 'madera', 'tambor', 'b1'],
+  ['toro', 'cab', [0, 0.07, 0], [0.335, 0.4, 0.335], [0, 0, 0], 'acc2', 'tambor', 'c'],
+  ...[-0.1, 0.1].map(x => ['caja', 'torso', [x, 0.1, zF(x) + 0.004], [0.03, 0.3, 0.01], [0, x * 2.2, 0.3 * Math.sign(x)], 'blanco', 'tambor', null]),
+  ['caja', 'cab', [0, 0.04, 0.152], [0.2, 0.02, 0.01], [0, 0, 0], 'blanco', 'tambor', 'c'],
+  // Don Tablado: galera, frac con colas, rombos de colores, cara pintada y guantes blancos
+  ['cilindro', 'cab', [0, 0.27, -0.01], [0.27, 0.34, 0.27], [-0.06, 0, 0], 'negro', 'murga', 'c'],
+  ['cilindro', 'cab', [0, 0.14, 0], [0.44, 0.02, 0.44], [-0.06, 0, 0], 'negro', 'murga', 'c'],
+  ['cilindro', 'cab', [0, 0.17, -0.002], [0.275, 0.05, 0.275], [-0.06, 0, 0], 'acc1', 'murga', 'c'],
+  ['caja', 'cuerpo', [0, 0.02, -0.19], [0.36, 0.62, 0.03], [0.18, 0, 0], 'acc2', 'murga', null],
+  ...[[-0.09, 0.2, 'acc1'], [0.09, 0.2, 'acc2'], [-0.09, 0.0, 'acc2'], [0.09, 0.0, 'acc1'], [0, 0.1, 'oro']].map(([x, y, c]) => ['caja', 'torso', [x, y, zF(x) + 0.006], [0.1, 0.1, 0.012], [0, x * 2.2, 0.785], c, 'murga', null]),
+  ['caja', 'cuerpo', [0, 0.72, 0.13], [0.16, 0.06, 0.04], [0, 0, 0], 'acc1', 'murga', null],
+  ...[-1, 1].map(sx => ['caja', 'cab', [sx * 0.058, 0.04, 0.143], [0.05, 0.05, 0.01], [0, sx * 0.35, 0.785], 'negro', 'murga', 'c']),
+  ['esfera', 'mano0', [0, 0, 0], [0.17, 0.2, 0.15], [0, 0, 0], 'blanco', 'murga', 'b0'],
+  ['esfera', 'mano1', [0, 0, 0], [0.17, 0.2, 0.15], [0, 0, 0], 'blanco', 'murga', 'b1'],
   // el Gritón: ondas de sonido al gritar (se dibujan aparte, aditivas)
   ['onda', 'cabeza', [0, 0.05, 0.22], [1, 1, 1], [0, 0, 0], 'onda', null, 'c'],
-  ['onda', 'cabeza', [0, 0.05, 0.22], [1, 1, 1], [0, 0, 0], 'onda', null, 'c']
+  ['onda', 'cabeza', [0, 0.05, 0.22], [1, 1, 1], [0, 0, 0], 'onda', null, 'c'],
+  ...ARTE_DET
 ];
 const DET_N = {}; for (const r of DET) DET_N[r[0]] = (DET_N[r[0]] || 0) + 1;
-const FLAGS = ['pena', 'nac', 'cinto', 'gorra', 'barba', 'lentes', 'bufanda', 'cadena', 'mochila', 'termo', 'costillas', 'tajo', 'venda', 'chaleco', 'traje', 'corbata', 'rocas', 'garrafa', 'bultos'];
+const FLAGS = ['pena', 'nac', 'cinto', 'gorra', 'barba', 'lentes', 'bufanda', 'cadena', 'mochila', 'termo', 'costillas', 'tajo', 'venda', 'chaleco', 'traje', 'corbata', 'rocas', 'garrafa', 'bultos', 'pesca', 'garrafas', 'garrafaMano', 'barra', 'bengala2', 'tambor', 'murga', ...ARTE_FLAGS];
 
 const PARTES = {
   torso: { geo: ao(cap(0.19, 0.3, 3, 10).scale(1.25, 1, 0.78), 0.5), n: 1 },
@@ -179,9 +238,10 @@ export class Horda {
     this.brillo.frustumCulled = false; scene.add(this.brillo);
     this.rojo = new THREE.Color(1.2, 0.25, 0.2); this.naranja = new THREE.Color(1.6, 0.5, 0.1); this.cero = new THREE.Matrix4().makeScale(0, 0, 0);
     const H = x => new THREE.Color(x);
-    this.K = { hueso: H(0xcfc8b0), tajo: H(0x4a0a0a), venda: H(0xc8c0a4), negro: H(0x101012), blanco: H(0xd8d8d0), oro: H(0xc8a030), metal: H(0x9aa0a8), cuero: H(0x2a1c12), piedra: H(0x5a6458), traje: H(0x0e0e14), plata: H(0xcfd4da), naranja: H(0xd2621a) };
+    this.K = { hueso: H(0xcfc8b0), tajo: H(0x4a0a0a), venda: H(0xc8c0a4), negro: H(0x101012), blanco: H(0xd8d8d0), oro: H(0xc8a030), metal: H(0x9aa0a8), cuero: H(0x2a1c12), piedra: H(0x5a6458), traje: H(0x0e0e14), plata: H(0xcfd4da), naranja: H(0xd2621a), amarillo: H(0xe8c020), cana: H(0x3a3020), madera: H(0x6a4020), lonja: H(0xe6d6a8), rojo: H(0xff3018).multiplyScalar(1.6) };
     this.cOnda = H(0x9fe6ff); this._tmp = new THREE.Color();
     this.v = new THREE.Vector3(); this.cnt = {}; for (const k in this.meshes) this.cnt[k] = 0;
+    instalarArte(this);
   }
   dibujar(lista) {
     const cnt = this.cnt; for (const k in cnt) cnt[k] = 0;
@@ -190,6 +250,7 @@ export class Horda {
     const nada = this._nada || (this._nada = k => { const mk = this.alias[k] || k; this.meshes[mk].setMatrixAt(this.cnt[mk]++, this.cero); });
     let ne = 0;
     for (const z of lista) {
+      this._za = z;
       if (!z.mOk) { z.g.updateMatrixWorld(true); if (z.dormido) z.mOk = true; } // los cadáveres quietos no recalculan matrices
       const fl = z.flash > 0, piel = fl ? this.rojo : z.cPiel;
       let rem = fl ? this.rojo : z.cRemera;
@@ -250,7 +311,7 @@ export function crearZombi() {
   const mangas = hombros.map(h => o(h)), brazos = hombros.map(h => o(h)), manos = hombros.map(h => o(h, 0, -0.62));
   const caderas = [-1, 1].map(s => o(g, s * 0.11, 0.86));
   const piernas = caderas.map(c => o(c)), zapatos = caderas.map(c => o(c, 0, -0.81, 0.0));
-  const padres = { cuerpo, torso, cadera, cabeza, cab, hombro1: hombros[1], brazo0: brazos[0], brazo1: brazos[1] };
+  const padres = { cuerpo, torso, cadera, cabeza, cab, hombro0: hombros[0], hombro1: hombros[1], brazo0: brazos[0], brazo1: brazos[1], mano0: manos[0], mano1: manos[1] };
   const det = DET.map(([k, p, pos, esc, rot, c, f, l]) => { const n = o(padres[p], pos[0], pos[1], pos[2]); n.scale.set(esc[0], esc[1], esc[2]); n.rotation.set(rot[0], rot[1], rot[2]); return { k, n, c, f, l }; });
   const ondas = det.filter(d => d.k === 'onda').map(d => d.n);
   const f = {}; for (const k of FLAGS) f[k] = false;
@@ -284,6 +345,11 @@ export function prepararZombi(z, tipo) {
   if (tipo === 'griton') { z.cPiel.setHex(0xc8c4b0); z.cRemera.setHex(0x30303a); z.cab.scale.set(0.95, 1.22, 0.95); z.pelo.scale.setScalar(0.001); }
   if (tipo === 'explosivo') { z.cPiel.setHex(0xa8a060); z.cRemera.setHex(0x8a7a30); z.torso.scale.set(1.45, 1.15, 1.6); z.cSangre.setHex(0xd06010); }
   if (tipo === 'patovica') { z.cPiel.setHex(0xb8c890); z.cRemera.setHex(0x16161e); z.cPant.setHex(0x1a1a24); z.cPelo.setHex(0x050505); z.pelo.scale.setScalar(0.8); z.torso.scale.set(1.25, 1.05, 1.1); }
+  if (tipo === 'anzuelo') { z.cPiel.setHex(0x9ab0a0); z.cRemera.setHex(0x3a4a5a); z.cPant.setHex(0x2a3a2a); z.cZapato.setHex(0x2a5a2a); z.cPelo.setHex(0x9a9a90); z.torso.scale.set(1.1, 1.0, 1.15); }
+  if (tipo === 'garrafero') { z.cPiel.setHex(0xa8a878); z.cRemera.setHex(0x2a4a7a); z.cPant.setHex(0x2a4a7a); z.cPelo.setHex(0x1a1410); z.torso.scale.set(1.3, 1.05, 1.2); }
+  if (tipo === 'bengala') { z.cPiel.setHex(0xb0b48a); z.cRemera.setHex(0xe0b818); z.cPant.setHex(0x161618); z.cZapato.setHex(0xd8d8d8); z.torso.scale.set(1.12, 1.05, 1.0); }
+  if (tipo === 'lubolo') { z.cPiel.setHex(0x6a5038); z.cRemera.setHex(0x6a5038); z.cPant.setHex(0xe8e8e0); z.cPelo.setHex(0x0a0806); z.torso.scale.set(1.3, 1.08, 1.12); }
+  if (tipo === 'tablado') { z.cPiel.setHex(0xe8e4dc); z.cRemera.setHex(0x8a1a8a); z.cPant.setHex(0x2a1a6a); z.cPelo.setHex(0x0a0a0a); z.torso.scale.set(1.0, 1.12, 0.95); z.cOjo.setHex(0xff40c0).multiplyScalar(1.3); }
   if (tipo === 'cerro') { z.cPiel.setHex(0x9ab878); z.cRemera.setHex(0x7a5a3a); z.cPant.setHex(0x4a4030); z.cPelo.setHex(0x203018); z.torso.scale.set(1.2, 1.1, 1.15); }
   // ropa rota: jirones de largo distinto, algunos arrancados
   z.jirones.forEach(j => { j.scale.set(0.7 + Math.random() * 0.8, Math.random() < 0.2 ? 0.001 : 0.6 + Math.random() * 1.2, 1); j.rotation.z = (Math.random() - .5) * 0.5; });
@@ -316,14 +382,22 @@ export function prepararZombi(z, tipo) {
     if (tipo === 'tanque') { F.cinto = true; F.costillas = r() < 0.3; F.tajo = true; F.venda = r() < 0.4; F.chaleco = r() < 0.6; z.cAcc2.setHex(0xe86a10); F.cadena = r() < 0.3; }
     if (tipo === 'patovica') { F.traje = true; F.corbata = true; F.lentes = true; F.cadena = true; F.cinto = true; F.tajo = true; z.cAcc1.setHex(0x8a1c1c); }
     if (tipo === 'cerro') { F.rocas = true; F.costillas = true; F.tajo = true; F.cinto = true; F.barba = true; }
+    if (tipo === 'anzuelo') { F.pesca = true; F.barba = true; F.tajo = true; z.cAcc2.setHex(0x3a6aa0); z.pelo.scale.setScalar(0.001); }
+    if (tipo === 'garrafero') { F.garrafas = true; F.garrafaMano = true; F.gorra = true; F.cinto = true; F.tajo = true; z.cAcc1.setHex(0x1a3a6a); z.pelo.scale.setScalar(0.001); }
+    if (tipo === 'bengala') { F.barra = true; F.pena = true; F.tajo = true; F.costillas = r() < 0.5; z.cAcc1.setHex(0x121212); z.cAcc2.setHex(0x1a1a1a); z.pelo.scale.setScalar(0.001); }
+    if (tipo === 'lubolo') { F.tambor = true; F.tajo = true; F.costillas = true; z.cAcc1.setHex(0x2a6ad0); z.cAcc2.setHex(0xe8e8e8); }
+    if (tipo === 'tablado') { F.murga = true; F.tajo = true; z.cAcc1.setHex(0xf0c020); z.cAcc2.setHex(0x1a8a9a); z.pelo.scale.setScalar(0.001); }
   }
   const mangaLarga = Math.random() < 0.4;
   z.mangas.forEach(m => m.scale.set(1, mangaLarga ? 2.4 : 1, 1));
   z.esc = T.escala * (T.jefe ? 1 : 0.92 + Math.random() * 0.16);
   if (tipo === 'corredor') z.g.scale.set(z.esc * 0.85, z.esc, z.esc * 0.85);
-  else if (tipo === 'tanque' || tipo === 'patovica') z.g.scale.set(z.esc * 1.12, z.esc, z.esc * 1.05);
+  else if (tipo === 'tanque' || tipo === 'patovica' || tipo === 'garrafero') z.g.scale.set(z.esc * 1.12, z.esc, z.esc * 1.05);
+  else if (tipo === 'lubolo') z.g.scale.set(z.esc * 1.1, z.esc, z.esc * 1.08);
+  else if (tipo === 'tablado') z.g.scale.set(z.esc * 0.9, z.esc * 1.04, z.esc * 0.9);
   else z.g.scale.setScalar(z.esc);
   z.fatiga = Math.random() < 0.5 ? 1 : -1;
+  vestirZombi(z, tipo);
   return z;
 }
 
@@ -370,6 +444,11 @@ export function animarZombi(z, dt, mov, t) {
     else if (tipo === 'gateador') { B[0].rotation.x = B[1].rotation.x = -3.0; }
     else if (tipo === 'griton') { z.cuerpo.rotation.x = -0.3 * k; z.cabeza.rotation.x = -0.7 * k; z.mandibula.rotation.x = 1.0; B[0].rotation.x = B[1].rotation.x = -0.9 * k; B[0].rotation.z = 0.8 * k; B[1].rotation.z = -0.8 * k; }
     else if (tipo === 'explosivo') { z.torso.scale.set(1.45 + k * 0.35, 1.15 + k * 0.15, 1.6 + k * 0.35); }
+    else if (z.accion === 'lance') { B[1].rotation.x = -2.9 * Math.min(1, k * 1.6); B[1].rotation.z = 0.2; z.cuerpo.rotation.x = -0.25 * k; z.cuerpo.rotation.y = -0.4 * k; }
+    else if (z.accion === 'tirar' || z.accion === 'tirar3') { B[1].rotation.x = -3.0 * Math.min(1, k * 1.5); B[1].rotation.z = 0.35; z.cuerpo.rotation.x = -0.3 * k; z.cuerpo.rotation.y = -0.5 * k; B[0].rotation.x = -1.2; }
+    else if (z.accion === 'tambor') { B[1].rotation.x = -2.8 * k; B[0].rotation.x = -1.0 - 1.4 * k; z.cuerpo.rotation.x = -0.2 * k; z.cabeza.rotation.x = -0.4 * k; z.mandibula.rotation.x = 0.6; }
+    else if (z.accion === 'saludo') { B[0].rotation.x = B[1].rotation.x = -1.5; B[0].rotation.z = -1.3 * k; B[1].rotation.z = 1.3 * k; z.cuerpo.rotation.x = -0.25 * k; z.cabeza.rotation.x = -0.5 * k; z.mandibula.rotation.x = 0.9; }
+    else if (z.accion === 'llamar' || z.accion === 'carga') { B[0].rotation.x = B[1].rotation.x = -3.0 * k; B[0].rotation.z = -0.4; B[1].rotation.z = 0.4; z.cabeza.rotation.x = -0.6 * k; z.mandibula.rotation.x = 1.0; }
     else { const w = Math.min(1, k * 3); B[0].rotation.x += (-2.4 - k * 0.6 - B[0].rotation.x) * w; B[1].rotation.x += (-2.4 - k * 0.6 - B[1].rotation.x) * w; z.cuerpo.rotation.x += (-0.2 * k - z.cuerpo.rotation.x) * w; z.mandibula.rotation.x = 0.65; }
   }
   if (tipo === 'griton') { // ondas de sonido: dos anillos que se agrandan mientras toma aire para gritar

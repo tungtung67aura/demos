@@ -1,7 +1,7 @@
 {
-  "name": "Zombis en la Rambla",
-  "short_name": "Zombis Rambla",
-  "description": "Shooter de zombis en 3D en la rambla de Montevideo. Aguantá hasta que amanezca.",
+  "name": "Rambla: Zona Cero",
+  "short_name": "Zona Cero",
+  "description": "Rambla: Zona Cero. Shooter de zombis en 3D en la rambla de Montevideo. Aguantá hasta que amanezca.",
   "lang": "es-UY",
   "start_url": "./",
   "scope": "./",

@@ -73,14 +73,18 @@ export function crearEfectos(scene) {
   const geoSombra = new THREE.CircleGeometry(1, 20).rotateX(-Math.PI / 2);
   const matAviso = new THREE.MeshBasicMaterial({ color: 0xff3010, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5 });
   const geoAviso = new THREE.RingGeometry(0.85, 1, 28).rotateX(-Math.PI / 2);
-  for (let i = 0; i < 14; i++) {
-    const piedra = i >= 10;
-    const obj = piedra ? new THREE.Mesh(geoPiedra, matPiedra) : new THREE.Sprite(matBaba);
-    if (!piedra) obj.scale.setScalar(0.7);
+  // v8: además garrafas (jefe y lanzagarrafas) y bengalas (jefe y pistola de bengalas). Pool fijo por tipo.
+  const matBengala = new THREE.SpriteMaterial({ map: brilloTex('rgba(255,70,30,1)'), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true });
+  const geoGarrafa = new THREE.CylinderGeometry(0.2, 0.2, 0.42, 10), matGarrafa = new THREE.MeshStandardMaterial({ color: 0xd8641c, roughness: 0.5, metalness: 0.3 });
+  const TIPOS_P = [['baba', 10], ['piedra', 4], ['garrafa', 8], ['bengala', 8]];
+  for (const [tipo, n] of TIPOS_P) for (let i = 0; i < n; i++) {
+    const piedra = tipo === 'piedra';
+    const obj = piedra ? new THREE.Mesh(geoPiedra, matPiedra) : tipo === 'garrafa' ? new THREE.Mesh(geoGarrafa, matGarrafa) : new THREE.Sprite(tipo === 'bengala' ? matBengala : matBaba);
+    if (tipo === 'baba') obj.scale.setScalar(0.7); if (tipo === 'bengala') obj.scale.setScalar(0.9);
     obj.visible = false; scene.add(obj);
     const sombra = new THREE.Mesh(geoSombra, matSombra); sombra.visible = false; scene.add(sombra);
     const aviso = new THREE.Mesh(geoAviso, matAviso); aviso.visible = false; scene.add(aviso);
-    proy.push({ obj, sombra, aviso, piedra, vivo: false, p: new THREE.Vector3(), v: new THREE.Vector3(), radio: 0, dano: 0, yPiso: 0 });
+    proy.push({ obj, sombra, aviso, tipo, piedra, vivo: false, p: new THREE.Vector3(), v: new THREE.Vector3(), radio: 0, dano: 0, yPiso: 0, jugador: false, g: 14, eT: 0 });
   }
 
   // pedazos: brazos y cabezas que salen volando, rebotan y quedan en el piso (instanciados, 2 draw calls)
@@ -117,6 +121,8 @@ export function crearEfectos(scene) {
       for (let k = 0; k < 2; k++) humo.emitir(p.x, p.y, p.z, nx * 0.6 + (Math.random() - .5), 0.4, nz * 0.6 + (Math.random() - .5), 0.6, 0.35, 0.33, 0.3);
     },
     llama(x, y, z) { fuego.emitir(x, y, z, (Math.random() - .5) * 0.5, 1.4 + Math.random(), (Math.random() - .5) * 0.5, 0.3 + Math.random() * 0.2, 1.5, 0.55, 0.12); },
+    humoColor(x, y, z, n, r, g, b, abre = 3) { for (let k = 0; k < n; k++) humo.emitir(x + (Math.random() - .5) * 2, y + Math.random() * 1.5, z + (Math.random() - .5) * 2, (Math.random() - .5) * abre, 0.5 + Math.random(), (Math.random() - .5) * abre, 2 + Math.random() * 1.5, r, g, b); },
+    confeti(x, y, z, dx, dz, n = 30) { const C = [[1.6, 0.3, 0.3], [0.3, 0.6, 1.6], [1.6, 1.4, 0.2], [0.3, 1.5, 0.4], [1.5, 0.4, 1.5]]; for (let k = 0; k < n; k++) { const c = C[k % 5], s = 4 + Math.random() * 6; chispas.emitir(x, y, z, dx * s + (Math.random() - .5) * 4, 1 + Math.random() * 3, dz * s + (Math.random() - .5) * 4, 0.6 + Math.random() * 0.5, c[0], c[1], c[2]); } },
     chispaAzul(x, y, z, n = 5) { for (let k = 0; k < n; k++) chispas.emitir(x, y, z, (Math.random() - .5) * 6, Math.random() * 4, (Math.random() - .5) * 6, 0.2 + Math.random() * 0.2, 0.5, 0.9, 2.0); },
     explosion(p, radio = 4, verde = false) {
       const r = verde ? 0.6 : 1.8, g = verde ? 1.6 : 0.8, b = verde ? 0.3 : 0.25;
@@ -135,27 +141,29 @@ export function crearEfectos(scene) {
     },
     baba(p, n = 10) { for (let k = 0; k < n; k++) babas.emitir(p.x, p.y, p.z, (Math.random() - .5) * 4, Math.random() * 3, (Math.random() - .5) * 4, 0.5 + Math.random() * 0.4, 0.5, 1.4, 0.25); },
     // dispara un proyectil en arco hacia 'destino'; tiempo de vuelo fijo para que se pueda esquivar
-    lanzar(tipo, desde, destino, vuelo, dano, radio, yPiso) {
+    lanzar(tipo, desde, destino, vuelo, dano, radio, yPiso, jugador = false, grav = 14) {
       const piedra = tipo === 'piedra';
-      const pr = proy.find(x => !x.vivo && x.piedra === piedra); if (!pr) return null;
-      pr.vivo = true; pr.p.copy(desde); pr.dano = dano; pr.radio = radio; pr.yPiso = yPiso; pr.t = vuelo;
+      const pr = proy.find(x => !x.vivo && x.tipo === tipo); if (!pr) return null;
+      pr.vivo = true; pr.p.copy(desde); pr.dano = dano; pr.radio = radio; pr.yPiso = yPiso; pr.t = vuelo; pr.jugador = jugador; pr.g = grav; pr.eT = 0;
       pr.v.set((destino.x - desde.x) / vuelo, 0, (destino.z - desde.z) / vuelo);
-      pr.v.y = (destino.y - desde.y + 0.5 * 14 * vuelo * vuelo) / vuelo;
+      pr.v.y = (destino.y - desde.y + 0.5 * grav * vuelo * vuelo) / vuelo;
       pr.obj.visible = true; pr.obj.position.copy(desde);
       pr.sombra.visible = true; pr.sombra.scale.setScalar(piedra ? 1.4 : 0.5);
-      pr.aviso.visible = piedra; pr.aviso.position.set(destino.x, yPiso + 0.06, destino.z); pr.aviso.scale.setScalar(radio);
+      pr.aviso.visible = !jugador && tipo !== 'baba'; pr.aviso.position.set(destino.x, yPiso + 0.06, destino.z); pr.aviso.scale.setScalar(radio);
       return pr;
     },
-    // avanza proyectiles; llama a alCaer(pr) cuando tocan el piso
-    simProy(dt, pisoEn, alCaer) {
+    // avanza proyectiles; llama a alCaer(pr) cuando tocan el piso (o cuando choque(pr) devuelve true: zombi/auto en el camino)
+    simProy(dt, pisoEn, alCaer, choque) {
       for (const pr of proy) {
         if (!pr.vivo) continue;
-        pr.v.y -= 14 * dt; pr.p.addScaledVector(pr.v, dt);
-        pr.obj.position.copy(pr.p); if (pr.piedra) { pr.obj.rotation.x += dt * 5; pr.obj.rotation.z += dt * 3; }
+        pr.v.y -= pr.g * dt; pr.p.addScaledVector(pr.v, dt);
+        pr.obj.position.copy(pr.p);
+        if (pr.piedra || pr.tipo === 'garrafa') { pr.obj.rotation.x += dt * 5; pr.obj.rotation.z += dt * 3; }
+        if (pr.tipo === 'bengala' && (pr.eT -= dt) <= 0) { pr.eT = 0.03; fuego.emitir(pr.p.x, pr.p.y, pr.p.z, (Math.random() - .5) * 0.6, 0.4, (Math.random() - .5) * 0.6, 0.25, 1.8, 0.45, 0.15); }
         const yp = pisoEn(pr.p.x, pr.p.z);
         pr.sombra.position.set(pr.p.x, yp + 0.05, pr.p.z);
-        if (pr.piedra) pr.aviso.material.opacity = 0.35 + 0.3 * Math.sin(performance.now() / 60);
-        if (pr.p.y <= yp + 0.1 && pr.v.y < 0) { pr.vivo = false; pr.obj.visible = pr.sombra.visible = pr.aviso.visible = false; alCaer(pr); }
+        if (pr.aviso.visible) pr.aviso.material.opacity = 0.35 + 0.3 * Math.sin(performance.now() / 60);
+        if ((pr.p.y <= yp + 0.1 && pr.v.y < 0) || (choque && choque(pr))) { pr.vivo = false; pr.obj.visible = pr.sombra.visible = pr.aviso.visible = false; alCaer(pr); }
       }
     },
     gib(p, v, color, cab) {

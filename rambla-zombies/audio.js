@@ -1,5 +1,5 @@
 // Sonidos generados con WebAudio: nada de archivos
-let ctx = null, master = null, ruidoBuf = null, sfx = null, musBus = null, comp = null;
+let ctx = null, master = null, ruidoBuf = null, sfx = null, musBus = null, comp = null, desfase = 0; // desfase: solo para render offline (tráiler)
 
 export function iniciarAudio() {
   if (!ctx) {
@@ -25,7 +25,7 @@ function env(g, t, a, peak, dec) {
 
 function ruido({ dur = 0.2, f = 2000, q = 0.7, tipo = 'lowpass', vol = 0.8, a = 0.002, f2 = null, rate = 1, dest = null, delay = 0 }) {
   if (!ctx) return;
-  const t = ctx.currentTime + delay, s = ctx.createBufferSource(); s.buffer = ruidoBuf; s.playbackRate.value = rate;
+  const t = ctx.currentTime + desfase + delay, s = ctx.createBufferSource(); s.buffer = ruidoBuf; s.playbackRate.value = rate;
   const fl = ctx.createBiquadFilter(); fl.type = tipo; fl.frequency.setValueAtTime(f, t); fl.Q.value = q;
   if (f2) fl.frequency.exponentialRampToValueAtTime(f2, t + dur);
   const g = ctx.createGain(); env(g, t, a, vol, dur);
@@ -34,7 +34,7 @@ function ruido({ dur = 0.2, f = 2000, q = 0.7, tipo = 'lowpass', vol = 0.8, a = 
 
 function tono({ f = 440, f2 = null, dur = 0.2, tipo = 'sine', vol = 0.4, a = 0.003, delay = 0, dest = null }) {
   if (!ctx) return;
-  const t = ctx.currentTime + delay, o = ctx.createOscillator(); o.type = tipo; o.frequency.setValueAtTime(f, t);
+  const t = ctx.currentTime + desfase + delay, o = ctx.createOscillator(); o.type = tipo; o.frequency.setValueAtTime(f, t);
   if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
   const g = ctx.createGain(); env(g, t, a, vol, dur);
   o.connect(g).connect(dest || sfx); o.start(t); o.stop(t + dur + a + 0.05);
@@ -76,7 +76,7 @@ export const sonido = {
   piedra() { ruido({ dur: 0.06, f: vr(3200, 0.25), tipo: 'bandpass', q: 1.5, vol: 0.3 }); },
   // cuerpo que cae al piso (con tope: si caen muchos juntos suena uno)
   cae(pesado, fuerza = 1) {
-    if (!ctx) return; const t = ctx.currentTime; if (t - ultimoCae < (pesado ? 0 : 0.07)) return; ultimoCae = t;
+    if (!ctx) return; const t = ctx.currentTime + desfase; if (t - ultimoCae < (pesado ? 0 : 0.07)) return; ultimoCae = t;
     const v = Math.min(1, 0.35 + fuerza * 0.08);
     if (pesado) { tono({ f: 48, f2: 20, dur: 0.9, vol: 1.2 }); ruido({ dur: 0.8, f: 260, f2: 50, vol: 1.1, rate: 0.35 }); }
     else { ruido({ dur: vr(0.16), f: vr(320, 0.2), f2: 90, vol: 0.7 * v, rate: vr(0.6, 0.2) }); tono({ f: vr(75, 0.2), f2: 40, dur: 0.12, vol: 0.4 * v }); }
@@ -84,7 +84,7 @@ export const sonido = {
   chapoteo() { ruido({ dur: vr(0.14), f: vr(1100, 0.3), f2: 300, vol: 0.35, rate: vr(0.8, 0.2) }); },
   gemido(grave = 1) {
     if (!ctx) return;
-    const t = ctx.currentTime, d = 0.8 + Math.random() * 0.6;
+    const t = ctx.currentTime + desfase, d = 0.8 + Math.random() * 0.6;
     const o = ctx.createOscillator(); o.type = 'sawtooth';
     const f0 = (80 + Math.random() * 40) * grave;
     o.frequency.setValueAtTime(f0, t); o.frequency.linearRampToValueAtTime(f0 * 1.3, t + d * 0.4); o.frequency.linearRampToValueAtTime(f0 * 0.7, t + d);
@@ -111,7 +111,7 @@ export const sonido = {
   chapa() { ruido({ dur: 0.12, f: vr(2500, 0.2), tipo: 'bandpass', q: 2, vol: 0.4 }); tono({ f: 420 + Math.random() * 200, dur: 0.2, vol: 0.1, tipo: 'square' }); },
   rugido(grave = 1) {
     if (!ctx) return;
-    const t = ctx.currentTime, d = 1.6;
+    const t = ctx.currentTime + desfase, d = 1.6;
     for (let k = 0; k < 3; k++) {
       const o = ctx.createOscillator(); o.type = 'sawtooth';
       const f0 = (55 + k * 13) * grave; o.frequency.setValueAtTime(f0, t); o.frequency.linearRampToValueAtTime(f0 * 1.5, t + 0.4); o.frequency.exponentialRampToValueAtTime(f0 * 0.6, t + d);
@@ -121,6 +121,20 @@ export const sonido = {
     }
     ruido({ dur: 1.4, f: 500, vol: 0.5, rate: 0.4 });
   },
+  // v8: jefes y armas nuevas
+  tambor(fuerte = 1) { tono({ f: 92, f2: 48, dur: 0.35, vol: 0.9 * fuerte }); ruido({ dur: 0.09, f: 1800, f2: 600, tipo: 'bandpass', q: 1.2, vol: 0.55 * fuerte }); },
+  repique() { [0, 0.07, 0.14].forEach(d => ruido({ dur: 0.05, f: 2600, tipo: 'bandpass', q: 3, vol: 0.35, delay: d })); },
+  latigo() { ruido({ dur: 0.25, f: 600, f2: 4200, tipo: 'bandpass', q: 2, vol: 0.5, a: 0.02 }); },
+  engancha() { tono({ f: 900, f2: 300, dur: 0.15, vol: 0.3, tipo: 'square' }); ruido({ dur: 0.1, f: 3000, tipo: 'highpass', vol: 0.4 }); },
+  bengala() { ruido({ dur: 0.9, f: 3000, f2: 1200, tipo: 'bandpass', q: 0.8, vol: 0.35 }); tono({ f: 300, f2: 120, dur: 0.15, vol: 0.3 }); },
+  fuego() { ruido({ dur: 0.4, f: 900, f2: 400, tipo: 'bandpass', q: 0.7, vol: 0.25 }); },
+  pito() { tono({ f: 1900, f2: 2100, dur: 0.35, vol: 0.25, tipo: 'square' }); tono({ f: 2100, dur: 0.25, vol: 0.22, tipo: 'square', delay: 0.4 }); },
+  murga() { [523, 659, 784, 659, 523].forEach((f, i) => tono({ f, dur: 0.22, vol: 0.18, tipo: 'sawtooth', delay: i * 0.16 })); },
+  bombo() { tono({ f: 70, f2: 40, dur: 0.4, vol: 0.9 }); ruido({ dur: 0.12, f: 400, vol: 0.4 }); },
+  tubo() { ruido({ dur: 0.35, f: 400, f2: 120, vol: 0.9, rate: 0.6 }); tono({ f: 90, f2: 40, dur: 0.3, vol: 0.6 }); },
+  gomera() { ruido({ dur: 0.08, f: 1500, f2: 3000, tipo: 'bandpass', q: 3, vol: 0.3 }); tono({ f: 500, f2: 900, dur: 0.06, vol: 0.15, tipo: 'triangle' }); },
+  fal() { ruido({ dur: 0.4, f: 3300, f2: 220, vol: 1.05 }); tono({ f: 130, f2: 40, dur: 0.28, vol: 0.7 }); },
+  recortada() { ruido({ dur: 0.55, f: 2200, f2: 120, vol: 1.2 }); tono({ f: 80, f2: 30, dur: 0.4, vol: 0.9 }); },
   pisoton() { tono({ f: 55, f2: 22, dur: 0.7, vol: 1.1 }); ruido({ dur: 0.6, f: 300, f2: 60, vol: 1, rate: 0.4 }); },
   carga() { ruido({ dur: 0.5, f: 200, f2: 800, vol: 0.6, rate: 0.5 }); },
   tiraPiedra() { ruido({ dur: 0.4, f: 300, f2: 1200, tipo: 'bandpass', q: 1, vol: 0.5, a: 0.1 }); },
@@ -167,7 +181,7 @@ function bombo(t, vol, f0 = 90) {
 }
 function agendar() {
   if (!mus || !ctx) return;
-  const ahora = ctx.currentTime, tens = mus.pausa ? 0 : mus.tension;
+  const ahora = ctx.currentTime + desfase, tens = mus.pausa ? 0 : mus.tension;
   const objetivo = mus.pausa ? 0.03 : mus.menu ? 0.09 : 0.06 + tens * 0.05;
   mus.pad.gain.setTargetAtTime(objetivo, ahora, 0.8);
   const bpm = mus.menu ? 70 : 78 + tens * 40 + (mus.jefe ? 14 : 0), corchea = 60 / bpm / 2;
@@ -195,3 +209,19 @@ function ruidoMus(t, vol) {
   const g = ctx.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
   s.connect(fl).connect(g).connect(musBus); s.start(t, Math.random()); s.stop(t + 0.1);
 }
+
+// v8: render offline con el mismo sintetizador (lo usa la herramienta del tráiler; el juego no lo llama)
+export const audioOffline = {
+  usar(oc) {
+    if (mus && mus.timer) clearInterval(mus.timer); mus = null; ctx = oc; desfase = 0;
+    comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4; comp.connect(ctx.destination);
+    master = ctx.createGain(); master.gain.value = 0.6; master.connect(comp);
+    sfx = ctx.createGain(); sfx.gain.value = 1; sfx.connect(master);
+    musBus = ctx.createGain(); musBus.gain.value = 0.5; musBus.connect(master);
+    ruidoBuf = ctx.createBuffer(1, ctx.sampleRate * 1.5, ctx.sampleRate); const d = ruidoBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    musica.iniciar(); clearInterval(mus.timer); mus.timer = null;
+  },
+  en(t) { desfase = t; },
+  musica(t, tension, jefe, menu) { desfase = t; if (mus) { mus.tension = tension; mus.jefe = jefe; mus.menu = menu; agendar(); } },
+  volMusica(v) { if (musBus) musBus.gain.setValueAtTime(v, desfase); }
+};

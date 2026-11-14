@@ -14,11 +14,12 @@ export function mezcla(n) {
   };
 }
 export function cantidad(n) {
-  if (n === 5) return 14;          // la del Patovica: menos zombis, más jefe
   if (n === 10) return 22;         // la del Zombi del Cerro
+  if (JEFES[n]) return 8 + n * 2;  // con jefe: menos horda, más jefe
   return 6 + n * 3;
 }
-export const JEFES = { 5: 'patovica', 10: 'cerro' };
+// v8: siete jefes en la campaña (los textos de presentación están en jefes.js)
+export const JEFES = { 3: 'anzuelo', 5: 'patovica', 6: 'garrafero', 7: 'bengala', 8: 'lubolo', 9: 'tablado', 10: 'cerro' };
 
 // mejoras de armas: 3 niveles cada una
 export const MEJORAS = {
@@ -27,7 +28,7 @@ export const MEJORAS = {
   recarga: { nombre: 'Recarga', desc: '20% más rápida', base: 90, max: 3, cuerpo: false },
   cadencia: { nombre: 'Cadencia', desc: '+15% más rápido', base: 130, max: 3, cuerpo: true }
 };
-export const PRECIO_TIER = { pistola: 1, escopeta: 1.4, metralleta: 1.7, rifle: 2, termo: 0.8, bate: 1, machete: 1.2, sarten: 1.1 };
+export const PRECIO_TIER = { pistola: 1, escopeta: 1.4, metralleta: 1.7, rifle: 2, termo: 0.8, bate: 1, machete: 1.2, sarten: 1.1, revolver: 1.6, gomera: 0.6, espeto: 1.1, cana: 1.2, recortada: 1.6, bengalera: 1.8, fal: 2.2, lanzagarrafas: 2.4 };
 export const precioMejora = (arma, clave, nivel) => Math.round(MEJORAS[clave].base * (PRECIO_TIER[arma] || 1) * (nivel + 1) / 10) * 10;
 
 export const EQUIPO = [
@@ -44,7 +45,7 @@ export const VENTAJAS = [
   { id: 'corazon', nombre: 'Corazón de tablado', desc: '+25 de vida máxima.', precio: 400 }
 ];
 
-export const PESOS = { normal: 10, corredor: 14, gateador: 12, escupidor: 20, explosivo: 18, tanque: 40, griton: 16, patovica: 300, cerro: 1000 };
+export const PESOS = { normal: 10, corredor: 14, gateador: 12, escupidor: 20, explosivo: 18, tanque: 40, griton: 16, patovica: 300, cerro: 1000, anzuelo: 220, garrafero: 360, bengala: 420, lubolo: 520, tablado: 650 };
 
 export const LOGROS = [
   { id: 'primera', nombre: 'Primera sangre', desc: 'Matá tu primer zombi.' },
@@ -53,12 +54,18 @@ export const LOGROS = [
   { id: 'ola5', nombre: 'Mitad de camino', desc: 'Sobreviví a la oleada 5.' },
   { id: 'patovica', nombre: 'Patovica afuera', desc: 'Derrotá al Patovica del Cordón.' },
   { id: 'cerro', nombre: 'El Cerro tiembla', desc: 'Derrotá al Zombi del Cerro.' },
+  { id: 'anzuelo', nombre: 'Pesca sin devolución', desc: 'Derrotá a Don Anzuelo.' },
+  { id: 'garrafero', nombre: 'Sin gas', desc: 'Derrotá al Garrafero.' },
+  { id: 'bengala', nombre: 'Se apagó la tribuna', desc: 'Derrotá al Bengala.' },
+  { id: 'lubolo', nombre: 'Fin de la llamada', desc: 'Derrotá al Lubolo Mayor.' },
+  { id: 'tablado', nombre: 'Bajó el telón', desc: 'Derrotá a Don Tablado.' },
+  { id: 'barrio', nombre: 'Barrio limpio', desc: 'Derrotá a los siete jefes (en cualquier partida).' },
   { id: 'amanecer', nombre: 'Amaneció', desc: 'Sobreviví hasta el amanecer.' },
   { id: 'sarten', nombre: 'Cocinero', desc: '15 bajas con la sartén en una partida.' },
   { id: 'termo', nombre: 'Cebador', desc: '10 bajas con el termo en una partida.' },
   { id: 'explosion', nombre: 'Fuegos artificiales', desc: '3 zombis con una sola explosión.' },
   { id: 'perfecta', nombre: 'Ni un rasguño', desc: 'Una oleada entera sin recibir daño.' },
-  { id: 'arsenal', nombre: 'Arsenal completo', desc: 'Tené las 8 armas en una partida.' },
+  { id: 'arsenal', nombre: 'Arsenal completo', desc: 'Tené todas las armas en una partida.' },
   { id: 'vip', nombre: 'Cliente VIP', desc: 'Gastá 3000 pesos en una partida.' },
   { id: 'pesadilla', nombre: 'Noche de terror', desc: 'Ganá en modo Pesadilla.' }
 ];
@@ -72,7 +79,7 @@ export function cargarPerfil() {
   // Se desbloquean según la mejor oleada alcanzada (lo que se podía pagar hasta ahí), una sola vez.
   if (!r.migrArmas) {
     r.migrArmas = 1;
-    if (r.partidas > 0) { const PRECIO = { bate: 100, sarten: 140, machete: 180, escopeta: 250, revolver: 380, metralleta: 450, rifle: 700 };
+    if (r.partidas > 0) { const PRECIO = { bate: 100, sarten: 140, machete: 180, escopeta: 250, revolver: 380, metralleta: 450, rifle: 700 }; // (solo armas de antes de v8)
       for (const id in PRECIO) if (PRECIO[id] <= r.mejorOleada * 90 && !r.armasCamp.includes(id)) r.armasCamp.push(id); }
   }
   return r;

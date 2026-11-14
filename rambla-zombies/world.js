@@ -5,6 +5,7 @@ import { crearAuto, crearBus } from './autos.js';
 import { texAsfalto, texBaldosa, texPiedra, texArena, texFachada } from './texturas.js';
 import { crearAmbiente } from './ambiente.js';
 import { crearZonas } from './zonas.js';
+import { crearBarrio } from './barrio.js';
 
 export function brilloTex(color) {
   const c = document.createElement('canvas'); c.width = c.height = 64;
@@ -103,24 +104,28 @@ function crearMar(scene, movil) {
 let espuma = null;
 function crearRambla(scene) {
   const tAsf = texAsfalto(), tBal = texBaldosa(), tPie = texPiedra(), tAre = texArena();
-  scene.add(cinta(14.5, -2.5, 1.2, 0x3a3a44, tAsf, 6));
-  scene.add(cinta(8.3, -10.8, 1.6, 0x9c8f7c, tBal, 4));
-  scene.add(cinta(1.3, -12.1, 2.6, 0xc4b6a0, tBal, 4));
-  scene.add(cinta(2.5, 12, 1.45, 0x8a7e6e, tBal, 4));   // vereda del lado de la ciudad
-  scene.add(cinta(300, 14.5, 1.3, 0x2c2f36, tAsf, 10));
-  scene.add(cinta(20, -32, -0.5, 0x6a604c, tAre, 8));
-  scene.add(cinta(0.25, 4.6, 1.22, 0xd9c26a)); // línea amarilla
+  // v8: las cintas y paredes que comparten textura van en UNA malla (el color pasa a color de vértice): 10 draw calls → 5
+  const lotes = new Map(), sumar = (...ms) => { for (const m of ms) { const g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry, c = m.material.color, n = g.attributes.position.count, a = new Float32Array(n * 3);
+    for (let k = 0; k < n; k++) { a[k * 3] = c.r; a[k * 3 + 1] = c.g; a[k * 3 + 2] = c.b; } g.setAttribute('color', new THREE.BufferAttribute(a, 3));
+    const key = m.material.map || 'liso'; if (!lotes.has(key)) lotes.set(key, { geos: [], r: m.material.roughness }); lotes.get(key).geos.push(g); m.material.dispose(); } };
+  sumar(cinta(14.5, -2.5, 1.2, 0x3a3a44, tAsf, 6));
+  sumar(cinta(8.3, -10.8, 1.6, 0x9c8f7c, tBal, 4));
+  sumar(cinta(1.3, -12.1, 2.6, 0xc4b6a0, tBal, 4));
+  sumar(cinta(2.5, 12, 1.45, 0x8a7e6e, tBal, 4));   // vereda del lado de la ciudad
+  sumar(cinta(300, 14.5, 1.3, 0x2c2f36, tAsf, 10));
+  sumar(cinta(20, -32, -0.5, 0x6a604c, tAre, 8));
+  sumar(cinta(0.25, 4.6, 1.22, 0xd9c26a)); // línea amarilla
   // el muro de la rambla: cara de piedra hacia la arena y escalón hacia la vereda
-  scene.add(pared(-12.1, -0.5, 2.6, 0xb4a690, tPie), pared(-10.8, 1.6, 2.6, 0xc4b6a0, tPie));
-  scene.add(cinta(0.6, -12.25, 2.62, 0xd6c8b0, tBal, 2));
+  sumar(pared(-12.1, -0.5, 2.6, 0xb4a690, tPie), pared(-10.8, 1.6, 2.6, 0xc4b6a0, tPie));
+  sumar(cinta(0.6, -12.25, 2.62, 0xd6c8b0, tBal, 2));
+  lotes.forEach((l, key) => { const g = unir(l.geos); g.computeBoundingSphere(); scene.add(new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, map: key === 'liso' ? null : key, side: THREE.DoubleSide, roughness: l.r }))); });
   // espuma en la orilla: una cinta aditiva que respira con las olas
   espuma = cinta(2.2, -33.2, -0.42, 0xffffff);
   espuma.material = new THREE.MeshBasicMaterial({ color: 0x9ab0c8, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, depthWrite: false });
   scene.add(espuma);
   // Faroles en las dos veredas: todo instanciado, la luz del piso es un "charco" aditivo, no una luz real
   const n = 110, total = (n + 1) * 2;
-  const postes = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.12, 0.18, 7.4, 6).translate(0, 3.7, 0), new THREE.MeshStandardMaterial({ color: 0x2a2c30, roughness: 0.6, metalness: 0.4 }), total);
-  const brazos = new THREE.InstancedMesh(new THREE.BoxGeometry(0.1, 0.1, 1.6).translate(0, 0, 0.8), postes.material, total);
+  const postes = new THREE.InstancedMesh(unir([new THREE.CylinderGeometry(0.12, 0.18, 7.4, 6).translate(0, 3.7, 0), new THREE.BoxGeometry(0.1, 0.1, 1.6).translate(0, 7.3, 0.8)]), /* v8: poste y brazo en una sola malla */ new THREE.MeshStandardMaterial({ color: 0x2a2c30, roughness: 0.6, metalness: 0.4 }), total);
   const cabezas = new THREE.InstancedMesh(new THREE.BoxGeometry(0.55, 0.22, 0.8), new THREE.MeshStandardMaterial({ color: 0xffe0b0, emissive: 0xffb060, emissiveIntensity: 2.5 }), total);
   const charcos = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
     new THREE.MeshBasicMaterial({ map: charcoTex(), color: 0xffa850, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }), total);
@@ -131,10 +136,9 @@ function crearRambla(scene) {
     const idx = Math.min(N, (i + (lado > 0 ? 0.5 : 0)) / n * N), m = muestras[Math.round(idx)];
     const dPoste = lado < 0 ? -9.6 : 13.2, dCabeza = lado < 0 ? -8.1 : 11.7;
     const p = aMundo(idx, dPoste), c = aMundo(idx, dCabeza), yb = piso(dPoste);
-    m4.makeTranslation(p.x, yb, p.z); postes.setMatrixAt(k, m4);
     const yaw = Math.atan2(c.x - p.x, c.z - p.z);
     e.set(0, yaw, 0); q.setFromEuler(e);
-    m4.compose(v.set(p.x, yb + 7.3, p.z), q, s1); brazos.setMatrixAt(k, m4);
+    m4.compose(v.set(p.x, yb, p.z), q, s1); postes.setMatrixAt(k, m4);
     m4.compose(v.set(c.x, yb + 7.25, c.z), q, s1); cabezas.setMatrixAt(k, m4);
     const yp = piso(dCabeza) + 0.04;
     m4.compose(v.set(c.x, yp, c.z), q, s2.set(13, 1, 13)); charcos.setMatrixAt(k, m4);
@@ -142,7 +146,7 @@ function crearRambla(scene) {
     focos.push(new THREE.Vector3(c.x, yb + 7, c.z));
     k++;
   }
-  scene.add(postes, brazos, cabezas, charcos);
+  scene.add(postes, cabezas, charcos);
   const gf = new THREE.BufferGeometry(); gf.setAttribute('position', new THREE.BufferAttribute(pf, 3));
   const halos = new THREE.Points(gf, new THREE.PointsMaterial({ map: brilloTex('rgba(255,190,110,1)'), size: 4.5, transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending, depthWrite: false }));
   scene.add(halos);
@@ -445,21 +449,21 @@ export function crearMundo(scene, movil) {
   scene.add(disco);
   const mar = crearMar(scene, movil), rambla = crearRambla(scene);
   const edif = crearEdificios(scene);
-  const cerro = crearCerro(scene), chatarra = crearChatarra(scene), props = crearProps(scene), puerto = crearPuerto(scene), amb = crearAmbiente(scene), zonas = crearZonas(scene);
+  const cerro = crearCerro(scene), chatarra = crearChatarra(scene), props = crearProps(scene), puerto = crearPuerto(scene), amb = crearAmbiente(scene), zonas = crearZonas(scene), barrio = crearBarrio(scene);
   let alba = 0, objetivo = 0;
   const FOG_N = new THREE.Color(0x1a2444);
   return {
-    colisiones: chatarra.colisiones.concat(props.colisiones, puerto.colisiones, amb.colisiones, zonas.colisiones), puerto,
+    colisiones: chatarra.colisiones.concat(props.colisiones, puerto.colisiones, amb.colisiones, zonas.colisiones, barrio.colisiones), puerto,
     fuegos: (n, c) => props.fuegos(n, c), alSonarFuegos: null,
     setAlba(v) { objetivo = v; },
     setAtmo(a, id) { // clima de cada mapa: color de la noche, niebla, horizonte y luz ambiente (y se prende su utilería)
-      zonas.mostrar(id);
+      zonas.mostrar(id); barrio.mostrar(id);
       NOCHE.setHex(a.noche); FOG_N.setHex(a.niebla); scene.fog.density = a.densidad; cielo.material.uniforms.horizonte.value.setHex(a.horizonte);
       ambiente.color.setHex(a.cielo); ambiente.groundColor.setHex(a.suelo);
     },
     get alba() { return alba; },
     update(t, dt, renderer, jugador) {
-      mar.update(t); edif.update(t); zonas.update(t); amb.update(t, dt, jugador); rambla.update(t, dt, jugador); cerro.update(t); chatarra.update(t); puerto.update(t, dt, jugador); props.update(t, dt, this.alSonarFuegos);
+      mar.update(t); edif.update(t); zonas.update(t); barrio.update(t, dt); amb.update(t, dt, jugador); rambla.update(t, dt, jugador); cerro.update(t); chatarra.update(t); puerto.update(t, dt, jugador); props.update(t, dt, this.alSonarFuegos);
       alba += (objetivo - alba) * Math.min(1, dt * 0.5);
       cielo.material.uniforms.alba.value = alba;
       cielo.position.copy(jugador || cielo.position);

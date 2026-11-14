@@ -44,8 +44,10 @@ export function crearProps(scene) {
     const p = aMundo(i, lado); palmas.push({ x: p.x, y: piso(lado), z: p.z, yaw: Math.random() * 6.28, s: 0.85 + Math.random() * 0.35 });
     if (enZona(i) && lado < 0) col.push({ x: p.x, z: p.z, r: 0.35, top: 20, madera: true });
   }
-  instanciar(scene, geoTronco, new THREE.MeshStandardMaterial({ color: 0x5a4632, roughness: 1 }), palmas);
-  instanciar(scene, geoHojas, new THREE.MeshStandardMaterial({ color: 0x2f5a2a, roughness: 0.9, side: THREE.DoubleSide }), palmas);
+  { // v8: tronco y hojas en una sola malla instanciada (color por vértice): un draw call menos
+    const teñir = (g, hex) => { const c = new THREE.Color(hex), n = g.attributes.position.count, a = new Float32Array(n * 3); for (let k = 0; k < n; k++) { a[k * 3] = c.r; a[k * 3 + 1] = c.g; a[k * 3 + 2] = c.b; } g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g; };
+    instanciar(scene, unir([teñir(geoTronco, 0x5a4632), teñir(geoHojas, 0x2f5a2a)]), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, side: THREE.DoubleSide }), palmas);
+  }
 
   // ---- contenedores de la Intendencia (desbordados, como debe ser)
   const geoCont = unir([caja(1.9, 1.2, 1.1, 0, 0.75, 0), caja(2.0, 0.12, 1.2, 0, 1.4, 0).rotateZ(0.12), caja(0.15, 0.3, 0.15, -0.8, 0.15, -0.4), caja(0.15, 0.3, 0.15, 0.8, 0.15, 0.4)]);

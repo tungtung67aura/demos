@@ -10,7 +10,15 @@ export const ARMAS = [
   { id: 'bate', nombre: 'Bate', precio: 100, desc: 'Buen daño y buen empuje.', tipo: 'cuerpo', dano: 55, cadencia: 0.6, alcance: 2.9, empuje: 10, sonido: 'golpe', arco: 0.5 },
   { id: 'machete', nombre: 'Machete', precio: 180, desc: 'Rápido y filoso. Corta brazos.', tipo: 'cuerpo', dano: 80, cadencia: 0.42, alcance: 2.4, empuje: 2.5, sonido: 'corte', arco: 0.6 },
   { id: 'sarten', nombre: 'Sartén de la abuela', precio: 140, desc: '¡BONG! El que más empuja.', tipo: 'cuerpo', dano: 45, cadencia: 0.55, alcance: 2.5, empuje: 18, sonido: 'sarten', arco: 0.55 },
-  { id: 'revolver', nombre: 'Revólver .38', precio: 380, desc: 'Seis tiros que tumban. Atraviesa a dos.', tipo: 'fuego', dano: 95, cadencia: 0.55, cargador: 6, reserva: 30, recarga: 2.3, alcance: 90, disp: 0.006, perdigones: 1, retroceso: 0.24, sonido: 'revolver', auto: false, atraviesa: 2, empuje: 1.8 }
+  { id: 'revolver', nombre: 'Revólver .38', precio: 380, desc: 'Seis tiros que tumban. Atraviesa a dos.', tipo: 'fuego', dano: 95, cadencia: 0.55, cargador: 6, reserva: 30, recarga: 2.3, alcance: 90, disp: 0.006, perdigones: 1, retroceso: 0.24, sonido: 'revolver', auto: false, atraviesa: 2, empuje: 1.8 },
+  // v8: armas nuevas (los modelos detallados pueden venir de js/armas-modelos.js; acá hay uno de respaldo)
+  { id: 'gomera', nombre: 'Gomera de bizcochos', precio: 60, desc: 'Silenciosa. No despierta a la horda y deja mareado.', tipo: 'fuego', dano: 22, cadencia: 0.38, cargador: 8, reserva: 48, recarga: 1.0, alcance: 45, disp: 0.008, perdigones: 1, retroceso: 0.02, sonido: 'gomera', auto: false, ruido: 0.12, aturde: 0.9, sinVaina: true, flash: 0, empuje: 1.2 },
+  { id: 'espeto', nombre: 'Espeto parrillero', precio: 160, desc: 'Estocada larga que atraviesa hasta a tres. Con chorizo.', tipo: 'cuerpo', dano: 95, cadencia: 0.6, alcance: 3.2, empuje: 3.5, sonido: 'corte', arco: 0.22, atraviesa: 3, estocada: true },
+  { id: 'cana', nombre: 'Caña de pescar', precio: 220, desc: 'Látigo de 4 metros. Engancha, tira para vos y marea.', tipo: 'cuerpo', dano: 34, cadencia: 0.75, alcance: 4.4, empuje: 2, sonido: 'latigo', arco: 0.8, engancha: true },
+  { id: 'recortada', nombre: 'Recortada de dos caños', precio: 520, desc: 'Dos tiros y a recargar. De cerca, los da vuelta.', tipo: 'fuego', dano: 19, cadencia: 0.3, cargador: 2, reserva: 20, recarga: 1.7, alcance: 22, disp: 0.15, perdigones: 12, retroceso: 0.42, sonido: 'recortada', auto: false, empuje: 5, flash: 1.6 },
+  { id: 'bengalera', nombre: 'Pistola de bengalas', precio: 600, desc: 'Prende fuego al que toque y deja el piso ardiendo.', tipo: 'fuego', dano: 40, cadencia: 0.8, cargador: 1, reserva: 10, recarga: 1.3, alcance: 40, disp: 0, perdigones: 1, retroceso: 0.2, sonido: 'bengala', auto: false, proyectil: 'bengala', radio: 2.4, sinVaina: true, flash: 1.3 },
+  { id: 'fal', nombre: 'Fusil FAL', precio: 900, desc: 'Fusil de batalla. Pega fuerte, lejos y atraviesa a dos.', tipo: 'fuego', dano: 78, cadencia: 0.16, cargador: 20, reserva: 60, recarga: 2.1, alcance: 160, disp: 0.007, perdigones: 1, retroceso: 0.15, sonido: 'fal', auto: false, atraviesa: 2, empuje: 1.7, flash: 1.2 },
+  { id: 'lanzagarrafas', nombre: 'Lanzagarrafas', precio: 1100, desc: 'Tira una garrafa de supergás que revienta todo alrededor.', tipo: 'fuego', dano: 150, cadencia: 1.1, cargador: 1, reserva: 6, recarga: 1.9, alcance: 45, disp: 0, perdigones: 1, retroceso: 0.36, sonido: 'tubo', auto: false, proyectil: 'garrafa', radio: 3.8, sinVaina: true, flash: 1.5 }
 ];
 
 
@@ -201,6 +209,65 @@ function modelo(id) {
       for (const y of [-0.03, 0.06]) g.add(cil(0.006, 0.006, 0.044, metalClaro, 0, y, 0, 0, 6)); // remaches
       mano(g, 0, -0.02, 0.03); break;
     }
+    // ---- v8: modelos de respaldo de las armas nuevas (si js/armas-modelos.js trae uno, se usa ese) ----
+    case 'gomera': {
+      g.add(caja(0.03, 0.12, 0.03, madera, 0, -0.03, 0)); // mango
+      for (const sx of [-1, 1]) { const b = caja(0.022, 0.1, 0.022, madera, sx * 0.03, 0.06, -0.01); b.rotation.z = -sx * 0.45; g.add(b); }
+      for (const sx of [-1, 1]) { const goma = cil(0.005, 0.005, 0.11, M(0x8a2a1a, { roughness: 0.9 }), sx * 0.04, 0.1, 0.04, Math.PI / 2 - 0.3, 5); goma.rotation.z = sx * 0.3; g.add(goma); }
+      g.add(caja(0.04, 0.02, 0.025, M(0x5a3a1a, { roughness: 0.95 }), 0, 0.08, 0.09));
+      { const bz = new THREE.Mesh(new THREE.TorusGeometry(0.018, 0.011, 5, 8, Math.PI * 1.2), M(0xd8a050, { roughness: 0.8 })); bz.position.set(0, 0.095, 0.09); bz.name = 'cargador'; g.add(bz); } // el bizcocho
+      mano(g, 0, -0.06, 0.03); punta.set(0, 0.1, -0.05); break;
+    }
+    case 'espeto': {
+      g.add(cil(0.006, 0.006, 0.82, metalClaro, 0, 0.5, 0, 0, 8)); g.add(new THREE.Mesh(new THREE.ConeGeometry(0.006, 0.05, 6), metalClaro).translateY(0.935));
+      g.add(cil(0.02, 0.022, 0.16, madera, 0, 0.02, 0, 0, 10)); g.add(cil(0.024, 0.024, 0.015, metal, 0, 0.1, 0, 0, 10));
+      const chori = M(0x8a2a1a, { roughness: 0.55 });
+      for (const y of [0.7, 0.8]) { const c = new THREE.Mesh(new THREE.CapsuleGeometry(0.022, 0.06, 3, 8), chori); c.position.set(0, y, 0); g.add(c); }
+      mano(g, 0, -0.02, 0.03); break;
+    }
+    case 'cana': {
+      g.add(cil(0.009, 0.016, 1.6, M(0xe0d4a8, { roughness: 0.4, metalness: 0.1 }), 0, 0.8, 0, 0, 8)); g.add(cil(0.019, 0.019, 0.26, M(0x6a4a2a, { roughness: 0.9 }), 0, 0.05, 0, 0, 10));
+      for (const y of [0.4, 0.75, 1.1, 1.42]) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.012, 0.002, 4, 8), metalClaro); r.position.set(0, y, -0.015); g.add(r); }
+      g.add(cil(0.035, 0.035, 0.03, metal, 0.03, 0.2, -0.03, 0, 12)); g.add(caja(0.01, 0.03, 0.01, negro, 0.05, 0.2, -0.03));
+      { const t = cil(0.0012, 0.0012, 0.45, M(0xe8f0ff, { emissive: 0x202830 }), 0, 1.38, -0.02, 0, 3); t.name = 'tanza'; g.add(t); }
+      g.add(new THREE.Mesh(new THREE.SphereGeometry(0.012, 6, 4), metal).translateY(1.16).translateZ(-0.02));
+      mano(g, 0, -0.02, 0.03); break;
+    }
+    case 'recortada': {
+      for (const sx of [-1, 1]) { g.add(cil(0.019, 0.019, 0.34, metal, sx * 0.02, 0.03, -0.17, Math.PI / 2, 12)); g.add(cil(0.014, 0.014, 0.01, oscuro, sx * 0.02, 0.03, -0.345, Math.PI / 2, 10)); }
+      g.add(caja(0.06, 0.07, 0.14, metal, 0, 0.0, 0.05, true)); g.add(caja(0.05, 0.04, 0.16, madera, 0, -0.01, -0.1));
+      { const c = caja(0.05, 0.11, 0.14, madera, 0, -0.06, 0.17); c.rotation.x = -0.35; g.add(c); }
+      g.add(caja(0.012, 0.03, 0.02, metalClaro, 0.016, 0.05, 0.12), caja(0.012, 0.03, 0.02, metalClaro, -0.016, 0.05, 0.12)); // martillos
+      g.add(aro(0.026, 0.004, metal, 0, -0.04, 0.08)); { const k = caja(0.04, 0.02, 0.05, metal, 0, 0.06, 0.07); k.name = 'cargador'; g.add(k); }
+      mano(g, 0, -0.08, 0.1); punta.set(0, 0.03, -0.35); break;
+    }
+    case 'bengalera': {
+      const naranja = M(0xe86a10, { roughness: 0.45, map: TX.poli, bumpMap: TX.poliB, bumpScale: 0.3 });
+      g.add(cil(0.028, 0.028, 0.2, naranja, 0, 0.035, -0.12, Math.PI / 2, 14)); g.add(cil(0.022, 0.022, 0.012, oscuro, 0, 0.035, -0.222, Math.PI / 2, 12));
+      g.add(caja(0.05, 0.05, 0.08, naranja, 0, 0.03, 0.01)); { const e = caja(0.042, 0.12, 0.05, naranja, 0, -0.05, 0.04); e.rotation.x = -0.25; g.add(e); }
+      g.add(aro(0.024, 0.004, negro, 0, -0.012, -0.01)); g.add(caja(0.01, 0.02, 0.03, metal, 0, 0.065, 0.04));
+      { const b = cil(0.02, 0.02, 0.06, M(0xc81818, { roughness: 0.6 }), 0, 0.035, 0.06, Math.PI / 2, 10); b.name = 'cargador'; g.add(b); }
+      mano(g, 0, -0.085, 0.05); punta.set(0, 0.035, -0.23); break;
+    }
+    case 'fal': {
+      g.add(caja(0.06, 0.08, 0.34, metal, 0, 0.02, -0.04, true)); g.add(caja(0.064, 0.05, 0.2, negro, 0, 0.02, -0.3));
+      for (let k = 0; k < 4; k++) g.add(caja(0.066, 0.008, 0.025, oscuro, 0, 0.02, -0.24 - k * 0.04)); // ranuras del guardamanos
+      g.add(cil(0.012, 0.012, 0.26, metal, 0, 0.03, -0.52, Math.PI / 2)); g.add(cil(0.017, 0.017, 0.07, oscuro, 0, 0.03, -0.66, Math.PI / 2, 8)); // caño y apagallamas
+      g.add(caja(0.008, 0.045, 0.012, metal, 0, 0.07, -0.58), caja(0.03, 0.03, 0.03, metal, 0, 0.075, 0.08)); // miras
+      g.add(caja(0.012, 0.035, 0.12, metal, 0, 0.085, -0.04)); // asa
+      { const c = caja(0.035, 0.17, 0.07, metal, 0, -0.1, -0.06); c.rotation.x = 0.18; c.name = 'cargador'; g.add(c); }
+      { const e = caja(0.04, 0.11, 0.05, negro, 0, -0.07, 0.1); e.rotation.x = -0.3; g.add(e); }
+      g.add(caja(0.05, 0.09, 0.3, madera, 0, -0.03, 0.3)); g.add(caja(0.052, 0.1, 0.02, oscuro, 0, -0.035, 0.455));
+      g.add(aro(0.026, 0.004, metal, 0, -0.035, 0.04)); mano(g, 0, -0.08, 0.1); punta.set(0, 0.03, -0.7); break;
+    }
+    case 'lanzagarrafas': {
+      const tubo = M(0x4a5a4a, { roughness: 0.55, metalness: 0.4, map: TX.metal });
+      g.add(cil(0.056, 0.056, 0.62, tubo, 0, 0.06, -0.27, Math.PI / 2, 14)); g.add(cil(0.06, 0.06, 0.05, negro, 0, 0.06, -0.45, Math.PI / 2, 14), cil(0.06, 0.06, 0.05, negro, 0, 0.06, -0.02, Math.PI / 2, 14)); // cinta aisladora
+      { const gr = cil(0.05, 0.05, 0.12, M(0xd8641c, { roughness: 0.5, metalness: 0.3 }), 0, 0.06, -0.6, Math.PI / 2, 12); gr.name = 'garrafa'; g.add(gr); }
+      g.add(caja(0.035, 0.12, 0.04, madera, 0, -0.04, 0.0)); g.add(caja(0.035, 0.1, 0.04, madera, 0, -0.03, -0.32));
+      g.add(caja(0.02, 0.04, 0.05, metal, 0, 0.14, -0.1)); g.add(aro(0.024, 0.004, metal, 0, -0.01, -0.03));
+      mano(g, 0, -0.1, 0.0); punta.set(0, 0.06, -0.6); break;
+    }
     case 'sarten': {
       const hierro = M(0x2a2a2a, { metalness: 0.7, roughness: 0.55, map: TX.poli, bumpMap: TX.poliB, bumpScale: 0.6 });
       const pan = cil(0.2, 0.17, 0.04, hierro, 0, 0.55, 0, Math.PI / 2, 18);
@@ -213,4 +280,9 @@ function modelo(id) {
   return g;
 }
 
-export function crearModelos() { const r = {}; ARMAS.forEach(a => r[a.id] = modelo(a.id)); return r; }
+// v8: si el módulo de arte trae un modelo para ese id, se usa ese (mismo formato: Group, userData.punta, piezas con name)
+export function crearModelos(externo) {
+  const r = {};
+  ARMAS.forEach(a => { let m = null; try { m = externo ? externo(a.id) : null; } catch (e) { m = null; } if (m && !m.userData.punta) m.userData.punta = new THREE.Vector3(0, 0.03, -0.4); r[a.id] = m || modelo(a.id); });
+  return r;
+}

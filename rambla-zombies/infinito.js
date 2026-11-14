@@ -83,7 +83,8 @@ export function ofrecer(armas, mods, oleada, n = 3, rnd = Math.random) {
 
 // oleadas: cada vez más, más duros y con jefes cada 5
 export function cantidadInf(n) { return n % 5 === 0 ? 12 + n : Math.min(70, 6 + n * 3); }
-export function jefeInf(n) { return n % 10 === 5 ? 'patovica' : n % 10 === 0 ? 'cerro' : null; }
+const ROTA_INF = ['anzuelo', 'patovica', 'garrafero', 'bengala', 'lubolo', 'tablado', 'cerro'];
+export function jefeInf(n) { return n % 5 === 0 ? ROTA_INF[(n / 5 - 1) % ROTA_INF.length] : null; }
 export function vidaInf(n) { return 1 + (n - 1) * 0.08 + Math.max(0, n - 10) ** 1.5 * 0.02; }
 export const EVENTOS = {
   niebla: { nombre: 'Niebla del Río', sub: 'No se ve nada. Escuchá' },
