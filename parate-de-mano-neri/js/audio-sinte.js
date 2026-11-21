@@ -23,6 +23,7 @@ export function sinteSfx(n, fuerza = 1) {
   if (!ctx) return; const t = ctx.currentTime;
   if (ult[n] && t - ult[n] < 0.025) return; ult[n] = t;
   switch (n) {
+    case 'tajo': ruido(t, 0.07, 4200, 2.5, 0.3, 'bandpass', sfxGain, 2200); tonoS(t + 0.02, 0.09, 1800, 2600, 0.07, 'sawtooth'); ruido(t + 0.04, 0.12, 900, 1, 0.25, 'lowpass'); break;
     case 'aire': ruido(t, 0.09, 1800, 0.8, 0.12, 'bandpass', sfxGain, 600); break;
     case 'pina': tonoS(t, 0.09, 180, 60, 0.55 * fuerza); ruido(t, 0.06, 2200, 0.7, 0.35 * fuerza, 'bandpass'); break;
     case 'patada': tonoS(t, 0.13, 140, 45, 0.7 * fuerza); ruido(t, 0.08, 1200, 0.8, 0.4, 'bandpass'); break;

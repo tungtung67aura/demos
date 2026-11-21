@@ -49,8 +49,8 @@ add('impactos', 'impacto.fuego', 'Quemadura en la parrilla', {});
 add('impactos', 'impacto.contenedor', 'Contenedor que choca a alguien', { sinte: 'fuerte' });
 // --- armas
 for (const [k, d] of [['palo', 'Palo / pata de silla'], ['botella', 'Botella'], ['termo', 'Termo'], ['silla', 'Silla de bar'], ['cano', 'Caño'], ['escoba', 'Escoba'], ['ladrillo', 'Ladrillo'], ['cajon', 'Cajón de feria'], ['corvina', 'Corvina (pescado)'], ['bandeja', 'Bandeja de mozo'],
-  ['cucharon', 'Cucharón de Doña Chola'], ['maquina', 'Máquina de boletos del Guarda'], ['pinza', 'Pinza del Parrillero'], ['paraguas', 'Paraguas del Capo']])
-  add('armas', 'arma.' + k, 'Golpe con ' + d, { sinte: k === 'botella' ? 'botella' : k === 'termo' || k === 'cano' || k === 'bandeja' || k === 'maquina' ? 'metal' : 'madera' });
+  ['cucharon', 'Cucharón de Doña Chola'], ['maquina', 'Máquina de boletos del Guarda'], ['pinza', 'Pinza del Parrillero'], ['paraguas', 'Paraguas del Capo'], ['faca', 'Faca / cuchillo (tajo)']])
+  add('armas', 'arma.' + k, 'Golpe con ' + d, { sinte: k === 'botella' ? 'botella' : k === 'faca' ? 'tajo' : k === 'termo' || k === 'cano' || k === 'bandeja' || k === 'maquina' ? 'metal' : 'madera' });
 add('armas', 'arma.rompe', 'Arma que se rompe (madera)', { sinte: 'madera' });
 add('armas', 'arma.tiro', 'Tirar un arma (zumbido)', { sinte: 'aire' });
 // --- items

@@ -152,6 +152,8 @@ export const DEFS = {
     ropa: { cabeza: 'nada', arriba: 'remeraPatova', abajo: 'jeanOscuro', calzado: 'zapatos' } },
   guri: { nombre: 'EL GURÍ', piel: '#e8b088', pelo: '#3a2416', peinado: 'rulos', escala: 0.8, ancho: 0.78, flaco: true, mandibula: 0.8, cachetes: true,
     ropa: { cabeza: 'gorraRoja', arriba: 'celeste', abajo: 'shortAzul', calzado: 'zapaGris' } },
+  faca: { nombre: 'EL FACA', piel: '#c08a64', pelo: '#140e0a', peinado: 'rapado', escala: 0.97, ancho: 0.92, flaco: true, ceno: true, mandibula: 1.0, barba: '#1e1410', barbaCorta: true,
+    ropa: { cabeza: 'gorraAtras', arriba: 'canguroNegro', abajo: 'depGris', calzado: 'zapaRoja' } },
   cuida: { nombre: 'EL CUIDA', piel: '#c48a62', pelo: '#2a2018', peinado: 'corto', escala: 1.0, ancho: 1.06, ceno: true, bigote: '#2a2018', mandibula: 1.05,
     ropa: { cabeza: 'gorraNegra', arriba: 'chalecoFluo', abajo: 'jean', calzado: 'botitas' } },
   dona: { nombre: 'DOÑA ROSA', piel: '#e8b494', pelo: '#c8c4cc', peinado: 'rodete', escala: 0.9, ancho: 1.12, panza: 7, mujer: true, mandibula: 0.95, pestanas: true, cachetes: true,
@@ -185,6 +187,7 @@ export const VARIANTES = {
   chorro: [{}, { piel: '#e0aa80', ropa: { cabeza: 'gorraAtras', arriba: 'canguroVerde', abajo: 'depNegro', calzado: 'zapaUY' } }, { peinado: 'rapado', ropa: { cabeza: 'capucha', arriba: 'buzoBordo', abajo: 'jeanOscuro', calzado: 'zapaVerde' } }],
   patova: [{}, { piel: '#7a4a32', ropa: { arriba: 'camisetaNegra', abajo: 'vestir' } }],
   guri: [{}, { piel: '#c88a62', peinado: 'corto', ropa: { cabeza: 'gorraAtras', arriba: 'penarol', abajo: 'shortNegro', calzado: 'zapaRoja' } }, { pelo: '#c89050', peinado: 'flequillo', ropa: { cabeza: 'nada', arriba: 'nacional', abajo: 'shortAzul', calzado: 'zapaUY' } }],
+  faca: [{}, { piel: '#8a5a3e', peinado: 'corto', ropa: { cabeza: 'capuchaGris', arriba: 'buzoBordo', abajo: 'jeanOscuro', calzado: 'zapaNegra' } }, { piel: '#d8a07a', pelo: '#3a2a20', ropa: { cabeza: 'nada', arriba: 'canguroVerde', abajo: 'depNegro', calzado: 'zapaUY' } }],
   cuida: [{}, { piel: '#a87050', bigote: null, barba: '#1a120e', barbaCorta: true, ropa: { cabeza: 'gorroGris', arriba: 'chalecoNaranja', abajo: 'depAzul', calzado: 'zapaNegra' } }],
   dona: [{}, { pelo: '#8a8a92', piel: '#d8a07a', lentes: false, ropa: { arriba: 'blusaChola', abajo: 'polleraChola' } }],
   tambor: [{}, { piel: '#5a3424', ropa: { cabeza: 'gorroRojo' } }],
@@ -668,7 +671,11 @@ const COSTURA = new Map();
 function costura(c) { let v = COSTURA.get(c); if (v) return v; const r = c & 255, g = (c >>> 8) & 255, bl = (c >>> 16) & 255; const luma = 0.3 * r + 0.59 * g + 0.11 * bl;
   const m = luma < 70 ? [r + (118 - r) * 0.5, g + (116 - g) * 0.5, bl + (132 - bl) * 0.5] : [r * 0.42 + 27 * 0.25, g * 0.42 + 18 * 0.25, bl * 0.42 + 32 * 0.25];
   v = (255 << 24 | Math.round(m[2]) << 16 | Math.round(m[1]) << 8 | Math.round(m[0])) >>> 0; COSTURA.set(c, v); return v; }
-function capa(frame, dibujar) { const b = bufTmp(frame.lw, frame.lh, frame.q); const r = dibujar(b); b.pulir(); b.sombrearQ();
+// máscaras de capa para las heridas: qué píxeles finales son remera (t) o piel del cráneo (c), sin lo que tapan las capas de adelante (brazo cercano, pelo, gorro)
+let PM = null;
+function marcarCapa(b, tag) { if (!PM) return; const d = b.d, w = b.w; const [X0, Y0, X1, Y1] = b.caja(0); if (X1 < X0) return;
+  for (let y = Y0; y <= Y1; y++) for (let x = X0; x <= X1; x++) { const i = y * w + x; if (!d[i]) continue; if (tag === 't') PM.t[i] = 1; else if (tag === 'c') PM.c[i] = 1; else { PM.t[i] = 0; PM.c[i] = 0; } } }
+function capa(frame, dibujar, tag) { const b = bufTmp(frame.lw, frame.lh, frame.q); const r = dibujar(b); b.pulir(); b.sombrearQ(); marcarCapa(b, tag);
   if (b.x1 >= 0) { const { w, h, d } = b, F = frame.d; const [X0, Y0, X1, Y1] = b.caja(1); const add = [];
     for (let y = Y0; y <= Y1; y++) for (let x = X0; x <= X1; x++) { const i = y * w + x; if (d[i] || !F[i]) continue;
       const n = (x > 0 && d[i - 1]) || (x < w - 1 && d[i + 1]) || (y > 0 && d[i - w]) || (y < h - 1 && d[i + w]); if (n) add.push(x, y, costura(n)); }
@@ -677,7 +684,7 @@ function capa(frame, dibujar) { const b = bufTmp(frame.lw, frame.lh, frame.q); c
 
 export function dibujarPose(def, pose, w, h, caraDef) {
   const E = esqueleto(def, pose, w, h), cm = E.cm;
-  const fr = new Buf(w, h, Q);
+  const fr = new Buf(w, h, Q); PM = { t: new Uint8Array(fr.w * fr.h), c: new Uint8Array(fr.w * fr.h) };
   const mano = pose.mano || 'puno', cara = pose.cara || caraDef;
   const out = {};
   const jf = E.brazo(pose.bf, -cm.shJ), jn = E.brazo(pose.bn, cm.shJ), lf = E.pierna(pose.pf, -cm.hipJ), lnr = E.pierna(pose.pn, cm.hipJ);
@@ -688,7 +695,7 @@ export function dibujarPose(def, pose, w, h, caraDef) {
   capa(fr, (b) => calzado(b, def, lf.A[0], lf.A[1], lf.ang, false)); detalleCalzado(fr, def, lf.A[0], lf.A[1], lf.ang);
   capa(fr, (b) => { pelvis(b, def, E); pierna(b, def, lnr, cm, true); if (def.aba.tipo === 'pollera') pollera(b, def, lf, lnr, cm); });
   capa(fr, (b) => calzado(b, def, lnr.A[0], lnr.A[1], lnr.ang, true)); detalleCalzado(fr, def, lnr.A[0], lnr.A[1], lnr.ang);
-  TEXTOS = []; capa(fr, (b) => torso(b, def, E)); const textos = TEXTOS; TEXTOS = null;
+  TEXTOS = []; capa(fr, (b) => torso(b, def, E), 't'); const textos = TEXTOS; TEXTOS = null;
   const foto = textos.length ? fr.d.slice() : null;
   // cabeza: apoyada sobre el cuello, sigue la inclinación del pecho
   const la = E.incl * (Math.abs(E.lean) > 1 ? 0.95 : 0.6) + (pose.head || 0), k = cm.k;
@@ -697,7 +704,7 @@ export function dibujarPose(def, pose, w, h, caraDef) {
   const gorro = def.cab && def.cab.tipo !== 'nada' && def.cab.tipo !== 'visera';
   if (def.peinado === 'cola' && def.cab.tipo !== 'capucha') { capa(fr, (b) => colaDeCaballo(b, def, H)); }
   if (def.cab.tipo === 'capucha') capa(fr, (b) => sombrero(b, def, H)); // la capucha va detrás de la cara
-  capa(fr, (b) => craneo(b, def, H));
+  capa(fr, (b) => craneo(b, def, H), 'c');
   if (def.cab.tipo !== 'capucha') capa(fr, (b) => pelo(b, def, H, gorro));
   if (def.peinado === 'cola' && !gorro) capa(fr, (b) => gomita(b, def, H));
   if (def.cab.tipo !== 'capucha') capa(fr, (b) => sombrero(b, def, H));
@@ -709,6 +716,7 @@ export function dibujarPose(def, pose, w, h, caraDef) {
   out.huesos = { cuello: E.NT, cadera: lnr.H, hombroN: jn.S, codoN: jn.E, munecaN: jn.W, hombroF: jf.S, codoF: jf.E, munecaF: jf.W,
     caderaN: lnr.H, rodillaN: lnr.K, tobilloN: lnr.A, caderaF: lf.H, rodillaF: lf.K, tobilloF: lf.A, cabeza: [ccx, ccy] };
   if (foto) out.espejo = textoEspejado(fr, foto, textos);
+  out.mascaras = PM; PM = null;
   return { buf: fr, ...out };
 }
 
@@ -732,9 +740,17 @@ function textoEspejado(fr, foto, textos) {
 }
 // recorta el cuadro a lo dibujado (menos memoria). Sin copia espejada: se espeja al dibujar;
 // si hay texto en el pecho se guarda un parche chico con el texto bien escrito para el lado espejado.
+// máscara de bits recortada a su caja (en píxeles del cuadro recortado): { x, y, w, h, bits }
+function empacar(m, W, x0, y0, w, h) { let a = 1e9, bb = 1e9, c = -1, e = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (m[(y + y0) * W + x + x0]) { if (x < a) a = x; if (x > c) c = x; if (y < bb) bb = y; if (y > e) e = y; }
+  if (c < 0) return null; const mw = c - a + 1, mh = e - bb + 1, bits = new Uint8Array((mw * mh + 7) >> 3);
+  for (let y = 0; y < mh; y++) for (let x = 0; x < mw; x++) if (m[(y + bb + y0) * W + x + a + x0]) { const k = y * mw + x; bits[k >> 3] |= 1 << (k & 7); }
+  return { x: a, y: bb, w: mw, h: mh, bits }; }
 function recortar(r) {
   const b = r.buf, q = b.q; const [x0, y0, x1, y1] = b.caja(1); const w = x1 - x0 + 1, h = y1 - y0 + 1;
-  const f = { d: b.aCanvasRec(x0, y0, w, h, false), q, pies: [r.pies[0] * q - x0, r.pies[1] * q - y0], mano: [r.manoF[0] * q - x0, r.manoF[1] * q - y0, r.manoF[2]], parche: null };
+  const f = { d: b.aCanvasRec(x0, y0, w, h, false), q, pies: [r.pies[0] * q - x0, r.pies[1] * q - y0], mano: [r.manoF[0] * q - x0, r.manoF[1] * q - y0, r.manoF[2]], parche: null,
+    cab: [r.cabeza[0] * q - x0, r.cabeza[1] * q - y0], rad: r.radio * q, cue: [r.huesos.cuello[0] * q - x0, r.huesos.cuello[1] * q - y0] }; // anclas para heridas
+  if (r.mascaras) { f.mt = empacar(r.mascaras.t, b.w, x0, y0, w, h); f.mc = empacar(r.mascaras.c, b.w, x0, y0, w, h); }
   if (r.espejo) { let rx0 = 1e9, ry0 = 1e9, rx1 = -1, ry1 = -1; for (const t of r.espejo.textos) { rx0 = Math.min(rx0, t.x0); ry0 = Math.min(ry0, t.y0); rx1 = Math.max(rx1, t.x0 + t.w - 1); ry1 = Math.max(ry1, t.y0 + t.h - 1); }
     rx0 = Math.max(rx0, x0); ry0 = Math.max(ry0, y0); rx1 = Math.min(rx1, x1); ry1 = Math.min(ry1, y1);
     if (rx1 >= rx0 && ry1 >= ry0) { const pw = rx1 - rx0 + 1, ph = ry1 - ry0 + 1; f.parche = { c: r.espejo.aCanvasRec(rx0, ry0, pw, ph, true), x: w - (rx0 - x0) - pw, y: ry0 - y0 }; } }
@@ -774,7 +790,7 @@ const activos = new Set(); // sets de la partida actual (se calientan en segundo
 const BASE_E = ['quieto', 'camina', 'dolor', 'vuela', 'piso', 'levanta', 'agarrado'];
 const USA_ENEMIGO = { buzo: [...BASE_E, 'pina1', 'patada', 'golpe'], mati: [...BASE_E, 'pina1', 'pina2'], cacho: [...BASE_E, 'pina2', 'pina3'], tano: [...BASE_E, 'pina1', 'patada', 'golpe', 'agarra'],
   chorro: [...BASE_E, 'pina1', 'barrida', 'agarra'], patova: [...BASE_E, 'bloquea', 'pina2', 'pina3', 'agarra', 'revolea'], guri: [...BASE_E, 'apunta', 'pina1'],
-  cuida: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe'], dona: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe'], tambor: [...BASE_E, 'tamborOnda', 'pina1'],
+  faca: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe', 'pina2'], cuida: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe'], dona: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe'], tambor: [...BASE_E, 'tamborOnda', 'pina1'],
   mozo: [...BASE_E, 'golpe', 'pina1', 'pina2'], pescador: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe'],
   chola: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe', 'empuja', 'festeja'], guarda: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe', 'pina2', 'festeja'],
   bocha: [...BASE_E, 'pina1', 'pina2', 'pina3', 'bloquea', 'festeja'], parrillero: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe', 'pina3', 'festeja'],

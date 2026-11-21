@@ -1,6 +1,6 @@
 # Audio de Párate de mano ñeri — lista de IDs
 
-Generado con `node tools/audio-doc.mjs`. Total: **299 IDs**.
+Generado con `node tools/audio-doc.mjs`. Total: **306 IDs**.
 
 ## Cómo cargar los audios
 1. Guardá cada archivo en `audio/<carpeta>/` con el **nombre exacto del ID** y extensión `.ogg` (ej.: `audio/golpes/golpe.pina.ogg`).
@@ -46,7 +46,7 @@ Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga
 | `impacto.fuego` | Quemadura en la parrilla | — | — |
 | `impacto.contenedor` | Contenedor que choca a alguien | fuerte | — |
 
-## Golpes y roturas de armas del piso — `audio/armas/` (16)
+## Golpes y roturas de armas del piso — `audio/armas/` (17)
 
 | ID | Qué es | Respaldo | Archivo |
 |---|---|---|---|
@@ -64,6 +64,7 @@ Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga
 | `arma.maquina` | Golpe con Máquina de boletos del Guarda | metal | — |
 | `arma.pinza` | Golpe con Pinza del Parrillero | madera | — |
 | `arma.paraguas` | Golpe con Paraguas del Capo | madera | — |
+| `arma.faca` | Golpe con Faca / cuchillo (tajo) | tajo | — |
 | `arma.rompe` | Arma que se rompe (madera) | madera | — |
 | `arma.tiro` | Tirar un arma (zumbido) | aire | — |
 
@@ -166,7 +167,7 @@ Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga
 | `mus.derrota` | Game over (jingle) | — | — |
 | `mus.final` | Final del juego / créditos (loop) | — | — |
 
-## Voces por personaje (gritos, dolor, KO) — `audio/voces/` (78)
+## Voces por personaje (gritos, dolor, KO) — `audio/voces/` (81)
 
 | ID | Qué es | Respaldo | Archivo |
 |---|---|---|---|
@@ -209,6 +210,9 @@ Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga
 | `voz.guri.ataque` | EL GURÍ: grito al pegar | — | — |
 | `voz.guri.dolor` | EL GURÍ: le pegan | — | — |
 | `voz.guri.ko` | EL GURÍ: cae KO | — | — |
+| `voz.faca.ataque` | EL FACA: grito al pegar | — | — |
+| `voz.faca.dolor` | EL FACA: le pegan | — | — |
+| `voz.faca.ko` | EL FACA: cae KO | — | — |
 | `voz.cuida.ataque` | EL CUIDA: grito al pegar | — | — |
 | `voz.cuida.dolor` | EL CUIDA: le pegan | — | — |
 | `voz.cuida.ko` | EL CUIDA: cae KO | — | — |
@@ -249,7 +253,7 @@ Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga
 | `voz.capo.ko` | DON PEPE, EL CAPO: derrotado | — | — |
 | `voz.capo.risa` | DON PEPE, EL CAPO: se ríe / provoca | — | — |
 
-## Frases de los globos de diálogo (una por texto) — `audio/frases/` (105)
+## Frases de los globos de diálogo (una por texto) — `audio/frases/` (108)
 
 | ID | Qué es | Respaldo | Archivo |
 |---|---|---|---|
@@ -303,6 +307,9 @@ Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga
 | `frase.no_me_agarras` | "¡NO ME AGARRÁS!" (guri) | — | — |
 | `frase.le_digo_a_mi_madre` | "¡LE DIGO A MI MADRE!" (guri) | — | — |
 | `frase.punteria_bo` | "¡PUNTERÍA, BO!" (guri) | — | — |
+| `frase.te_marco_gil` | "¡TE MARCO, GIL!" (faca) | — | — |
+| `frase.quedate_quietito` | "¡QUEDATE QUIETITO!" (faca) | — | — |
+| `frase.te_abro_como_chorizo` | "¡TE ABRO COMO CHORIZO!" (faca) | — | — |
 | `frase.te_lo_cuido_jefe` | "¡TE LO CUIDO, JEFE!" (cuida) | — | — |
 | `frase.la_voluntad_maestro` | "¡LA VOLUNTAD, MAESTRO!" (cuida) | — | — |
 | `frase.aca_no_estacionas` | "¡ACÁ NO ESTACIONÁS!" (cuida) | — | — |

@@ -1,5 +1,6 @@
 // Arranque, escalado entero pixel-perfect, bucle de paso fijo (120 Hz) con interpolación y pantallas.
 import { cuadroG } from './grado.js';
+import { GORE, textoGore } from './sangre.js';
 import { crearProps } from './props.js';
 import { generar, DEFS, dibujarCuadro, fijarQ, calentar, partida, vigente } from './sprites.js';
 import { SLOTS, opciones } from './ropa.js';
@@ -13,7 +14,7 @@ import { NIVELES } from './niveles.js';
 import { abrirMapa, pasoMapa, dibujarMapa, precargarMapa } from './mapa.js';
 import { calle, cielo, ALTO, EXTRA } from './escenario.js';
 
-export const VERSION = 'bb-v7';
+export const VERSION = 'bb-v8';
 // sonidos de menú por ID (audio-ids.js): sin archivo, no suena (o suena el respaldo sintetizado si el ID lo tiene)
 const UI = { menu: 'ui.mover', dale: 'ui.ok', pausa: 'ui.pausa', item: 'ui.ropa', atras: 'ui.atras' };
 function sfx(k) { sonar(UI[k] || k); }
@@ -24,7 +25,8 @@ const DT = 1 / 120;
 const cv = document.getElementById('juego'); const x = cv.getContext('2d', { alpha: false });
 let W = 480, H = 270, escala = 2, D = 2; // D: densidad del lienzo (subpíxeles por píxel del juego; los luchadores se dibujan con el doble de detalle)
 const raiz = document.getElementById('raiz');
-const cfg = Object.assign({ musica: true }, JSON.parse(localStorage.getItem('bb-cfg') || '{}'));
+const cfg = Object.assign({ musica: true, sangre: 2 }, JSON.parse(localStorage.getItem('bb-cfg') || '{}'));
+GORE.nivel = [0, 1, 2].includes(cfg.sangre) ? cfg.sangre : 2;
 let record = +(localStorage.getItem('bb-record') || 0);
 
 function ajustar() {
@@ -176,11 +178,11 @@ function menus(dt) {
     if (ok()) { if (vest.fila < SLOTS.length) { vest.fila = SLOTS.length; sfx('menu'); } else { sfx('dale'); aLaCancha(); return; } }
     if (E.buf.atras > 0 || E.buf.pausa > 0) { E.buf.atras = 0; E.buf.pausa = 0; pantalla = 'seleccion'; tP = 0; }
   } else if (pantalla === 'pausa') {
-    if (n.y) { pausaSel = (pausaSel + n.y + 3) % 3; sfx('menu'); }
+    if (n.y) { pausaSel = (pausaSel + n.y + 4) % 4; sfx('menu'); }
     let elegir = ok() ? pausaSel : -1;
-    if (t) { for (let i = 0; i < 3; i++) { const y = Math.round(H / 2 - 58) + 40 + i * 18; if (t[1] > y - 5 && t[1] < y + 13 && Math.abs(t[0] - W / 2) < 92) elegir = i; } }
+    if (t) { for (let i = 0; i < 4; i++) { const y = Math.round(H / 2 - 58) + 40 + i * 18; if (t[1] > y - 5 && t[1] < y + 13 && Math.abs(t[0] - W / 2) < 92) elegir = i; } }
     if (E.buf.pausa > 0) { E.buf.pausa = 0; elegir = 0; }
-    if (elegir === 0) { pantalla = 'juego'; } else if (elegir === 1) { cfg.musica = !cfg.musica; setMusica(cfg.musica); localStorage.setItem('bb-cfg', JSON.stringify(cfg)); } else if (elegir === 2) { pantalla = 'titulo'; juego = null; mostrarControles(false); musica('mus.menu'); if (nuevaVersion) location.reload(); }
+    if (elegir === 0) { pantalla = 'juego'; } else if (elegir === 1) { cfg.musica = !cfg.musica; setMusica(cfg.musica); localStorage.setItem('bb-cfg', JSON.stringify(cfg)); } else if (elegir === 2) { cfg.sangre = GORE.nivel = (GORE.nivel + 2) % 3; localStorage.setItem('bb-cfg', JSON.stringify(cfg)); if (!GORE.nivel && juego) juego.sangre.limpiar(); else if (juego) juego.sangre.calentar(juego.grado); sfx('menu'); } else if (elegir === 3) { pantalla = 'titulo'; juego = null; mostrarControles(false); musica('mus.menu'); if (nuevaVersion) location.reload(); }
   } else if (pantalla === 'continuar') {
     contador -= dt; juego.paso(0, E);
     if (ok() || t) { juego.vidas = 2; juego.puntos = 0; juego.proxVida = 100000; juego.estado = 'jugando'; sonar('evento.continuar'); const j = juego.j; j.hp = j.hpMax; j.muerto = false; j.est = 'levanta'; j.t = 0; j.invul = 3; pantalla = 'juego'; }
@@ -205,12 +207,12 @@ function dibujar(alfa) {
     dibujarHUD(x, juego, W, H, E.tactil || matchMedia('(pointer:coarse)').matches, pantalla !== 'juego');
     if (E.tactil && (med.frames & 7) === 0) revisarTapado();
     if (pantalla === 'pausa') {
-      velo(0.55); const py = Math.round(H / 2 - 58); panel(W / 2 - 92, py, 184, 114);
+      velo(0.55); const py = Math.round(H / 2 - 58); panel(W / 2 - 92, py, 184, 132);
       texto(x, 'PAUSA', W / 2, py + 9, '#ffd23a', 2, 'centro', CONTORNO, '#8a5a10');
-      ['SEGUIR', 'MÚSICA: ' + (cfg.musica ? 'SÍ' : 'NO'), 'SALIR AL MENÚ'].forEach((s, i) => { const yy = py + 40 + i * 18; const sel = pausaSel === i;
+      ['SEGUIR', 'MÚSICA: ' + (cfg.musica ? 'SÍ' : 'NO'), 'SANGRE: ' + textoGore(), 'SALIR AL MENÚ'].forEach((s, i) => { const yy = py + 40 + i * 18; const sel = pausaSel === i;
         if (sel) { x.fillStyle = 'rgba(255,210,58,0.16)'; x.fillRect(Math.round(W / 2 - 80), yy - 4, 160, 15); x.fillStyle = '#ffd23a'; x.fillRect(Math.round(W / 2 - 80), yy - 4, 2, 15); }
         texto(x, s, W / 2, yy, sel ? '#ffffff' : '#9a8aa8', 1, 'centro'); if (sel && Math.floor(tP * 3) % 2 === 0) texto(x, '>', W / 2 - 72, yy, '#ffd23a', 1); });
-      texto(x, esTactil() ? 'TOCÁ UNA OPCIÓN' : 'ARRIBA/ABAJO · PIÑA', W / 2, py + 98, '#7a6a8a', 1, 'centro');
+      texto(x, esTactil() ? 'TOCÁ UNA OPCIÓN' : 'ARRIBA/ABAJO · PIÑA', W / 2, py + 116, '#7a6a8a', 1, 'centro');
     }
     if (pantalla === 'continuar') { velo(0.62); const py = Math.round(H / 2 - 66); panel(W / 2 - 104, py, 208, 132, '#ff5a4a');
       texto(x, '¿SEGUÍS?', W / 2, py + 9, '#ff5a4a', 2, 'centro', CONTORNO, '#5a0a0a');
@@ -391,7 +393,7 @@ function botControl() {
   E.tdx = dx; E.tdy = dy; E.dx = dx; E.dy = dy;
 }
 
-window.__bb = { version: VERSION, med, bot: false, debug: /debug/.test(location.search), get pantalla() { return pantalla; }, juego: null,
+window.__bb = { version: VERSION, med, bot: false, gore: GORE, debug: /debug/.test(location.search), get pantalla() { return pantalla; }, juego: null,
   empezar: (i = 0, nivel = 0) => { elegido = i; empezar(nivel); }, siguiente: () => siguienteNivel(), NIVELES, irA: (p) => { pantalla = p; }, ajustar, D: () => D, escala: () => escala };
 
 // ---------- service worker: se actualiza solo en el menú ----------

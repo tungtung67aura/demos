@@ -149,6 +149,10 @@ function guri(g, e, dt, dx, dy, adx) {
   if (ia.cd <= 0 && alineado(g, e, dy, adx, 100, 280)) { e.cara = Math.sign(dx) || 1; g.atacar(e, ATQ.e_gomera); ia.cd = (1.5 + Math.random()) / (e.buff > 0 ? 1.6 : 1); return; }
   const lado = Math.sign(e.x - j.x) || 1; ir(e, Math.max(g.cam + 20, Math.min(g.cam + g.vista.w - 20, j.x + lado * 170)), j.y, 20, 8, 0.9);
 }
+// ---------- faca: tajo corto con brillo de aviso; si quedás a media distancia, puntazo con envión
+function faca(g, e, dt, dx, dy, adx) {
+  if (e.ia.rol === 'atacar') cuerpoACuerpo(g, e, dt, dy, adx, 44, () => (adx > 26 && Math.random() < 0.45 ? ATQ.e_puntazo : ATQ.e_facazo), 30); else rodear(g, e, dt);
+}
 // ---------- cuidacoches: palo largo con aviso
 function cuida(g, e, dt, dx, dy, adx) {
   if (e.ia.rol === 'atacar') cuerpoACuerpo(g, e, dt, dy, adx, 62, () => (Math.random() < 0.6 ? ATQ.e_palazo : ATQ.e_barre), 44); else rodear(g, e, dt);
@@ -264,5 +268,5 @@ function capo(g, e, dt, dx, dy, adx) {
   }
   acomodar(g, e, dx, dy, 38);
 }
-const TIPOS = { base, chorro, patova, guri, cuida, dona, tambor, mozo, pescador, tano, chola, guarda, bocha, parrillero, capo };
+const TIPOS = { base, chorro, patova, guri, faca, cuida, dona, tambor, mozo, pescador, tano, chola, guarda, bocha, parrillero, capo };
 export const ATQ_IA = A;

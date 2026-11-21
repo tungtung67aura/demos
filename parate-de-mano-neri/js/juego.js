@@ -8,6 +8,7 @@ import { NIVELES } from './niveles.js';
 import { sonar, voz, frase, musica, ambiente } from './audio.js';
 import { texto, lienzo, CONTORNO } from './pixel.js';
 import { FX } from './fx.js';
+import { Sangre, GORE, etapa } from './sangre.js';
 import { director, pensar, seguirCombo } from './ia.js';
 import { Eventos } from './eventos.js';
 import { gradoSuave, cuadroG, spriteG, silueta, purgarGrado } from './grado.js';
@@ -42,7 +43,7 @@ export class Juego {
     this.dale = 0; this.estado = 'jugando'; this.tEstado = 0; this.jefe = null; this.miniActual = null; this.mensaje = null; this.bonus = 0;
     this.proxVida = previo && previo.proxVida ? previo.proxVida : 100000;
     this.stats = { golpes: 0, recibidos: 0, ko: 0 }; this._pan = { x: 0.5 };
-    this.fx = new FX(); this.ev = new Eventos(this);
+    this.fx = new FX(); this.ev = new Eventos(this); this.sangre = new Sangre(this); if (GORE.nivel) this.sangre.calentar(this.grado);
     this.j = this.crearJugador(claveJugador, 80, 228);
     for (const d of nv.decor) this.decor.push({ ...d, sp: SP[d.t], solido: d.t !== 'carton' && d.t !== 'cono', vx: 0, golpeados: null, px: d.x });
     for (const r of nv.rompibles) this.rompibles.push({ ...r, hp: (ROMPIBLES[r.t] || { hp: 2 }).hp, roto: false, sacude: 0, id: uid++ });
@@ -98,7 +99,7 @@ export class Juego {
     if (this.cartel > 0) this.cartel -= dt;
     if (this.lento > 0) { this.lento -= dt; dt *= 0.35; }
     this.temblor = Math.max(0, this.temblor - dt);
-    if (this.hitstop > 0) { this.hitstop -= dt; this.fx.paso(dt * 0.3); return; }
+    if (this.hitstop > 0) { this.hitstop -= dt; this.fx.paso(dt * 0.3); if (GORE.nivel) this.sangre.paso(dt * 0.3); return; }
     if (this.estado === 'jugando' && !(this.jefeIntro > 0)) { this.tiempo -= dt; if (this.tiempo <= 0) { this.tiempo = 120; this.danar(this.j, null, 999, { tumba: true, kb: 0, vz: 100 }, true); } }
     if (this.tCombo > 0) { this.tCombo -= dt; if (this.tCombo <= 0) this.combo = 0; }
     this.dale = Math.max(0, this.dale - dt);
@@ -108,7 +109,7 @@ export class Juego {
     for (const e of this.ents) this.fisica(e, dt);
     this.separar();
     for (const e of this.ents) if (e.atq) this.chequearGolpes(e);
-    this.pasoItems(dt); this.pasoDecor(dt); this.pasoPerros(dt); this.ev.paso(dt); this.fx.paso(dt);
+    this.pasoItems(dt); this.pasoDecor(dt); this.pasoPerros(dt); this.ev.paso(dt); this.fx.paso(dt); this.pasoSangrado(dt); if (GORE.nivel) this.sangre.paso(dt);
     { const G = this.globos; let k = 0; for (let i = 0; i < G.length; i++) { const g = G[i]; g.t += dt; if (g.t < g.dur && !g.e.borrar) G[k++] = g; } G.length = k; }
     compactar(this.ents); compactar(this.items);
     if (this.miniActual && (this.miniActual.borrar || this.miniActual.muerto)) this.miniActual = null;
@@ -180,6 +181,7 @@ export class Juego {
   atacar(e, a, aire = false) {
     e.est = 'ataca'; e.atq = a; e.t = 0; e.golpeados.clear(); e.conecto = false; e.anim = a.anim; e.lanzo = false;
     if (!aire) { e.vx = 0; e.vy = 0; }
+    if (a.corta && e.equipo === 'e') { const q = this.fx.nueva('bloqueo', e.x + e.cara * 16, e.y, (e.sp ? e.sp.h : 44) * 0.55, 0.2); void q; sonar('arma.tiro', this.pan(e.x)); } // brillo de la hoja: aviso legible del tajo
     if (e.intent && Math.abs(e.intent.mx) > 0.3 && !aire && e.equipo === 'j') e.cara = Math.sign(e.intent.mx);
     if (a.aviso) { this.fx.aviso(e, a.ini); sonar('enem.aviso', this.pan(e.x)); }
     else if (!a.proy && a.dmg) sonar('mov.aire', this.pan(e.x));
@@ -423,6 +425,13 @@ export class Juego {
     if (o.equipo === 'j' && o.clave === 'pelado') dmg *= 0.9;
     const grande = !!(a.tumba || dmg >= 10);
     this.fx.chispa(hx, hy, hz, grande);
+    // tipo de golpe para la sangre, el hit-stop y el temblor: 0 piña, 1 patada, 2 pesado, 3 arma, 4 corte, 5 especial
+    const corta = (conArma && dArma.corta) || a.corta || (conArma && dArma.rompe && e.arma.dur <= 1);
+    const tipo = a === ATQ.especial || a.giro ? 5 : corta ? 4 : conArma ? (dArma.pesada ? 2 : 3) : (a.tumba || dmg >= 10 || a.remate) ? 2 : (a.anim === 'patada' || a.anim === 'rodilla' || a.anim === 'barrida') ? 1 : 0;
+    if (o.hpMax) { if (GORE.nivel) this.sangre.golpe(o, e, hx, hy, hz, tipo, dmg, hz >= (o.sp ? o.sp.h * 0.62 : 30)); this._golpeado = o;
+      if (corta) { o.sangra = Math.max(o.sangra || 0, o.equipo === 'j' ? 2.4 : 3.2); this.hitstop = Math.max(this.hitstop, 0.075); this.temblor = Math.max(this.temblor, 0.1); }
+      if (tipo === 2 || tipo === 5) { this.hitstop = Math.max(this.hitstop, (a.hs || 0.05) + 0.02); this.temblor = Math.max(this.temblor, 0.18); } }
+    if (conArma && dArma.metal) for (let i = 0; i < 6; i++) { const b = this.fx.nueva('brasa', hx, hy, hz, 0.25 + Math.random() * 0.2); b.vx = (Math.random() - 0.5) * 220; b.vz = 40 + Math.random() * 160; }
     sonar(conArma && dArma.son ? dArma.son : a.son || 'golpe.pina', { x: this.pan(hx).x, vol: grande ? 1.2 : 1 });
     this.hitstop = Math.max(this.hitstop, a.hs || 0.05);
     if (grande) this.temblor = Math.max(this.temblor, 0.14);
@@ -458,6 +467,8 @@ export class Juego {
     if (o.agarradoPor && o.agarradoPor !== por) this.soltarAgarre(o.agarradoPor);
     if (o.agarrando) this.soltarAgarre(o);
     o.hp -= dmg;
+    if (GORE.nivel && o.hpMax && this._golpeado !== o && dmg > 0) this.sangre.golpe(o, por, o.x, o.y, (o.sp ? o.sp.h : 40) * 0.55, a.tumba ? 2 : 0, dmg, false);
+    this._golpeado = null;
     if (o.equipo === 'j') { this.combo = 0; this.tCombo = 0; this.stats.recibidos++; if (o.arma && (a.tumba || o.hp <= 0)) this.soltarArma(o); if (Math.random() < 0.3) this.globo(o, pick(FRASES.dolor), 0.9); voz(o.clave, o.hp <= 0 ? 'ko' : 'dolor'); }
     else { if (o.ia) o.ia.hits++; if (o.hp > 0 && Math.random() < 0.12) this.globo(o, pick(FRASES.dolor), 0.9); if (Math.random() < 0.3) voz(o.clave, 'dolor', this.pan(o.x)); }
     const dir = por ? Math.sign(o.x - por.x) || por.cara : -o.cara;
@@ -473,7 +484,14 @@ export class Juego {
     } else {
       o.est = 'dolor'; o.t = 0; o.tStun = a.stun || 0.3; o.vx = dir * (a.kb || 30); o.atq = null; o.anim = 'dolor'; o.fr = Math.random() < 0.5 ? 0 : 1; o.cara = -dir; o.juggle = 0;
     }
-    if (o.hp <= 0) { o.hp = 0; if (o.equipo === 'e') this.koEnemigo(o); }
+    if (o.hp <= 0) { o.hp = 0; if (GORE.nivel && !o.ko) this.sangre.ko(o, por, o.equipo === 'e' && (o.st.jefe || a === ATQ.especial || a.remate || a.giro || dmg >= 14)); if (o.equipo === 'e') this.koEnemigo(o); }
+  }
+  // sangrado por corte (faca, vidrio): saca de a poco pero nunca remata (queda en 1); y la herida del jugador se limpia al curarse
+  pasoSangrado(dt) {
+    for (const e of this.ents) if (e.sangra > 0 && e.hpMax) { e.sangra -= dt; if (e.hp > 1 && !e.muerto && this.estado === 'jugando') e.hp = Math.max(1, e.hp - (e.equipo === 'j' ? 1.6 : 3.5) * dt); }
+    const j = this.j; if (!j || !j.hpMax) return; const st = etapa(j);
+    if (j._st !== undefined && st < j._st && !j.muerto && j.hp > 0) { if (GORE.nivel) this.sangre.limpieza(j, this.fx); j.sangra = 0; if (st < 2) j.herC = 0; if (st < 3) j.herT = 0; }
+    j._st = st;
   }
   koEnemigo(o) {
     if (o.ko) return; o.ko = true; this.stats.ko++; this.puntos += o.st.puntos * (o.mini ? 2 : 1); voz(o.clave, 'ko', this.pan(o.x));
@@ -639,6 +657,7 @@ export class Juego {
     x.drawImage(this.capaCalle, Math.max(0, C), 0, W, ALTO + EXTRA, 0, off + sy - EXTRA, W, ALTO + EXTRA);
     const Y = off + sy;
     this.ev.fondo(x, C, Y);
+    if (GORE.nivel) this.sangre.piso(x, C, Y, W, this.grado);
     // lista ordenada por profundidad (sin crear arrays: se reusa)
     const L = this._lista || (this._lista = []); L.length = 0;
     for (const d of this.decor) if (d.x > C - 80 && d.x < C + W + 80) L.push(d);
@@ -658,8 +677,10 @@ export class Juego {
     for (const o of L) { if (o.ev) { o.ev = 0; this.ev.dibujar(x, o, C, Y, this.grado); } else this.dibujarObj(x, o, C, Y); }
     if (this.nv.hora === 'noche' || this.ev.apagon > 0) this.ev.luces(x, C, Y);
     this.fx.dibujar(x, C, Y);
+    if (GORE.nivel) this.sangre.aire(x, C, Y, this.grado);
     for (const f of this.frente) { const fx = Math.round(f.x - cam * 1.25 - sx); if (fx < -80 || fx > W + 10) continue; x.drawImage(f.sp, fx, H - f.sp.height + f.baja + sy); }
     this.ev.encima(x, W, H, Y, C);
+    if (GORE.nivel) this.sangre.pantalla(x, W, H, this.grado);
     // nombres y barras de enemigos comunes
     for (const e of this.ents) if (e.equipo === 'e' && !e.muerto && !e.st.jefe && !e.mini && e.x > C && e.x < C + W) {
       const ex = Math.round(this.lerp(e.px, e.x) - C), ey = Math.round(this.lerp(e.py, e.y) - this.lerp(e.pz, e.z) + Y - e.sp.h + 8);
@@ -719,6 +740,7 @@ export class Juego {
     if ((o.mini || o.buff > 0) && o.est !== 'piso' && !o.muerto) { const col = o.mini ? '#ff3a2a' : '#ffd040'; const s = (f._s && f._s[col]) || (this.presS-- > 0 ? silueta(f, col) : null); if (s) { x.globalAlpha = 0.35 + 0.25 * Math.sin(this.t * 10); for (const [ax, ay] of AURA) dibujarCuadro(x, s, X + sh + ax, Yp + ay, o.cara); x.globalAlpha = 1; } }
     const bombo = o.clave === 'tambor' || (o.clave === 'chola' && o.anim === 'empuja');
     dibujarCuadro(x, f, X + sh, Yp, o.cara);
+    if (GORE.nivel && o.hpMax && o.hp < o.hpMax * 0.8) this.sangre.heridas(x, o, f0, X + sh, Yp, G);
     if (o.est === 'dolor' && o.t < 0.06) { x.globalAlpha = 0.55 - o.t * 7; dibujarCuadro(x, siluetaBlanca(f0), X + sh, Yp, o.cara); x.globalAlpha = 1; }
     if (o.alerta > 0 && o.equipo === 'e' && o.est !== 'piso' && o.est !== 'vuela') { const ay = Yp - f.pies[1] / f.q - 12 + (o.alerta > 0.55 ? -2 : 0); texto(x, '!', X, ay, '#ff3a2a', 2, 'centro', CONTORNO, '#5a0a0a'); }
     // tambor colgado / changuito de la Chola

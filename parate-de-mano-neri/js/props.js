@@ -67,6 +67,8 @@ export function crearProps() {
   SP.tachoRoto = hacer(36, 16, (b) => { b.poli([[0, 4], [28, 0], [36, 12], [4, 16]], c('#5d6670')); b.rect(8, 6, 18, 2, c('#4a525a')); b.poli([[24, 12], [32, 10], [34, 16], [26, 16]], c('#7d8690')); });
   // ítems
   SP.palo = hacer(48, 4, (b) => { b.rect(0, 1, 48, 3, c('#9a6a3a')); b.rect(0, 1, 9, 3, c('#6a4424')); b.px(20, 1, c('#7a5028')); b.px(33, 2, c('#7a5028')); b.rect(46, 1, 2, 3, c('#c8a070')); }); // palo de ≈0,85 m (alcance 46 coincide)
+  SP.faca = hacer(18, 5, (b) => { // faca criolla: mango de madera con virola, hoja con filo brillante y punta
+    b.rect(0, 1, 6, 3, c('#5a3a24')); b.rect(1, 1, 4, 1, c('#7a5232')); b.rect(6, 0, 1, 5, c('#8a8a92')); b.rect(7, 1, 9, 3, c('#b8bec8')); b.rect(7, 1, 9, 1, c('#eef2f8')); b.rect(16, 2, 2, 1, c('#d8dde6')); b.px(17, 1, c('#eef2f8')); b.rect(8, 3, 7, 1, c('#8a909a')); });
   SP.botella = hacer(8, 20, (b) => { b.rect(1, 7, 6, 13, c('#2f7a35')); b.rect(2, 2, 4, 6, c('#2f7a35')); b.rect(2, 0, 4, 2, c('#d8b040')); b.rect(1, 11, 6, 5, c('#f0e6d0')); });
   SP.garrafa = hacer(20, 32, (b) => { b.rect(1, 9, 18, 21, c('#d02a2a')); b.elipse(10, 9, 9, 4, c('#d02a2a')); b.rect(6, 0, 8, 2, c('#888')); b.rect(4, 2, 2, 5, c('#888')); b.rect(14, 2, 2, 5, c('#888')); b.rect(8, 3, 4, 3, c('#c8a040')); b.rect(3, 16, 14, 4, c('#f2f2f2')); b.rect(1, 29, 18, 3, c('#7a1818')); b.rect(3, 12, 2, 14, c('#e84a4a')); }); // garrafa de supergás (≈0,57 m)
   SP.termo = hacer(9, 24, (b) => { b.rect(1, 4, 7, 20, c('#c0c4cc')); b.rect(2, 0, 5, 5, c('#2a2a30')); b.rect(1, 9, 7, 2, c('#6a7080')); b.rect(1, 18, 7, 2, c('#6a7080')); });

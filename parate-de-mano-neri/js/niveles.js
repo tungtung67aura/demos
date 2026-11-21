@@ -43,14 +43,14 @@ export const NIVELES = [
     decor: [{ t: 'cono', x: 700, y: 212 }, { t: 'cono', x: 724, y: 222 }, { t: 'banco', x: 1600, y: 190 }, { t: 'banco', x: 1840, y: 190 }, { t: 'moto', x: 2500, y: 196 }, { t: 'contenedor', x: 3000, y: 192, empuja: true }],
     rompibles: [{ t: 'revistero', x: 2080, y: 198, da: 'billete' }, { t: 'revistero', x: 2160, y: 198, da: 'alfajor' }, { t: 'tacho', x: 460, y: 200, da: 'cano' }, { t: 'maceta', x: 1700, y: 196, da: 'mate' },
       { t: 'maceta', x: 1900, y: 196, da: 'ladrillo' }, { t: 'cajaBiz', x: 2700, y: 260, da: 'chivito' }, { t: 'tacho', x: 3360, y: 200, da: 'palo' }, { t: 'conservadora', x: 2840, y: 262, da: 'choripan' }],
-    items: [{ t: 'garrafa', x: 1240, y: 258 }, { t: 'botella', x: 900, y: 240 }, { t: 'silla', x: 2620, y: 196 }, { t: 'pata', x: 1100, y: 250 }],
+    items: [{ t: 'garrafa', x: 1240, y: 258 }, { t: 'botella', x: 900, y: 240 }, { t: 'faca', x: 1980, y: 246 }, { t: 'silla', x: 2620, y: 196 }, { t: 'pata', x: 1100, y: 250 }],
     perros: [],
     oleadas: [
       { cam: 300, enemigos: [['cuida', 0], ['chorro', 1], ['mati', 3], ['buzo', 0]] },
       { cam: 900, enemigos: [['patova', 1], ['chorro', 0], ['guri', 2], ['mati', 1]], eventos: [{ t: 'bondi', en: 4, linea: 'CA1' }] },
-      { cam: 1520, enemigos: [['cuida', 1], ['chorro', 2], ['guri', 0], ['cacho', 1], ['mati', 0]], eventos: [{ t: 'palomas', en: 1 }] },
+      { cam: 1520, enemigos: [['cuida', 1], ['faca', 0], ['guri', 0], ['cacho', 1], ['mati', 0]], eventos: [{ t: 'palomas', en: 1 }] },
       { cam: 2160, enemigos: [['patova', 0], ['cuida', 0, MINI('EL CUIDA MAYOR')], ['chorro', 1], ['guri', 1], ['buzo', 2]], eventos: [{ t: 'bondi', en: 6, linea: '185' }, { t: 'bondi', en: 16, linea: '121', izq: true }] },
-      { cam: 2780, enemigos: [['patova', 1], ['mozo', 0], ['chorro', 0], ['cuida', 1], ['mati', 2], ['guri', 2]], eventos: [{ t: 'carro', en: 5 }] },
+      { cam: 2780, enemigos: [['patova', 1], ['mozo', 0], ['faca', 1], ['cuida', 1], ['mati', 2], ['guri', 2]], eventos: [{ t: 'carro', en: 5 }] },
       { cam: 9999, jefe: 'guarda', enemigos: [['guarda', 0]] }] },
 
   { id: 'barriosur', num: 4, nombre: 'BARRIO SUR, NOCHE DE LLAMADAS', lugar: 'BARRIO SUR · NOCHE', escena: 'barriosur', hora: 'noche', L: 3600, lejos: 'sur', medio: 'ciudad',
@@ -59,14 +59,14 @@ export const NIVELES = [
     peligros: [{ t: 'fogata', x: 860, y: 194 }, { t: 'fogata', x: 2120, y: 196 }, { t: 'fogata', x: 3150, y: 194 }],
     rompibles: [{ t: 'tacho', x: 640, y: 198, da: 'palo' }, { t: 'cajaBiz', x: 1300, y: 258, da: 'bizcochos' }, { t: 'cajon', x: 1440, y: 262, da: 'botella' }, { t: 'barril', x: 1600, y: 196, da: 'cano' },
       { t: 'tacho', x: 2300, y: 200, da: 'mate' }, { t: 'cajon', x: 2760, y: 262, da: 'botella' }, { t: 'barril', x: 2960, y: 196, da: 'tortafrita' }],
-    items: [{ t: 'ladrillo', x: 520, y: 250 }, { t: 'ladrillo', x: 1700, y: 240 }, { t: 'garrafa', x: 2480, y: 256 }, { t: 'silla', x: 1260, y: 196 }],
+    items: [{ t: 'ladrillo', x: 520, y: 250 }, { t: 'faca', x: 1180, y: 248 }, { t: 'ladrillo', x: 1700, y: 240 }, { t: 'garrafa', x: 2480, y: 256 }, { t: 'silla', x: 1260, y: 196 }],
     perros: [{ x: 1000, y: 254 }],
     oleadas: [
       { cam: 280, enemigos: [['tambor', 0], ['buzo', 1], ['mati', 2], ['chorro', 0]] },
       { cam: 860, enemigos: [['cacho', 0], ['tambor', 1], ['chorro', 1], ['buzo', 3], ['mati', 0]], eventos: [{ t: 'llamadas', en: 2 }] },
-      { cam: 1460, enemigos: [['patova', 0], ['chorro', 2], ['buzo', 0], ['mati', 1], ['guri', 1]], eventos: [{ t: 'apagon', en: 6, dur: 7 }] },
+      { cam: 1460, enemigos: [['patova', 0], ['faca', 0], ['buzo', 0], ['mati', 1], ['guri', 1]], eventos: [{ t: 'apagon', en: 6, dur: 7 }] },
       { cam: 2040, enemigos: [['tambor', 0, MINI('EL PIANO MAYOR', 2.2)], ['tambor', 1], ['cacho', 2], ['chorro', 0], ['buzo', 2]], eventos: [{ t: 'llamadas', en: 3 }] },
-      { cam: 2640, enemigos: [['patova', 1], ['cacho', 1], ['chorro', 1], ['mati', 3], ['guri', 0], ['tambor', 0]], eventos: [{ t: 'apagon', en: 10, dur: 6 }] },
+      { cam: 2640, enemigos: [['patova', 1], ['cacho', 1], ['faca', 2], ['mati', 3], ['guri', 0], ['tambor', 0]], eventos: [{ t: 'apagon', en: 10, dur: 6 }] },
       { cam: 9999, jefe: 'bocha', enemigos: [['bocha', 0]] }] },
 
   { id: 'ciudadvieja', num: 5, nombre: 'CIUDAD VIEJA Y EL MERCADO', lugar: 'CIUDAD VIEJA · DÍA GRIS', escena: 'ciudadvieja', hora: 'gris', L: 3800, lejos: 'puerto', medio: 'ciudad',
@@ -75,14 +75,14 @@ export const NIVELES = [
     peligros: [{ t: 'parrilla', x: 2620, y: 194 }, { t: 'parrilla', x: 3060, y: 194 }, { t: 'parrilla', x: 3480, y: 194 }],
     rompibles: [{ t: 'mesa', x: 690, y: 200, da: 'silla' }, { t: 'mesa', x: 820, y: 210, da: 'mate' }, { t: 'mesa', x: 950, y: 200, da: 'silla' }, { t: 'maceta', x: 1100, y: 196, da: 'alfajor' },
       { t: 'barril', x: 1700, y: 196, da: 'botella' }, { t: 'cajonFruta', x: 2050, y: 262, da: 'naranja' }, { t: 'barril', x: 2480, y: 196, da: 'choripan' }, { t: 'mesa', x: 2860, y: 204, da: 'silla' }, { t: 'conservadora', x: 3260, y: 262, da: 'chivito' }],
-    items: [{ t: 'bandeja', x: 760, y: 250 }, { t: 'cano', x: 1500, y: 240 }, { t: 'botella', x: 1900, y: 252 }, { t: 'silla', x: 2200, y: 200 }, { t: 'corvina', x: 2760, y: 256 }],
+    items: [{ t: 'bandeja', x: 760, y: 250 }, { t: 'faca', x: 2480, y: 246 }, { t: 'cano', x: 1500, y: 240 }, { t: 'botella', x: 1900, y: 252 }, { t: 'silla', x: 2200, y: 200 }, { t: 'corvina', x: 2760, y: 256 }],
     perros: [],
     oleadas: [
       { cam: 300, enemigos: [['mozo', 0], ['chorro', 0], ['mati', 2], ['buzo', 1]] },
       { cam: 900, enemigos: [['mozo', 1], ['cuida', 0], ['patova', 1], ['chorro', 1], ['guri', 2]], eventos: [{ t: 'turistas', en: 3 }] },
-      { cam: 1520, enemigos: [['patova', 0], ['mozo', 0], ['chorro', 2], ['guri', 0], ['cacho', 1]], eventos: [{ t: 'lluvia', en: 0, dur: 30 }] },
+      { cam: 1520, enemigos: [['patova', 0], ['mozo', 0], ['faca', 1], ['guri', 0], ['cacho', 1]], eventos: [{ t: 'lluvia', en: 0, dur: 30 }] },
       { cam: 2120, enemigos: [['mozo', 1, MINI('EL MAÎTRE', 2.6)], ['cuida', 1], ['chorro', 0], ['mati', 1], ['pescador', 1]], eventos: [{ t: 'turistas', en: 5 }] },
-      { cam: 2780, enemigos: [['patova', 1], ['cacho', 0], ['mozo', 0], ['chorro', 1], ['guri', 1], ['pescador', 0]] },
+      { cam: 2780, enemigos: [['patova', 1], ['cacho', 0], ['mozo', 0], ['faca', 0], ['guri', 1], ['pescador', 0]] },
       { cam: 9999, jefe: 'parrillero', enemigos: [['parrillero', 0]] }] },
 
   { id: 'rambla', num: 6, nombre: 'LA RAMBLA EN TORMENTA', lugar: 'RAMBLA · TORMENTA', escena: 'rambla', hora: 'tormenta', L: 3600, lejos: 'mar', medio: 'mar',
@@ -95,9 +95,9 @@ export const NIVELES = [
     oleadas: [
       { cam: 300, enemigos: [['pescador', 0], ['chorro', 1], ['guri', 0], ['mati', 3]] },
       { cam: 900, enemigos: [['patova', 1], ['pescador', 1], ['chorro', 0], ['dona', 0], ['buzo', 2]], eventos: [{ t: 'ola', en: 6 }] },
-      { cam: 1520, enemigos: [['tambor', 1], ['cuida', 1], ['chorro', 2], ['guri', 2], ['mozo', 1], ['cacho', 0]], eventos: [{ t: 'gaviotas', en: 3 }] },
+      { cam: 1520, enemigos: [['tambor', 1], ['cuida', 1], ['faca', 2], ['guri', 2], ['mozo', 1], ['cacho', 0]], eventos: [{ t: 'gaviotas', en: 3 }] },
       { cam: 2140, enemigos: [['pescador', 1, MINI('DON CORVINA', 2.4)], ['patova', 0, MINI('EL HELADERA', 1.6)], ['chorro', 0], ['guri', 1]], eventos: [{ t: 'ola', en: 8 }, { t: 'ola', en: 20 }] },
-      { cam: 2760, enemigos: [['patova', 1], ['pescador', 0], ['tambor', 0], ['chorro', 1], ['mozo', 0], ['cuida', 0], ['mati', 2]], eventos: [{ t: 'gaviotas', en: 4 }, { t: 'ola', en: 12 }] },
+      { cam: 2760, enemigos: [['patova', 1], ['pescador', 0], ['tambor', 0], ['faca', 1], ['mozo', 0], ['cuida', 0], ['mati', 2]], eventos: [{ t: 'gaviotas', en: 4 }, { t: 'ola', en: 12 }] },
       { cam: 9999, jefe: 'capo', enemigos: [['capo', 0]] }] },
 ];
 export const nivelPorId = (id) => NIVELES.find((n) => n.id === id) || NIVELES[0];

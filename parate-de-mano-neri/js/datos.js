@@ -16,6 +16,7 @@ export const ENEMIGOS = {
   chorro: { ia: 'chorro', hp: 30, vel: 108, dmg: 6, reaccion: 0.14, nombres: ['EL RATA', 'LAUCHA', 'PIRAÑA', 'EL FIDEO'], puntos: 320, esquiva: 0.25, peso: 0.8, desc: 'Rapidísimo. Se roba la comida y tu arma; barrida al piso.' },
   patova: { ia: 'patova', hp: 140, noAgarre: true, vel: 36, dmg: 13, reaccion: 0.42, nombres: ['EL ROPERO', 'EL MUELLE', 'TYSON', 'EL HELADERA'], puntos: 800, pesado: true, guardia: true, peso: 2.3, ancho: 15, desc: 'Bloquea las piñas de frente. Te agarra y te revolea.' },
   guri: { ia: 'guri', armaFija: 'gomera', hp: 24, vel: 86, dmg: 5, reaccion: 0.2, nombres: ['EL GURÍ', 'PITUFO', 'CHIQUI', 'EL PEQUE'], puntos: 300, peso: 0.7, ancho: 8, desc: 'Gomera de lejos; si te acercás, se escapa.' },
+  faca: { ia: 'faca', hp: 46, vel: 80, dmg: 9, reaccion: 0.22, nombres: ['EL FACA', 'TAJITO', 'EL CORTE', 'NAVAJA'], puntos: 420, armaFija: 'faca', suelta: true, desc: 'Anda con faca: brilla la hoja y te tira el tajo o el puntazo. El corte sangra.' },
   cuida: { ia: 'cuida', hp: 48, vel: 58, dmg: 8, reaccion: 0.24, nombres: ['EL CUIDA', 'FRANELA', 'EL CHALECO', 'JEFE'], puntos: 380, armaFija: 'palo', suelta: true, desc: 'Cuidacoches con palo: barre de lejos.' },
   dona: { ia: 'dona', hp: 52, vel: 50, dmg: 7, reaccion: 0.28, nombres: ['DOÑA ROSA', 'DOÑA TERE', 'DOÑA BETTY', 'DOÑA NELLY'], puntos: 380, armaFija: 'escoba', suelta: true, desc: 'Escoba larga y naranjas en bolsa.' },
   tambor: { ia: 'tambor', hp: 54, vel: 46, dmg: 8, reaccion: 0.3, nombres: ['EL PIANO', 'EL CHICO', 'EL REPIQUE'], puntos: 500, desc: 'Toca y los demás se agrandan. Bajalo primero.' },
@@ -52,6 +53,8 @@ export const ATQ = {
   e_arrebato: { anim: 'agarra', ini: 0.14, act: 0.1, rec: 0.25, dmg: 0.3, x: [0, 34], kb: 20, stun: 0.25, son: 'mov.arrebato', hs: 0.04, roba: true },
   e_agarre: { anim: 'agarra', ini: 0.42, act: 0.16, rec: 0.6, dmg: 0, x: [0, 34], kb: 0, son: 'mov.agarre', hs: 0.05, aviso: true, agarre: true, dash: 90 },
   e_barre: { anim: 'golpe', ini: 0.3, act: 0.1, rec: 0.42, dmg: 1, x: [10, 62], kb: 110, stun: 0.45, son: 'arma.escoba', hs: 0.07, arma: true },
+  e_facazo: { anim: 'golpe', ini: 0.44, act: 0.08, rec: 0.42, dmg: 1.0, x: [6, 40], kb: 60, stun: 0.4, son: 'arma.faca', hs: 0.07, arma: true, aviso: true, corta: true },
+  e_puntazo: { anim: 'pina2', ini: 0.58, act: 0.2, rec: 0.55, dmg: 1.25, x: [4, 38], kb: 110, tumba: true, vz: 90, son: 'arma.faca', hs: 0.09, arma: true, aviso: true, corta: true, dash: 160 },
   e_palazo: { anim: 'golpe', ini: 0.34, act: 0.1, rec: 0.45, dmg: 1.1, x: [8, 54], kb: 120, tumba: true, vz: 110, son: 'arma.palo', hs: 0.08, arma: true, aviso: true },
   e_tambor: { anim: 'tamborOnda', ini: 0.3, act: 0.08, rec: 0.5, dmg: 0.9, x: [-44, 44], kb: 140, tumba: true, vz: 120, son: 'enem.tambor.golpe', hs: 0.08, giro: true },
   // jefes
@@ -81,6 +84,7 @@ export const ATQ = {
 // deja: lo que queda al romperse. rompe: se hace añicos (vidrio). soloTiro: no se pega con ella, se tira (patada o piña).
 export const ITEMS = {
   palo: { nombre: 'PALO', arma: true, dmg: 12, alcance: 46, dur: 8, vel: 1, kb: 95, son: 'arma.palo', tiro: 14, astilla: '#9a6a3a' },
+  faca: { nombre: 'FACA', arma: true, dmg: 11, alcance: 34, dur: 6, vel: 1.3, kb: 50, son: 'arma.faca', tiro: 18, corta: true, metal: true },
   botella: { nombre: 'BOTELLA', arma: true, dmg: 9, alcance: 36, dur: 2, vel: 1.15, son: 'arma.botella', tiro: 12, rompe: true },
   termo: { nombre: 'TERMO', arma: true, dmg: 10, alcance: 38, dur: 14, vel: 1.05, son: 'arma.termo', tiro: 12, astilla: '#c0c4cc' },
   garrafa: { nombre: 'GARRAFA', arma: true, soloTiro: true, dmg: 0, alcance: 0, dur: 1, tiro: 22, explota: true },
@@ -128,6 +132,7 @@ export const FRASES = {
   chorro: ['¡ME LO LLEVO!', '¡ESTO ES MÍO, BO!', '¡NI ME VISTE!', '¡CORRÉ, GIL!'],
   patova: ['¡NO PASÁS!', '¡HOY NO ENTRÁS!', '¡CON ESAS CHAMPIONES NO!', '¡LISTA CERRADA!'],
   guri: ['¡TOMÁ, VIEJO!', '¡NO ME AGARRÁS!', '¡LE DIGO A MI MADRE!', '¡PUNTERÍA, BO!'],
+  faca: ['¡TE MARCO, GIL!', '¡QUEDATE QUIETITO!', '¡MIRÁ LO QUE TENGO!', '¡TE ABRO COMO CHORIZO!'],
   cuida: ['¡TE LO CUIDO, JEFE!', '¡LA VOLUNTAD, MAESTRO!', '¡ACÁ NO ESTACIONÁS!', '¡DALE QUE TE LO LAVO!'],
   dona: ['¡ATORRANTE!', '¡QUÉ JUVENTUD!', '¡A MI EDAD!', '¡TE VOY A BARRER!', '¡LLAMO A TU MADRE!'],
   tambor: ['¡DALE QUE SUENA!', '¡CHICO, REPIQUE Y PIANO!', '¡QUE NO PARE!', '¡ESTO ES CANDOMBE!'],
