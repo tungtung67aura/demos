@@ -1,85 +1,97 @@
-// Audio sintetizado con WebAudio: golpes, efectos y un loop de candombe (chico, repique y piano + bajo).
-let ctx = null, master = null, musGain = null, sfxGain = null, ruidoBuf = null, musicaOn = true, sfxOn = true, prox = 0, paso = 0, timerMus = null;
+// SISTEMA CENTRAL DE AUDIO. El juego sólo usa IDs (js/audio-ids.js); los archivos se asignan en audio/manifest.js.
+//   sonar(id, {x, vol, tono})  efectos, golpes, voces, frases (x: posición en pantalla 0..1 para el paneo)
+//   musica(id)                 cambia la música con fundido (null = silencio)
+//   ambiente(id)               loop ambiental del nivel (null = nada)
+//   voz(personaje, evento)     'voz.<personaje>.<evento>' (si no hay archivo, nada)
+//   frase(texto)               la voz del globo de diálogo ('frase.<slug>')
+// Archivos faltantes o que el navegador no decodifica: se marcan una vez y se ignoran (sin errores, sin reintentos).
+import { CATALOGO, slug } from './audio-ids.js';
+import { ARCHIVOS, AJUSTES } from '../audio/manifest.js';
+import { sinteIniciar, sinteSfx, sinteMusica } from './audio-sinte.js';
+
+const BASE = new URL('../audio/', import.meta.url).href;
+let ctx = null, master = null, buses = {}, musicaOn = true, efectosOn = true;
+const bufs = new Map(); // id -> { estado: 'cargando'|'ok'|'falta', lista: [AudioBuffer] }
+const ultimo = new Map(); // id -> tiempo del último disparo (anti metralleta)
+const activos = { voces: 0 };
+let musActual = null, ambActual = null; // { id, src, gain }
+
 export function iniciarAudio() {
   if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
   const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
-  ctx = new AC(); master = ctx.createGain(); master.gain.value = 0.8; master.connect(ctx.destination);
+  ctx = new AC(); master = ctx.createGain(); master.gain.value = AJUSTES.volumen.general; master.connect(ctx.destination);
   const comp = ctx.createDynamicsCompressor(); comp.connect(master);
-  sfxGain = ctx.createGain(); sfxGain.gain.value = 0.9; sfxGain.connect(comp);
-  musGain = ctx.createGain(); musGain.gain.value = 0.32; musGain.connect(comp);
-  ruidoBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate); const d = ruidoBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  for (const k of ['musica', 'efectos', 'voces', 'ambiente']) { const g = ctx.createGain(); g.gain.value = AJUSTES.volumen[k]; g.connect(comp); buses[k] = g; }
+  if (!musicaOn) buses.musica.gain.value = 0;
+  sinteIniciar(ctx, buses.efectos, buses.musica);
+  // los efectos cortos se decodifican de entrada (son chicos); música y ambiente cuando se piden
+  for (const id in ARCHIVOS) { const c = CATALOGO[id]; if (c && c.cat !== 'musica' && c.cat !== 'ambiente' && c.cat !== 'frases') cargar(id); }
+  if (pendienteMus) { const m = pendienteMus; pendienteMus = null; musica(m); }
+  if (pendienteAmb) { const a = pendienteAmb; pendienteAmb = null; ambiente(a); }
 }
 export function audioOk() { return !!ctx; }
-export function setMusica(v) { musicaOn = v; if (musGain) musGain.gain.value = v ? 0.32 : 0; }
-export function setSfx(v) { sfxOn = v; if (sfxGain) sfxGain.gain.value = v ? 0.9 : 0; }
+export function setMusica(v) { musicaOn = v; if (buses.musica) buses.musica.gain.value = v ? AJUSTES.volumen.musica : 0; }
+export function setSfx(v) { efectosOn = v; }
 export function suspender(s) { if (!ctx) return; if (s) ctx.suspend(); else ctx.resume(); }
 
-function ruido(t, dur, f, q = 1, vol = 0.5, tipo = 'bandpass', dest = sfxGain, fFin = null) {
-  const s = ctx.createBufferSource(); s.buffer = ruidoBuf; s.playbackRate.value = 0.8 + Math.random() * 0.4;
-  const fl = ctx.createBiquadFilter(); fl.type = tipo; fl.frequency.setValueAtTime(f, t); if (fFin) fl.frequency.exponentialRampToValueAtTime(fFin, t + dur); fl.Q.value = q;
-  const g = ctx.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  s.connect(fl); fl.connect(g); g.connect(dest); s.start(t, Math.random() * 0.5); s.stop(t + dur + 0.02);
+function decodificar(ab) { return new Promise((res, rej) => { try { const p = ctx.decodeAudioData(ab, res, rej); if (p && p.then) p.then(res, rej); } catch (e) { rej(e); } }); }
+async function bajar(ruta) { const r = await fetch(BASE + ruta); if (!r.ok) throw new Error('falta'); return decodificar(await r.arrayBuffer()); }
+// carga todas las variantes de un ID; si un formato falla, prueba el alternativo del mismo nombre (.m4a / .mp3)
+function cargar(id) {
+  let b = bufs.get(id); if (b) return b; const rutas = ARCHIVOS[id];
+  b = { estado: rutas && rutas.length ? 'cargando' : 'falta', lista: [] }; bufs.set(id, b);
+  if (b.estado === 'falta' || !ctx) return b;
+  const grupos = new Map(); for (const r of rutas) { const base = r.replace(/\.[a-z0-9]+$/i, ''); if (!grupos.has(base)) grupos.set(base, []); grupos.get(base).push(r); }
+  Promise.all([...grupos.values()].map(async (alts) => { for (const r of alts) { try { return await bajar(r); } catch (e) { /* probar el siguiente formato */ } } return null; }))
+    .then((l) => { b.lista = l.filter(Boolean); b.estado = b.lista.length ? 'ok' : 'falta'; });
+  return b;
 }
-function tonoS(t, dur, f0, f1, vol = 0.4, tipo = 'sine', dest = sfxGain) {
-  const o = ctx.createOscillator(); o.type = tipo; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
-  const g = ctx.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  o.connect(g); g.connect(dest); o.start(t); o.stop(t + dur + 0.02);
-}
-const ult = {};
-export function sfx(n, fuerza = 1) {
-  if (!ctx || !sfxOn) return; const t = ctx.currentTime;
-  if (ult[n] && t - ult[n] < 0.025) return; ult[n] = t;
-  switch (n) {
-    case 'aire': ruido(t, 0.09, 1800, 0.8, 0.12, 'bandpass', sfxGain, 600); break;
-    case 'pina': tonoS(t, 0.09, 180, 60, 0.55 * fuerza); ruido(t, 0.06, 2200, 0.7, 0.35 * fuerza, 'bandpass'); break;
-    case 'patada': tonoS(t, 0.13, 140, 45, 0.7 * fuerza); ruido(t, 0.08, 1200, 0.8, 0.4, 'bandpass'); break;
-    case 'fuerte': tonoS(t, 0.22, 120, 35, 0.9); ruido(t, 0.16, 900, 0.6, 0.55, 'lowpass', sfxGain, 200); break;
-    case 'piso': tonoS(t, 0.2, 90, 30, 0.7); ruido(t, 0.18, 400, 0.6, 0.4, 'lowpass'); break;
-    case 'botella': for (let i = 0; i < 4; i++) tonoS(t + i * 0.02, 0.12, 2400 + Math.random() * 2000, 1800, 0.12, 'triangle'); ruido(t, 0.18, 5000, 0.8, 0.35, 'highpass'); break;
-    case 'madera': tonoS(t, 0.07, 420, 200, 0.4, 'triangle'); ruido(t, 0.12, 900, 2, 0.4); break;
-    case 'metal': tonoS(t, 0.25, 900, 880, 0.18, 'square'); tonoS(t, 0.3, 1330, 1300, 0.12, 'triangle'); ruido(t, 0.1, 3000, 3, 0.3); break;
-    case 'explosion': tonoS(t, 0.5, 100, 25, 1.0); ruido(t, 0.7, 1200, 0.5, 0.9, 'lowpass', sfxGain, 80); break;
-    case 'agarra': ruido(t, 0.08, 700, 1, 0.3); break;
-    case 'come': [523, 659, 784, 1046].forEach((f, i) => tonoS(t + i * 0.06, 0.1, f, f, 0.18, 'square')); break;
-    case 'item': tonoS(t, 0.08, 660, 990, 0.2, 'square'); break;
-    case 'plata': [988, 1318].forEach((f, i) => tonoS(t + i * 0.07, 0.12, f, f, 0.18, 'square')); break;
-    case 'especial': tonoS(t, 0.4, 200, 900, 0.3, 'sawtooth'); ruido(t, 0.4, 600, 1, 0.4, 'bandpass', sfxGain, 3000); break;
-    case 'dale': [784, 784, 1046].forEach((f, i) => tonoS(t + i * 0.1, 0.09, f, f, 0.2, 'square')); break;
-    case 'ko': tonoS(t, 0.6, 300, 60, 0.4, 'sawtooth'); break;
-    case 'bocina': tonoS(t, 0.5, 330, 330, 0.25, 'sawtooth'); tonoS(t, 0.5, 415, 415, 0.2, 'sawtooth'); break;
-    case 'perro': tonoS(t, 0.08, 700, 400, 0.25, 'square'); tonoS(t + 0.12, 0.08, 700, 400, 0.25, 'square'); break;
-    case 'menu': tonoS(t, 0.05, 880, 880, 0.12, 'square'); break;
-    case 'pausa': tonoS(t, 0.1, 600, 300, 0.15, 'square'); break;
+const BUS = { voces: 'voces', frases: 'voces', musica: 'musica', ambiente: 'ambiente' };
+export function sonar(id, o = {}) {
+  if (!ctx || !efectosOn) return; const c = CATALOGO[id]; if (!c) return;
+  const t = ctx.currentTime; const u = ultimo.get(id); if (u !== undefined && t - u < 0.03) return; ultimo.set(id, t);
+  const b = ARCHIVOS[id] ? cargar(id) : null;
+  if (b && b.estado === 'ok') {
+    const bus = BUS[c.cat] || 'efectos'; if (bus === 'voces' && activos.voces >= 2) return;
+    const src = ctx.createBufferSource(); src.buffer = b.lista[(Math.random() * b.lista.length) | 0];
+    src.playbackRate.value = (o.tono || 1) * (bus === 'efectos' ? 0.95 + Math.random() * 0.1 : 1);
+    const g = ctx.createGain(); g.gain.value = (o.vol || 1) * (AJUSTES.volumenId[id] ?? 1); let nodo = g;
+    if (o.x !== undefined && ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = Math.max(-0.8, Math.min(0.8, (o.x - 0.5) * 1.4)); g.connect(p); nodo = p; }
+    src.connect(g); nodo.connect(buses[bus]);
+    if (bus === 'voces') { activos.voces++; src.onended = () => { activos.voces--; }; }
+    src.start(t); return;
   }
+  if ((!b || b.estado === 'falta') && c.sinte && AJUSTES.sinteDeRespaldo && c.cat !== 'musica') sinteSfx(c.sinte, o.vol || 1);
 }
+export function voz(quien, ev, o) { const id = `voz.${quien}.${ev}`; if (ARCHIVOS[id]) sonar(id, o); }
+export function frase(txt, o) { const id = 'frase.' + slug(txt); if (ARCHIVOS[id]) { cargar(id); sonar(id, o); } }
 
-// --------- MÚSICA: candombe ---------
-// 16 semicorcheas por compás. chico: ostinato agudo; repique: llamadas; piano: base grave. + bajo y un riff.
-const BPM = 126; const SEMI = 60 / BPM / 4;
-const CHICO = [0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1].map((v, i) => i % 4 === 1 ? 0 : v || (i % 4 === 0 ? 0.6 : 0));
-const MADERA = [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0]; // clave del candombe (madera)
-const PIANO = [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0];
-const REPI = [0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0];
-const BAJO = [45, 0, 0, 45, 0, 0, 52, 0, 43, 0, 0, 43, 0, 0, 50, 0, 41, 0, 0, 41, 0, 0, 48, 0, 40, 0, 0, 40, 0, 47, 0, 40];
-const RIFF = [69, 0, 72, 0, 74, 0, 72, 69, 0, 0, 67, 0, 69, 0, 0, 0, 65, 0, 69, 0, 72, 0, 69, 65, 0, 0, 64, 0, 67, 0, 0, 0];
-const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
-let modo = 'nivel';
-function tic() {
-  if (!ctx) return;
-  while (prox < ctx.currentTime + 0.12) {
-    const i = paso % 16, k = paso % 32, t = prox, bar = Math.floor(paso / 16);
-    if (musicaOn) {
-      if (CHICO[i]) ruido(t, 0.05, 2600, 3, 0.18 * CHICO[i], 'bandpass', musGain);
-      if (MADERA[i]) tonoS(t, 0.04, 1600, 1500, 0.08, 'square', musGain);
-      if (PIANO[i]) { tonoS(t, 0.25, 95, 55, 0.6, 'sine', musGain); }
-      if (REPI[i] && (bar % 2 === 1 || modo === 'jefe')) { tonoS(t, 0.1, 260, 160, 0.35, 'triangle', musGain); ruido(t, 0.06, 1800, 2, 0.15, 'bandpass', musGain); }
-      if (BAJO[k]) { const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = mtof(BAJO[k] - 12 + (modo === 'jefe' ? -2 : 0)); const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 500; const g = ctx.createGain(); g.gain.setValueAtTime(0.14, t); g.gain.exponentialRampToValueAtTime(0.001, t + SEMI * 2.5); o.connect(f); f.connect(g); g.connect(musGain); o.start(t); o.stop(t + SEMI * 3); }
-      if (RIFF[k] && bar % 4 >= 2 && modo !== 'menu') { const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = mtof(RIFF[k] + (modo === 'jefe' ? -2 : 0)); const g = ctx.createGain(); g.gain.setValueAtTime(0.045, t); g.gain.exponentialRampToValueAtTime(0.001, t + SEMI * 1.8); o.connect(g); g.connect(musGain); o.start(t); o.stop(t + SEMI * 2); }
-    }
-    prox += SEMI; paso++;
-  }
+// --- loops (música y ambiente) con fundido
+let pendienteMus = null, pendienteAmb = null;
+function loop(id, bus, actual, fundido) {
+  if (actual) { const a = actual; try { a.gain.gain.setTargetAtTime(0, ctx.currentTime, fundido / 3); a.src.stop(ctx.currentTime + fundido); } catch (e) { /* ya parado */ } }
+  if (!id || !ARCHIVOS[id]) return null;
+  const n = { id, src: null, gain: ctx.createGain() }; n.gain.gain.value = 0; n.gain.connect(buses[bus]);
+  const b = cargar(id);
+  const arrancar = () => { if (n.muerto || b.estado !== 'ok') return; const s = ctx.createBufferSource(); s.buffer = b.lista[0]; s.loop = CATALOGO[id] ? CATALOGO[id].loop !== false : true; s.connect(n.gain); s.start(); n.src = s;
+    n.gain.gain.setTargetAtTime(AJUSTES.volumenId[id] ?? 1, ctx.currentTime, fundido / 3); };
+  if (b.estado === 'ok') arrancar(); else { const espera = setInterval(() => { if (b.estado !== 'cargando') { clearInterval(espera); arrancar(); } }, 100); }
+  return n;
 }
-export function musica(m) {
-  if (!ctx) return; modo = m;
-  if (!timerMus) { prox = ctx.currentTime + 0.1; paso = 0; timerMus = setInterval(tic, 40); }
+export function musica(id) {
+  if (!ctx) { pendienteMus = id; return; }
+  if (musActual && musActual.id === id) return; if (!musActual && id === musSinte) return;
+  if (musActual) musActual.muerto = true;
+  musActual = loop(id, 'musica', musActual, 0.6);
+  // respaldo: el candombe sintetizado original (sólo si ese ID no tiene archivo)
+  const c = id && CATALOGO[id]; const sin = !musActual && c && c.sinte && AJUSTES.sinteDeRespaldo ? c.sinte : null;
+  musSinte = sin ? id : null; sinteMusica(sin);
 }
+let musSinte = null;
+export function ambiente(id) {
+  if (!ctx) { pendienteAmb = id; return; }
+  if (ambActual && ambActual.id === id) return; if (ambActual) ambActual.muerto = true;
+  ambActual = loop(id, 'ambiente', ambActual, 1.2);
+}
+// para pruebas / AUDIO.md
+export const __audio = { estado: () => ({ cargados: [...bufs].filter(([, b]) => b.estado === 'ok').length, faltan: [...bufs].filter(([, b]) => b.estado === 'falta').length, ids: Object.keys(CATALOGO).length }) };

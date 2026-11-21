@@ -22,7 +22,7 @@ const NEG = rgba32(CONTORNO);
 //  bn / bf: brazo cercano (guardia al mentón) / lejano (el de la mano adelantada).
 //     { m: [x, y] } = cinemática inversa del puño desde el hombro (el codo cae abajo/atrás, nunca al revés)
 //     { fk: [hombro, codo] } = ángulos (hombro desde abajo, + adelante; el codo sólo flexiona hacia adelante, 0..2,6)
-const G0 = { g: 0.55, x: 0, y: -0.3, lean: 0.12, enc: 0.06, head: -0.06, pn: [-0.7, 0, 0], pf: [0.72, 0, 0], bn: { m: [0.84, 0.04] }, bf: { m: [1.24, 0.12] } };
+const G0 = { g: 0.55, x: 0, y: -0.3, lean: 0.12, enc: 0.06, head: -0.06, pn: [-0.7, 0, 0], pf: [0.72, 0, 0], bn: { m: [0.9, -0.2] }, bf: { m: [1.3, -0.04] } };
 const P = (o) => Object.assign({}, G0, o);
 function mezcla(a, b, t) {
   if (typeof a === 'number' && typeof b === 'number') return a + (b - a) * t;
@@ -37,10 +37,10 @@ const Q0 = P({});
 const ARMA = { m: [0.5, 0.02] }; // palo/botella en la mano cercana, a la altura del pecho, apuntando arriba-adelante
 const caminar = (arma) => { const r = []; for (let i = 0; i < 8; i++) { const th = (i / 8) * PI * 2, c = C(th);
   // pie: medio ciclo apoyado (va hacia atrás respecto de la pelvis) y medio en el aire (punta abajo al despegar, talón al apoyar)
-  const pie = (ph) => { const x = 0.62 * C(ph), sn = -S(ph), alza = 0.32 * Math.max(0, sn); return [x, alza, alza > 0.01 ? (C(ph) < 0 ? -0.55 : 0.22) * sn : 0]; };
+  const pie = (ph) => { const x = 0.7 * C(ph), sn = -S(ph), alza = 0.5 * Math.max(0, sn); /* la pierna que pasa se levanta y dobla: no se esconde detrás de la otra */ return [x, alza, alza > 0.01 ? (C(ph) < 0 ? -0.55 : 0.22) * sn : 0]; };
   r.push(P({ g: 0.5, y: -0.16 - 0.12 * c * c, lean: 0.14, head: -0.04 + 0.02 * c, pn: pie(th), pf: pie(th + PI),
     bn: arma ? ARMA : { m: [0.76 - 0.16 * c, 0.0] }, bf: { m: [1.12 + 0.16 * c, 0.06] } })); } return r; };
-const respirar = (arma) => [0, 1, 2, 1].map((i) => P({ y: -0.3 - i * 0.04, enc: 0.06 + i * 0.01, bn: arma ? ARMA : { m: [0.84, 0.04 - i * 0.04] }, bf: { m: [1.24, 0.12 - i * 0.04] } }));
+const respirar = (arma) => [0, 1, 2, 1].map((i) => P({ y: -0.3 - i * 0.04, enc: 0.06 + i * 0.01, bn: arma ? ARMA : { m: [0.9, -0.2 - i * 0.03] }, bf: { m: [1.3, -0.04 - i * 0.03] } })); // puños a la altura del pecho/mentón: la cara queda a la vista
 const ataque = (a, g, r1) => [a, g, r1, mezclaPose(r1, Q0, 0.55)];
 const piernaAtras = { pn: [-0.95, 0.12, -0.4] }; // talón de atrás levantado al rotar la cadera
 export const POSES = {
@@ -98,11 +98,32 @@ export const POSES = {
   junta: [P({ y: -0.9, lean: 0.55, bn: { m: [0.9, -1.3] }, bf: { m: [1.0, -1.2] }, pn: [-0.5, 0, 0], pf: [0.6, 0, 0], mano: 'abierta' }),
     P({ y: -1.3, lean: 0.8, enc: 0.1, bn: { m: [1.0, -1.6] }, bf: { m: [1.1, -1.5] }, pn: [-0.5, 0, 0], pf: [0.6, 0, 0], mano: 'abierta' })],
   festeja: [P({ y: -0.15, bn: { fk: [3.0, 0.15] }, bf: { m: [0.4, -0.3] }, head: -0.12, cara: 'feliz' }), P({ y: -0.25, bn: { fk: [2.75, 0.6] }, bf: { m: [0.4, -0.35] }, head: -0.06, cara: 'feliz' })],
+  // barrida al ras del piso (el chorro): se agacha, se tira con la pierna estirada, se desliza
+  barrida: [P({ y: -0.8, lean: 0.4, enc: 0.1, g: 0.5, bn: { m: [0.7, -0.5] }, bf: { m: [0.9, -0.4] }, pn: [-0.6, 0, 0], pf: [0.7, 0, 0], cara: 'enojo' }),
+    P({ alto: 0.62, lean: -0.95, head: 0.25, pn: { fk: [1.62, -0.05, -0.5] }, pf: { fk: [0.6, -1.9, -0.2] }, bn: { fk: [-1.2, 0.3] }, bf: { fk: [-0.9, 0.5] }, cara: 'grito' }),
+    P({ alto: 0.6, lean: -0.9, head: 0.2, pn: { fk: [1.55, -0.1, -0.5] }, pf: { fk: [0.7, -1.8, -0.2] }, bn: { fk: [-1.3, 0.3] }, bf: { fk: [-1.0, 0.5] }, cara: 'enojo' }),
+    P({ y: -0.7, lean: 0.3, bn: { m: [0.8, -0.3] }, bf: { m: [1.0, -0.2] }, cara: 'enojo' })],
+  // golpe al tambor (onda): levanta los dos brazos y descarga
+  tamborOnda: [P({ y: -0.24, lean: -0.12, head: -0.15, bn: { fk: [2.7, 0.5] }, bf: { fk: [2.5, 0.6] }, cara: 'grito' }),
+    P({ y: -0.6, lean: 0.42, enc: 0.12, bn: { m: [1.0, -0.62] }, bf: { m: [1.2, -0.56] }, ...piernaAtras, pf: [0.6, 0, 0], cara: 'grito' }),
+    P({ y: -0.56, lean: 0.36, bn: { m: [1.0, -0.5] }, bf: { m: [1.2, -0.46] }, cara: 'enojo' }), P({ y: -0.4, lean: 0.2, bn: { m: [0.9, -0.3] }, bf: { m: [1.2, -0.2] }, cara: 'enojo' })],
+  // empuja (el changuito de Doña Chola): brazos adelante abajo, cuerpo inclinado, paso largo
+  empuja: [P({ y: -0.4, lean: 0.3, x: 0.06, bn: { m: [1.3, -0.42] }, bf: { m: [1.5, -0.36] }, pn: [-0.9, 0, 0], pf: [0.5, 0, 0], cara: 'enojo', mano: 'abierta' }),
+    P({ y: -0.46, lean: 0.46, x: 0.12, bn: { m: [1.45, -0.46] }, bf: { m: [1.62, -0.4] }, pn: [-1.05, 0.1, -0.3], pf: [0.62, 0, 0], cara: 'grito', mano: 'abierta' }),
+    P({ y: -0.46, lean: 0.46, x: 0.12, bn: { m: [1.45, -0.46] }, bf: { m: [1.62, -0.4] }, pn: [0.4, 0.3, 0.2], pf: [-0.7, 0, 0], cara: 'grito', mano: 'abierta' }),
+    P({ y: -0.36, lean: 0.24, bn: { m: [1.2, -0.36] }, bf: { m: [1.4, -0.3] }, cara: 'enojo', mano: 'abierta' })],
+  // gomera (el gurí): estira el brazo lejano y tira del elástico con el cercano
+  apunta: [P({ y: -0.3, lean: -0.04, bf: { m: [1.95, 0.5] }, bn: { m: [0.9, 0.48] }, pn: [-0.8, 0, 0], pf: [0.6, 0, 0], cara: 'enojo' }),
+    P({ y: -0.32, lean: -0.1, bf: { m: [2.0, 0.5] }, bn: { m: [0.25, 0.42] }, pn: [-0.8, 0, 0], pf: [0.6, 0, 0], cara: 'enojo' }),
+    P({ y: -0.3, lean: 0.06, bf: { m: [1.95, 0.48] }, bn: { m: [1.2, 0.3] }, pn: [-0.8, 0, 0], pf: [0.6, 0, 0], cara: 'grito', mano: 'abierta' }),
+    P({ y: -0.3, lean: 0.06, bf: { m: [1.6, 0.3] }, bn: { m: [1.0, 0.1] }, cara: 'enojo' })],
+  // guardia cerrada (el patova, el Bocha, el Capo con paraguas): antebrazos delante del pecho, la cara asoma por arriba
+  bloquea: [P({ y: -0.38, lean: 0.02, g: 0.6, bn: { m: [0.9, 0.26] }, bf: { m: [1.06, 0.3] }, pn: [-0.82, 0, 0], pf: [0.6, 0, 0], cara: 'enojo' })],
   agarrado: [P({ y: -0.45, lean: 0.45, enc: 0.15, head: 0.25, bn: { m: [0.6, -0.6] }, bf: { m: [0.8, -0.5] }, pn: [-0.5, 0, 0], pf: [0.5, 0, 0], cara: 'dolor' })],
 };
 // levanta: 4 cuadros (sentado, en cuatro patas, rodilla, parándose)
 // fases por cuadro de ataque: a = arranque (anticipación), g = golpe activo, r = recuperación
-export const FASES = { pina1: 'agrr', pina2: 'agrr', pina3: 'agrr', patada: 'agrr', golpe: 'agrr' };
+export const FASES = { pina1: 'agrr', pina2: 'agrr', pina3: 'agrr', patada: 'agrr', golpe: 'agrr', barrida: 'aggr', tamborOnda: 'agrr', empuja: 'aggr', apunta: 'aagr' };
 // elige el cuadro de un ataque según el tiempo y las fases
 export function cuadroAtaque(anim, t, A) {
   const f = FASES[anim]; if (!f) return t < A.ini ? 0 : t < A.ini + A.act + A.rec * 0.4 ? 1 : 2;
@@ -124,6 +145,34 @@ export const DEFS = {
   cacho: { nombre: 'CACHO', piel: '#e6a27c', pelo: '#2a1a12', peinado: 'rapado', escala: 1.0, ancho: 1.4, panza: 13, papada: true, cachetes: true, ceno: true, mandibula: 1.2, barba: '#4a3022', barbaCorta: true, ropa: { cabeza: 'gorraCAP', arriba: 'campera', abajo: 'depNegro', calzado: 'zapaNegra' } },
   tano: { nombre: 'EL TANO', piel: '#d8986c', pelo: '#15100c', peinado: 'engominado', bigote: '#15100c', lentes: true, cadena: true, escala: 1.12, ancho: 1.42, panza: 6, ceno: true, mandibula: 1.25,
     ropa: { cabeza: 'nada', arriba: 'saco', abajo: 'vestir', calzado: 'zapatos' } },
+  // enemigos nuevos: cada uno con contextura, cara y ropa de oficio propias
+  chorro: { nombre: 'EL RATA', piel: '#c8946c', pelo: '#1e1410', peinado: 'flequillo', escala: 0.93, ancho: 0.78, flaco: true, ceno: true, mandibula: 0.88, barba: '#2a1a12', barbaCorta: true,
+    ropa: { cabeza: 'capuchaGris', arriba: 'canguroNegro', abajo: 'depGris', calzado: 'zapaRoja' } },
+  patova: { nombre: 'EL ROPERO', piel: '#b88058', pelo: '#120c0a', peinado: 'pelado', escala: 1.16, ancho: 1.6, musculo: 1.3, mandibula: 1.35, ceno: true, cuelloAncho: true, barba: '#1e1410', barbaCorta: true,
+    ropa: { cabeza: 'nada', arriba: 'remeraPatova', abajo: 'jeanOscuro', calzado: 'zapatos' } },
+  guri: { nombre: 'EL GURÍ', piel: '#e8b088', pelo: '#3a2416', peinado: 'rulos', escala: 0.8, ancho: 0.78, flaco: true, mandibula: 0.8, cachetes: true,
+    ropa: { cabeza: 'gorraRoja', arriba: 'celeste', abajo: 'shortAzul', calzado: 'zapaGris' } },
+  cuida: { nombre: 'EL CUIDA', piel: '#c48a62', pelo: '#2a2018', peinado: 'corto', escala: 1.0, ancho: 1.06, ceno: true, bigote: '#2a2018', mandibula: 1.05,
+    ropa: { cabeza: 'gorraNegra', arriba: 'chalecoFluo', abajo: 'jean', calzado: 'botitas' } },
+  dona: { nombre: 'DOÑA ROSA', piel: '#e8b494', pelo: '#c8c4cc', peinado: 'rodete', escala: 0.9, ancho: 1.12, panza: 7, mujer: true, mandibula: 0.95, pestanas: true, cachetes: true,
+    ropa: { cabeza: 'nada', arriba: 'blusaFlores', abajo: 'pollera', calzado: 'pantuflas' } },
+  tambor: { nombre: 'EL PIANO', piel: '#7a4a32', pelo: '#120c0a', peinado: 'rapado', escala: 1.02, ancho: 1.12, musculo: 1.1, mandibula: 1.1,
+    ropa: { cabeza: 'nada', arriba: 'comparsa', abajo: 'vestirBlanco', calzado: 'zapaNegra' } },
+  mozo: { nombre: 'EL MOZO', piel: '#e0a882', pelo: '#1a120e', peinado: 'engominado', bigote: '#1a120e', escala: 0.98, ancho: 0.9, flaco: true, mandibula: 1.0,
+    ropa: { cabeza: 'nada', arriba: 'camisaMozo', abajo: 'vestir', calzado: 'zapatos' } },
+  pescador: { nombre: 'EL PESCA', piel: '#c88a5e', pelo: '#8a8a8a', peinado: 'corto', escala: 1.0, ancho: 1.18, panza: 8, barba: '#9a9a9a', mandibula: 1.1, cachetes: true,
+    ropa: { cabeza: 'pilusa', arriba: 'lenadora', abajo: 'botas', calzado: 'botasGoma' } },
+  // jefes
+  chola: { nombre: 'DOÑA CHOLA', piel: '#d8a07a', pelo: '#3a2a22', peinado: 'rodete', escala: 1.06, ancho: 1.5, panza: 12, mujer: true, mandibula: 1.12, pestanas: true, cachetes: true, papada: true, ceno: true,
+    ropa: { cabeza: 'panuelo', arriba: 'blusaChola', abajo: 'polleraChola', calzado: 'zapatos' } },
+  guarda: { nombre: 'EL GUARDA', piel: '#d49a72', pelo: '#2a2018', peinado: 'corto', bigote: '#2a2018', escala: 1.06, ancho: 1.2, panza: 9, ceno: true, mandibula: 1.15,
+    ropa: { cabeza: 'gorraGuarda', arriba: 'camisaGuarda', abajo: 'vestirAzul', calzado: 'zapatos' } },
+  bocha: { nombre: 'EL BOCHA', piel: '#a87050', pelo: '#120c0a', peinado: 'rapado', escala: 1.04, ancho: 1.24, musculo: 1.3, mandibula: 1.2, ceno: true, tatuaje: true, barba: '#120c0a', barbaCorta: true,
+    ropa: { cabeza: 'vincha', arriba: 'musculosaRoja', abajo: 'shortBox', calzado: 'botasBox' } },
+  parrillero: { nombre: 'EL PARRILLERO', piel: '#d89070', pelo: '#2a1a12', peinado: 'pelado', escala: 1.14, ancho: 1.56, panza: 14, papada: true, cachetes: true, ceno: true, mandibula: 1.25, bigote: '#2a1a12', tatuajes: true,
+    ropa: { cabeza: 'nada', arriba: 'delantalParri', abajo: 'jeanOscuro', calzado: 'botitas' } },
+  capo: { nombre: 'DON PEPE', piel: '#d8a07c', pelo: '#d8d4d0', peinado: 'engominado', bigote: '#d8d4d0', lentes: true, cadena: true, escala: 1.1, ancho: 1.3, panza: 8, ceno: true, mandibula: 1.2,
+    ropa: { cabeza: 'sombrero', arriba: 'sacoBlanco', abajo: 'vestirBlanco', calzado: 'zapatosBlancos' } },
 };
 // variantes de enemigos: cambian ropa (camisetas de clubes incluidas) y a veces el pelo/piel → siluetas distintas
 export const VARIANTES = {
@@ -133,6 +182,14 @@ export const VARIANTES = {
   mati: [{}, { pelo: '#2a1a12', ropa: { cabeza: 'gorraAtras', arriba: 'penarol', abajo: 'depNegro', calzado: 'zapaNegra' } },
     { pelo: '#2a1a12', peinado: 'rulos', piel: '#b07850', ropa: { cabeza: 'nada', arriba: 'defensor', abajo: 'jean', calzado: 'zapaRoja' } },
     { pelo: '#c89050', ropa: { cabeza: 'viseraBlanca', arriba: 'torque', abajo: 'shortNegro', calzado: 'zapaUY' } }],
+  chorro: [{}, { piel: '#e0aa80', ropa: { cabeza: 'gorraAtras', arriba: 'canguroVerde', abajo: 'depNegro', calzado: 'zapaUY' } }, { peinado: 'rapado', ropa: { cabeza: 'capucha', arriba: 'buzoBordo', abajo: 'jeanOscuro', calzado: 'zapaVerde' } }],
+  patova: [{}, { piel: '#7a4a32', ropa: { arriba: 'camisetaNegra', abajo: 'vestir' } }],
+  guri: [{}, { piel: '#c88a62', peinado: 'corto', ropa: { cabeza: 'gorraAtras', arriba: 'penarol', abajo: 'shortNegro', calzado: 'zapaRoja' } }, { pelo: '#c89050', peinado: 'flequillo', ropa: { cabeza: 'nada', arriba: 'nacional', abajo: 'shortAzul', calzado: 'zapaUY' } }],
+  cuida: [{}, { piel: '#a87050', bigote: null, barba: '#1a120e', barbaCorta: true, ropa: { cabeza: 'gorroGris', arriba: 'chalecoNaranja', abajo: 'depAzul', calzado: 'zapaNegra' } }],
+  dona: [{}, { pelo: '#8a8a92', piel: '#d8a07a', lentes: false, ropa: { arriba: 'blusaChola', abajo: 'polleraChola' } }],
+  tambor: [{}, { piel: '#5a3424', ropa: { cabeza: 'gorroRojo' } }],
+  mozo: [{}, { pelo: '#8a8a8a', bigote: '#8a8a8a', panza: 6, flaco: false }],
+  pescador: [{}, { pelo: '#3a2a20', barba: '#3a2a20', ropa: { arriba: 'camperaAzul' } }],
   cacho: [{}, { piel: '#d49a72', peinado: 'pelado', ropa: { cabeza: 'nada', arriba: 'danubio', abajo: 'depNegro', calzado: 'zapaNegra' } },
     { ropa: { cabeza: 'gorroGris', arriba: 'wanderers', abajo: 'jeanOscuro', calzado: 'zapaGris' } }],
 };
@@ -165,7 +222,7 @@ function medidas(def) {
     wNeck: 0.072 * Hb * (1 + mm * 1.5) * (1 + 0.35 * g) * (1 - 0.15 * mu) };
 }
 // secciones del tronco a lo largo de la columna (t = 0 cadera, t = 1 línea de hombros): [t, medio ancho, fondo adelante, fondo atrás] (en Hb)
-const HEM = { camiseta: 0.08, musculosa: 0.1, buzo: -0.05, campera: 0, abierta: 0, saco: -0.1 };
+const HEM = { camiseta: 0.08, musculosa: 0.1, buzo: -0.05, campera: 0, abierta: 0, saco: -0.1, chaleco: 0.04, delantal: 0.0, camisa: 0.02 };
 function secciones(cm, def) {
   const g = cm.g, mm = (def.musculo || 1) - 1, mu = def.mujer ? 1 : 0, fl = def.flaco ? 0.9 : 1, ch = 1 + mm * 0.9, an = cm.an, A = def.arr ? def.arr.tipo : '';
   const holg = A === 'buzo' ? 0.012 : A === 'campera' || A === 'saco' || A === 'abierta' ? 0.007 : 0;
@@ -292,6 +349,9 @@ function pelo(b, def, H, conGorro) {
       break;
     case 'rulos': for (const [u, v, r] of [[-5.2, -2.8, 2.6], [-4.4, -5.6, 2.8], [-1.8, -7.4, 2.8], [1.2, -7.8, 2.7], [3.9, -6.7, 2.5], [5.4, -4.6, 2.0], [-5.6, 0.2, 2.2]]) { const [x, y] = H(u, v); b.disco(x, y, r * H.k, p); }
       recolor(b, p, (x, y, fx, fy) => ((fx * 7 + fy * 3) % 9 === 0 ? col(tono(def.pelo, 1.4)) : (fx * 5 + fy * 2) % 11 === 0 ? col(tono(def.pelo, 0.7)) : 0)); break;
+    case 'rodete': poli([[-6.5, -0.2], [-6.2, -5.0], [-3.8, -7.6], [0, -8.2], [3.8, -7.4], [6.0, -5.2], [6.2, -3.6], [4.2, -4.6], [1.6, -4.4], [-0.6, -3.6], [-1.4, 1.0], [-3.6, 2.2], [-5.6, 1.8]]);
+      { const [rx, ry] = H(-4.4, -8.2); b.disco(rx, ry, 3.0 * H.k, p); const [a0, b0] = H(-6.4, -8.0), [a1, b1] = H(-2.6, -9.8); b.linea(a0, b0, a1, b1, col(tono(def.pelo, 0.7))); }
+      break;
     case 'engominado': poli([[-6.6, 0.2], [-6.4, -4.6], [-4.0, -7.4], [0, -8.0], [3.6, -7.4], [5.8, -5.4], [5.6, -4.2], [3.0, -4.6], [0, -4.6], [-1.8, -2.6], [-1.6, 0.6], [-3.6, 2.0], [-5.8, 2.0]]);
       { const [a0, b0] = H(-3, -6.4), [a1, b1] = H(2.6, -6.6); b.linea(a0, b0, a1, b1, col(tono(def.pelo, 2.4))); } break;
   }
@@ -316,6 +376,20 @@ function sombrero(b, def, H) {
   } else if (c.tipo === 'visera') {
     poli([[-6.6, -3.0], [-6.4, -4.8], [6.4, -4.8], [6.6, -3.0]], c1);
     poli([[5.4, -4.4], [11.4, -3.4], [11.6, -2.4], [5.6, -2.6]], c2);
+  } else if (c.tipo === 'pilusa') { // gorro pilusa de pescador
+    poli([[-6.4, -2.8], [-5.8, -7.4], [0, -8.8], [5.8, -7.4], [6.4, -3.0]], c1);
+    poli([[-8.8, -1.6], [-7.0, -3.4], [7.4, -3.4], [9.4, -1.4], [7.0, -0.8], [-7.0, -0.8]], c2);
+    for (const u of [-3, 0, 3]) { const [a0, b0] = H(u, -7.6), [a1, b1] = H(u * 1.1, -3.4); b.linea(a0, b0, a1, b1, col(tono(c.c1, 0.8))); }
+  } else if (c.tipo === 'sombrero') { // sombrero de ala (el Capo)
+    poli([[-5.6, -3.8], [-5.2, -9.6], [-1.2, -10.8], [1.0, -9.8], [3.2, -10.8], [5.8, -9.6], [6.0, -3.8]], c1);
+    poli([[-5.8, -5.4], [6.1, -5.4], [6.1, -3.8], [-5.8, -3.8]], c2);
+    poli([[-9.6, -3.0], [-6.2, -4.4], [7.0, -4.4], [10.8, -2.8], [7.2, -2.0], [-6.2, -2.0]], col(tono(c.c1, 0.86)));
+  } else if (c.tipo === 'panuelo') { // pañuelo de feria atado atrás
+    poli([[-7.2, 1.0], [-7.0, -4.8], [-4.0, -8.6], [0, -9.2], [4.0, -8.2], [6.4, -5.8], [6.8, -3.4], [4.6, -4.4], [0, -5.2], [-2.0, -2.2], [-2.4, 2.2], [-4.8, 3.2]], c1);
+    poli([[-7.0, -1.6], [-10.2, 0.2], [-9.6, 2.2], [-7.4, 0.8]], c1); poli([[-7.2, -0.8], [-9.4, 3.8], [-8.0, 4.4], [-6.4, 0.6]], col(tono(c.c1, 0.8)));
+    recolor(b, c1, (x, y) => ((Math.floor(x) * 3 + Math.floor(y) * 5) % 7 === 0 ? c2 : 0));
+  } else if (c.tipo === 'vincha') { // vincha de boxeador
+    poli([[-6.7, -4.6], [6.3, -5.8], [6.6, -4.0], [-6.7, -2.8]], c1); poli([[-6.6, -4.2], [-9.6, -1.6], [-8.6, -0.8], [-6.4, -3.0]], c2);
   } else if (c.tipo === 'capucha') {
     poli([[-7.6, 3.2], [-8.4, -2.6], [-6.4, -8.2], [-1.4, -10.2], [3.6, -9.4], [6.6, -6.6], [7.4, -4.0], [5.4, -4.6], [2.0, -6.8], [-2.0, -5.8], [-3.6, -1.0], [-3.0, 3.6], [-1.0, 6.4], [-5.2, 6.6]], c1);
     const [a0, b0] = H(5.4, -4.6), [a1, b1] = H(-2.6, -2.0); b.linea(a0, b0, a1, b1, col(tono(c.c1, 0.6)));
@@ -399,7 +473,7 @@ function brazo(b, def, J, p, frente, mano) {
   const brazoPts = [[sx, sy], bx(0.45), [ex, ey]], brazoW = [wU * (frente ? 1.12 : 0.98), wU * 1.04, wU * 0.82];
   const anteb = [[ex, ey], fx(0.35), fx(0.92)], antebW = [wL * 0.9, wL * 1.04, wL * 0.74];
   if (t === 'musculosa') { miembro(b, brazoPts, brazoW, piel); miembro(b, anteb, antebW, piel); b.disco(sx, sy, wU * 0.62, piel); }
-  else if (t === 'camiseta') {
+  else if (t === 'camiseta' || t === 'chaleco' || t === 'delantal') {
     miembro(b, brazoPts, brazoW, piel); miembro(b, anteb, antebW, piel);
     const m1 = bx(0.62); b.seg(sx, sy, m1[0], m1[1], wU * 1.3, wU * 1.22, mangaCol); // manga corta
     // puño y hombro de la manga: bandas DENTRO de la manga (recolor por la posición a lo largo del húmero), nunca un disco encima
@@ -444,7 +518,8 @@ function pierna(b, def, J, p, frente) {
   const tela = col(tono(B.c1, f)), piel = col(tono(def.piel, f));
   const muslo = [[hx, hy], tx(0.5), [kx, ky]], musloW = [p.wThigh, p.wThigh * 0.98, p.wShin * 1.05];
   const canilla = [[kx, ky], calf, [fx, fy]], canW = [p.wShin, p.wShin * 1.1, p.wShin * 0.72];
-  if (B.tipo === 'short') {
+  if (B.tipo === 'pollera') { const md = col(tono(B.media || def.piel, f)); miembro(b, muslo, musloW, md); miembro(b, canilla, canW, md); }
+  else if (B.tipo === 'short') {
     miembro(b, muslo, musloW, piel); miembro(b, canilla, canW, piel);
     const s1 = tx(0.6); b.seg(hx, hy, s1[0], s1[1], p.wThigh * 1.06, p.wThigh * 1.08, tela);
     if (B.raya) { const o = [-C(a1) * p.wThigh * 0.3, S(a1) * p.wThigh * 0.3]; b.linea(hx + o[0], hy + o[1], s1[0] + o[0], s1[1] + o[1], col(tono(B.raya, f))); }
@@ -464,6 +539,16 @@ function pierna(b, def, J, p, frente) {
       const t1 = tx(0.35); b.linea(t1[0] - C(a1) * 3.5, t1[1] + S(a1) * 3.5, t1[0] - C(a1) * 1, t1[1] + S(a1) * 1 + 1.5, fl); }
   }
   return [fx, fy, a];
+}
+// pollera: dos paños que siguen los muslos (sirve en cualquier pose: caminar, caer, tirado) + el relleno entre las caderas
+function pollera(b, def, lf, lnr, cm) {
+  const c = col(def.aba.c1), o = col(tono(def.aba.c1, 0.7)), t = 0.82, w = cm.wThigh * 1.55;
+  const P = (J) => [J.H[0] + (J.K[0] - J.H[0]) * t, J.H[1] + (J.K[1] - J.H[1]) * t];
+  const bF = P(lf), bN = P(lnr);
+  b.seg(lf.H[0], lf.H[1], bF[0], bF[1], w, w * 1.25, c); b.seg(lnr.H[0], lnr.H[1], bN[0], bN[1], w, w * 1.25, c);
+  b.poli([lf.H, lnr.H, bN, bF], c);
+  for (const J of [lf, lnr]) { const m = P(J); b.linea(J.H[0] + (m[0] - J.H[0]) * 0.35, J.H[1] + (m[1] - J.H[1]) * 0.35, m[0], m[1], o); }
+  b.linea(bF[0], bF[1] + 1, bN[0], bN[1] + 1, o); // ruedo
 }
 function calzado(b, def, fx, fy, a, frente) {
   const Z = def.cal, f = frente ? 1 : 0.86, e = def.escala;
@@ -540,6 +625,29 @@ function torso(b, def, E) {
     const rem = col(A.remera); recolor(b, base, (x, y) => { const [tt, s] = lc(x, y); if (tt > 0.4) { const v = Math.min(1, (tt - 0.4) / 0.62); if (s > E.sAt(tt, 0.34 * v) && s < E.sAt(tt, -0.3 * v)) return rem; } return 0; });
     ln(b, E.S3(1.02, 0.4), E.S3(0.4, 0.03), d(0.58)); ln(b, E.S3(0.86, 0.46), E.S3(0.7, 0.3), d(0.58)); // solapas
     const bt = E.S3(0.3, 0.04); b.px(Math.round(bt[0]), Math.round(bt[1]), col('#e8d27a'));
+  } else if (t === 'chaleco') { // chaleco reflectivo abierto sobre remera: franjas plateadas y el frente de la remera
+    const rem = col(A.remera), ref = col(A.raya || '#e8eef0');
+    recolor(b, base, (x, y) => { const [tt, s] = lc(x, y); if (tt > 0.3 && s > E.sAt(tt, 0.2) && s < E.sAt(tt, -0.28)) return rem; if (Math.abs(tt - 0.4) < 0.035 || Math.abs(tt - 0.62) < 0.03) return ref; if (tt < hem + 0.06) return d(0.8); return 0; });
+    ln(b, E.S3(0.3, 0.2), E.S3(1.0, 0.2), d(0.62)); ln(b, E.S3(0.3, -0.28), E.S3(1.0, -0.28), d(0.62));
+  } else if (t === 'delantal') { // blusa (lisa o floreada) con delantal adelante y tiras al cuello
+    const del = col(A.delantal), c2 = A.c2 ? col(A.c2) : 0;
+    recolor(b, base, (x, y) => { const [tt, s] = lc(x, y);
+      if (tt < 0.8 && s > E.sAt(tt, 0.52) && s < E.sAt(tt, -0.38)) return del;
+      if (A.patron === 'flores' && c2) { const u = Math.floor((s + 200) / 2.6), v = Math.floor(tt * 22); if ((u * 7 + v * 5) % 9 === 0) return c2; }
+      return 0; });
+    ln(b, E.S3(0.8, 0.52), E.S3(1.03, 0.36), del); ln(b, E.S3(0.8, -0.38), E.S3(1.03, -0.22), del);
+    ln(b, E.S3(0.8, 0.52), E.S3(0.8, -0.38), col(tono(A.delantal, 0.75))); ln(b, E.S3(0.42, 0.3), E.S3(0.42, -0.1), col(tono(A.delantal, 0.72))); // bolsillo
+  } else if (t === 'camisa') { // camisa abotonada: cuello, tapeta con botones; a cuadros, con bolsillo o con chaleco de mozo
+    const c2 = A.c2 ? col(A.c2) : 0, ancho = Math.max(2, Math.round(2.2 * e));
+    recolor(b, base, (x, y) => { const [tt, s] = lc(x, y);
+      if (A.chaleco && tt > 0.2 && tt < 0.96 && !(s > E.sAt(tt, 0.26 * Math.min(1, (tt - 0.2) / 0.5)) && s < E.sAt(tt, -0.22 * Math.min(1, (tt - 0.2) / 0.5)))) return col(A.chaleco);
+      if (A.patron === 'cuadros' && c2) { const u = Math.floor((s + 200) / (ancho * 2)) % 2, v = Math.floor(tt * E.Ls / (ancho * 2)) % 2; if (u && v) return c2; if (u || v) return d(0.78); }
+      return 0; });
+    const tap = A.chaleco ? 0.02 : 0.04; ln(b, E.S3(hem + 0.04, tap), E.S3(1.0, tap), d(0.7));
+    for (let k = 0; k < 4; k++) { const bp = E.S3(0.3 + k * 0.18, tap); b.px(Math.round(bp[0]), Math.round(bp[1]), col(A.chaleco ? '#c8c8d0' : '#f2f2ea')); }
+    const cu = col(A.cuello || tono(A.c1, 1.15)); { const q0 = E.S3(1.05, 0.48), q1 = E.S3(0.9, 0.06), q2 = E.S3(1.05, -0.38); b.poli([q0, q1, E.S3(1.0, 0.3)], cu); b.poli([q2, q1, E.S3(1.0, -0.2)], cu); }
+    if (A.mono) { const m = E.S3(1.0, 0.05); b.rect(Math.round(m[0]) - 2, Math.round(m[1]), 5, 2, col(A.mono)); }
+    if (A.bolsillo) { const p0 = E.S3(0.74, 0.36), p1 = E.S3(0.6, 0.12); ln(b, p0, E.S3(0.74, 0.12), d(0.72)); ln(b, E.S3(0.74, 0.12), p1, d(0.72)); const pl = E.S3(0.77, 0.26); b.px(Math.round(pl[0]), Math.round(pl[1]), col('#2a5aa0')); } // birome en el bolsillo
   }
   if (t !== 'musculosa' && !OSCURAS.has(base)) { const fo = d(0.72), fl = d(1.15); // pliegues de tela: axila → cintura y tela amontonada arriba del ruedo
     ln(b, E.S3(0.8, -0.78), E.S3(0.52, -0.45), fo); ln(b, E.S3(0.7, -0.9), E.S3(0.54, -0.8), fo);
@@ -578,7 +686,7 @@ export function dibujarPose(def, pose, w, h, caraDef) {
   out.manoB = capa(fr, (b) => brazo(b, def, jf, cm, false, mano));
   capa(fr, (b) => pierna(b, def, lf, cm, false));
   capa(fr, (b) => calzado(b, def, lf.A[0], lf.A[1], lf.ang, false)); detalleCalzado(fr, def, lf.A[0], lf.A[1], lf.ang);
-  capa(fr, (b) => { pelvis(b, def, E); pierna(b, def, lnr, cm, true); });
+  capa(fr, (b) => { pelvis(b, def, E); pierna(b, def, lnr, cm, true); if (def.aba.tipo === 'pollera') pollera(b, def, lf, lnr, cm); });
   capa(fr, (b) => calzado(b, def, lnr.A[0], lnr.A[1], lnr.ang, true)); detalleCalzado(fr, def, lnr.A[0], lnr.A[1], lnr.ang);
   TEXTOS = []; capa(fr, (b) => torso(b, def, E)); const textos = TEXTOS; TEXTOS = null;
   const foto = textos.length ? fr.d.slice() : null;
@@ -659,22 +767,38 @@ export function vigente(sp) { return !sp || sp.q === Q ? sp : generar(...sp.args
 // Genera las animaciones de un personaje: {anim: [{d, q, pies, mano, parche}...]}.
 // Los cuadros se dibujan A DEMANDA (al pedir una animación por primera vez) y, mientras se juega, de a uno en los ratos
 // libres (calentar). Así no se gasta memoria en animaciones que un enemigo nunca usa (con densidad 3 cada set pesa ~2,2× más).
+const PF = (globalThis.__pf || (globalThis.__pf = { gen: 0, grad: 0, sil: 0, txt: 0, set: 0, nGen: 0, nGrad: 0 })); // perfil: ms gastados en generar en caliente
 const cacheSp = new Map();
 const activos = new Set(); // sets de la partida actual (se calientan en segundo plano)
 // lo que cada enemigo usa de verdad (su IA): se calienta sólo eso; lo demás (armas) se dibuja cuando hace falta
 const BASE_E = ['quieto', 'camina', 'dolor', 'vuela', 'piso', 'levanta', 'agarrado'];
-const USA_ENEMIGO = { buzo: [...BASE_E, 'pina1', 'patada'], mati: [...BASE_E, 'pina1', 'pina2'], cacho: [...BASE_E, 'pina2', 'pina3'], tano: [...BASE_E, 'pina1', 'patada', 'golpe', 'agarra'] };
+const USA_ENEMIGO = { buzo: [...BASE_E, 'pina1', 'patada', 'golpe'], mati: [...BASE_E, 'pina1', 'pina2'], cacho: [...BASE_E, 'pina2', 'pina3'], tano: [...BASE_E, 'pina1', 'patada', 'golpe', 'agarra'],
+  chorro: [...BASE_E, 'pina1', 'barrida', 'agarra'], patova: [...BASE_E, 'bloquea', 'pina2', 'pina3', 'agarra', 'revolea'], guri: [...BASE_E, 'apunta', 'pina1'],
+  cuida: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe'], dona: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe'], tambor: [...BASE_E, 'tamborOnda', 'pina1'],
+  mozo: [...BASE_E, 'golpe', 'pina1', 'pina2'], pescador: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe'],
+  chola: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe', 'empuja', 'festeja'], guarda: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe', 'pina2', 'festeja'],
+  bocha: [...BASE_E, 'pina1', 'pina2', 'pina3', 'bloquea', 'festeja'], parrillero: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe', 'pina3', 'festeja'],
+  capo: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe', 'pina2', 'especial', 'bloquea', 'festeja'] };
 // ¿la animación ya está dibujada? (si no, se pide en segundo plano)
 export function lista(sp, nombre) { if (!sp.parciales[nombre]) return true; pedidos.add(sp); (sp.pedidos || (sp.pedidos = new Set())).add(nombre); return false; }
 const pedidos = new Set();
+// cuadro i de una animación SIN dibujarla en caliente (en el cuadro de pantalla): si todavía no está, devuelve el cuadro
+// listo más cercano (o el de reposo) y la pide al calentador, que la dibuja en el tiempo libre (sin tirones).
+export function cuadroListo(sp, nombre, i) {
+  const p = sp.parciales[nombre];
+  if (!p) { const d = Object.getOwnPropertyDescriptor(sp.anims, nombre); const a = d && d.value; if (a) return a[Math.min(i, a.length - 1)]; const q = sp.anims.quieto; return q[i % q.length]; }
+  const n = POSES[nombre].length; i = Math.min(i, n - 1); if (p.length > i) return p[i];
+  pedidos.add(sp); (sp.pedidos || (sp.pedidos = new Set())).add(nombre);
+  if (p.length) return p[p.length - 1]; const q = sp.anims.quieto; return q[i % q.length];
+}
 export function claveRopa(r) { return r ? [r.cabeza, r.arriba, r.abajo, r.calzado].join('|') : ''; }
 export function generar(clave, variante = 0, ropa = null, soloQuieto = false) {
   const k = Q + ':' + clave + ':' + variante + ':' + claveRopa(ropa) + (soloQuieto ? ':q' : ''); if (cacheSp.has(k)) return cacheSp.get(k);
-  const def = armarDef(clave, variante, ropa);
+  const tS = performance.now(); const def = armarDef(clave, variante, ropa);
   const { w, h } = tamCuadro(def);
   const caraBase = def.ceno ? 'enojo' : 'normal';
   const anims = {}, parciales = {};
-  const cuadro = (nombre, i) => recortar(dibujarPose(def, POSES[nombre][i], w, h, caraBase));
+  const cuadro = (nombre, i) => { const t0 = performance.now(); const r = recortar(dibujarPose(def, POSES[nombre][i], w, h, caraBase)); PF.gen += performance.now() - t0; PF.nGen++; return r; };
   for (const nombre in POSES) {
     if (soloQuieto && nombre !== 'quieto') continue;
     parciales[nombre] = [];
@@ -685,21 +809,21 @@ export function generar(clave, variante = 0, ropa = null, soloQuieto = false) {
   void anims.quieto; // la de reposo siempre (menús, vestuario)
   const rt = retrato(def, 30); const res = { def, anims, parciales, cuadro, w, h, q: Q, k, args: [clave, variante, ropa, soloQuieto], retrato: rt, retratoChico: soloQuieto ? null : retrato(def, 13) };
   if (cacheSp.size > 40) for (const kk of cacheSp.keys()) { if (kk.endsWith(':q')) { cacheSp.delete(kk); break; } }
-  cacheSp.set(k, res); return res;
+  cacheSp.set(k, res); PF.set += performance.now() - tS; return res;
 }
 // la partida declara qué sets usa: se liberan los demás (memoria) y se calientan éstos en segundo plano
 const JUGADORES_K = ['seba', 'pelado', 'pato'];
 export function partida(sets) { const keep = new Set(sets.map((s) => s.k)); for (const [kk, v] of cacheSp) if (!keep.has(kk) && !kk.endsWith(':q') && !JUGADORES_K.includes(v.args[0])) cacheSp.delete(kk); activos.clear(); for (const s of sets) activos.add(s); }
 // dibuja cuadros pendientes de los sets activos hasta gastar ~ms milisegundos (como mínimo uno, si hay)
-export function calentar(ms) {
+export function calentar(ms, post = null) {
   if (!activos.size && !pedidos.size) return 0; const t0 = performance.now(); let n = 0;
   for (const sp of [...pedidos, ...activos]) {
     const jugador = JUGADORES_K.includes(sp.args[0]);
-    const orden = jugador ? Object.keys(sp.parciales) : [...(USA_ENEMIGO[sp.args[0]] || BASE_E), ...(sp.pedidos || [])];
+    const orden = [...(sp.pedidos || []), ...(jugador ? Object.keys(sp.parciales) : (USA_ENEMIGO[sp.args[0]] || BASE_E))];
     for (const nombre of orden) { const p = sp.parciales[nombre]; if (!p) continue;
-      while (p.length < POSES[nombre].length) { p.push(sp.cuadro(nombre, p.length)); n++; if (performance.now() - t0 > ms) return n; }
+      while (p.length < POSES[nombre].length) { const f = sp.cuadro(nombre, p.length); if (post) post(f); p.push(f); n++; if (performance.now() - t0 > ms) return n; }
       void sp.anims[nombre]; }
-    pedidos.delete(sp);
+    pedidos.delete(sp); if (sp.pedidos) sp.pedidos.clear();
   }
   return n;
 }

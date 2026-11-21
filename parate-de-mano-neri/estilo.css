@@ -1,8 +1,8 @@
 @font-face { font-family: 'PS2P'; src: url('fuentes/PressStart2P-Regular.ttf'); font-display: swap; }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; height: 100%; background: #120a18; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; overscroll-behavior: none; }
+html, body { margin: 0; height: 100%; background: #120a18 radial-gradient(ellipse at center, #241433 0%, #120a18 70%); overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; overscroll-behavior: none; }
 #raiz { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left); }
-#juego { image-rendering: crisp-edges; image-rendering: pixelated; display: block; }
+#juego { image-rendering: crisp-edges; image-rendering: pixelated; display: block; box-shadow: 0 0 0 2px #0a0610, 0 0 0 4px #2e1d40, 0 8px 40px rgba(0,0,0,.6); }
 #tactil { position: fixed; inset: 0; pointer-events: none; display: none; }
 body.en-juego.tactil #tactil { display: block; }
 #zona-stick { position: absolute; left: 0; top: 18%; bottom: 0; width: 48%; pointer-events: auto; }

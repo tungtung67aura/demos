@@ -16,6 +16,12 @@ export const CABEZAS = {
   viseraVioleta: { nombre: 'VISERA VIOLETA', tipo: 'visera', c1: '#6a2c91', c2: '#f2f2f2' },
   capucha: { nombre: 'CAPUCHA', tipo: 'capucha', c1: '#6e5a4a', npc: true },
   capuchaGris: { nombre: 'CAPUCHA GRIS', tipo: 'capucha', c1: '#5a5d66', npc: true },
+  // npc (enemigos y jefes)
+  gorraGuarda: { nombre: 'GORRA DE GUARDA', tipo: 'gorra', c1: '#26365e', c2: '#121626', letra: true, npc: true },
+  pilusa: { nombre: 'PILUSA', tipo: 'pilusa', c1: '#7a8a5a', c2: '#5a6a40', npc: true },
+  sombrero: { nombre: 'SOMBRERO', tipo: 'sombrero', c1: '#e8e2d2', c2: '#1b1b22', npc: true },
+  panuelo: { nombre: 'PAÑUELO', tipo: 'panuelo', c1: '#c8304a', c2: '#f2e0a0', npc: true },
+  vincha: { nombre: 'VINCHA', tipo: 'vincha', c1: '#f2f2f2', c2: '#c8202a', npc: true },
 };
 export const ARRIBAS = {
   buzoUY: { nombre: 'BUZO URUGUAY', tipo: 'buzo', c1: '#1d2f5c', c2: '#2a4280', letras: 'URUGUAY', acento: '#e9eef5', raya: '#e9eef5' },
@@ -35,6 +41,21 @@ export const ARRIBAS = {
   wanderers: { nombre: 'BOHEMIA', club: 'Montevideo Wanderers', tipo: 'camiseta', c1: '#f2f2f2', c2: '#141414', patron: 'rayas', cuello: '#141414', manga: '#141414' },
   torque: { nombre: 'CELESTE Y MARINO', club: 'Montevideo City Torque', tipo: 'camiseta', c1: '#9ad6f4', cuello: '#1b2a5a', ribete: '#1b2a5a', puno: '#1b2a5a', hombros: '#1b2a5a' },
   saco: { nombre: 'SACO', tipo: 'saco', c1: '#7a1f24', remera: '#efe9dc', npc: true },
+  // npc: cada enemigo nuevo con su ropa de oficio (silueta y color propios, no un recoloreo)
+  sacoBlanco: { nombre: 'SACO BLANCO', tipo: 'saco', c1: '#e6e0d0', remera: '#2a2230', npc: true },
+  canguroNegro: { nombre: 'CANGURO NEGRO', tipo: 'buzo', c1: '#2a2a32', c2: '#34343e', acento: '#c8c8c8', npc: true },
+  canguroVerde: { nombre: 'CANGURO VERDE', tipo: 'buzo', c1: '#3a5a3a', c2: '#46684a', acento: '#e8e8e8', npc: true },
+  remeraPatova: { nombre: 'REMERA NEGRA', tipo: 'camiseta', c1: '#1e1e26', cuello: '#2e2e38', npc: true },
+  chalecoFluo: { nombre: 'CHALECO FLÚO', tipo: 'chaleco', c1: '#c8e830', remera: '#3a3a48', raya: '#e8eef0', manga: '#3a3a48', npc: true },
+  chalecoNaranja: { nombre: 'CHALECO NARANJA', tipo: 'chaleco', c1: '#f08a20', remera: '#2a4a7a', raya: '#e8eef0', manga: '#2a4a7a', npc: true },
+  blusaFlores: { nombre: 'BLUSA FLOREADA', tipo: 'delantal', c1: '#8a5aa0', c2: '#f2d870', patron: 'flores', delantal: '#e8e2d4', manga: '#8a5aa0', npc: true },
+  blusaChola: { nombre: 'DELANTAL DE FERIA', tipo: 'delantal', c1: '#2a6a8a', c2: '#f2f2f2', patron: 'flores', delantal: '#f2eee4', manga: '#2a6a8a', npc: true },
+  delantalParri: { nombre: 'DELANTAL DE CUERO', tipo: 'delantal', c1: '#ecebe4', delantal: '#5a3a28', manga: '#ecebe4', npc: true },
+  camisaGuarda: { nombre: 'CAMISA DE GUARDA', tipo: 'camisa', c1: '#b8cce4', cuello: '#a8bcd8', bolsillo: true, manga: '#b8cce4', npc: true },
+  camisaMozo: { nombre: 'CAMISA DE MOZO', tipo: 'camisa', c1: '#f2f2ee', cuello: '#ffffff', chaleco: '#1e1e26', mono: '#1b1220', manga: '#f2f2ee', npc: true },
+  lenadora: { nombre: 'CAMISA LEÑADORA', tipo: 'camisa', c1: '#b0302e', c2: '#2a2228', patron: 'cuadros', cuello: '#8a2422', manga: '#b0302e', npc: true },
+  comparsa: { nombre: 'CAMISA DE COMPARSA', tipo: 'camiseta', c1: '#f0d040', c2: '#c8202a', patron: 'banda', cuello: '#c8202a', npc: true },
+  musculosaRoja: { nombre: 'MUSCULOSA ROJA', tipo: 'musculosa', c1: '#c8202a', npc: true },
 };
 export const ABAJOS = {
   depRojo: { nombre: 'DEPORTIVO ROJO', tipo: 'deportivo', c1: '#c1272d', raya: '#ffffff' },
@@ -48,6 +69,12 @@ export const ABAJOS = {
   shortCeleste: { nombre: 'SHORT CELESTE', tipo: 'short', c1: '#7cc4ee', raya: '#ffffff' },
   calza: { nombre: 'CALZA', tipo: 'calza', c1: '#1f1f2a', raya: '#7cc4ee' },
   vestir: { nombre: 'PANTALÓN DE VESTIR', tipo: 'vestir', c1: '#24242c', npc: true },
+  vestirBlanco: { nombre: 'PANTALÓN BLANCO', tipo: 'vestir', c1: '#d8d2c2', npc: true },
+  vestirAzul: { nombre: 'PANTALÓN AZUL', tipo: 'vestir', c1: '#28345a', npc: true },
+  pollera: { nombre: 'POLLERA', tipo: 'pollera', c1: '#4a3a6a', media: '#c8a088', npc: true },
+  polleraChola: { nombre: 'POLLERA VERDE', tipo: 'pollera', c1: '#2a5a48', media: '#b89078', npc: true },
+  botas: { nombre: 'BOTAS DE GOMA', tipo: 'jean', c1: '#4a5a3a', npc: true },
+  shortBox: { nombre: 'SHORT DE BOX', tipo: 'short', c1: '#c8202a', raya: '#f2f2f2', npc: true },
 };
 export const CALZADOS = {
   zapaUY: { nombre: 'BLANCAS Y AZULES', tipo: 'zapa', c1: '#f2f2f2', c2: '#2b56c4', suela: '#d03030' },
@@ -59,6 +86,10 @@ export const CALZADOS = {
   botitas: { nombre: 'BOTITAS', tipo: 'bota', c1: '#5a3a24', c2: '#3a2416', suela: '#2a1a12' },
   ojotas: { nombre: 'OJOTAS', tipo: 'ojotas', c1: '#2f6fc0', c2: '#f2f2f2', suela: '#2f6fc0' },
   zapatos: { nombre: 'ZAPATOS', tipo: 'zapato', c1: '#1a1210', c2: '#3a2a20', suela: '#100a08', npc: true },
+  zapatosBlancos: { nombre: 'ZAPATOS BLANCOS', tipo: 'zapato', c1: '#e8e2d2', c2: '#c8c2b2', suela: '#3a3028', npc: true },
+  botasGoma: { nombre: 'BOTAS DE GOMA', tipo: 'bota', c1: '#2a3a2a', c2: '#1a2a1a', suela: '#121a12', npc: true },
+  pantuflas: { nombre: 'PANTUFLAS', tipo: 'zapato', c1: '#a85a6a', c2: '#c87a8a', suela: '#5a3a3a', npc: true },
+  botasBox: { nombre: 'BOTAS DE BOX', tipo: 'bota', c1: '#f2f2f2', c2: '#c8202a', suela: '#2a2a2a', npc: true },
 };
 export const SLOTS = [['cabeza', 'CABEZA', CABEZAS], ['arriba', 'ARRIBA', ARRIBAS], ['abajo', 'ABAJO', ABAJOS], ['calzado', 'CALZADO', CALZADOS]];
 export function opciones(slot) { const cat = SLOTS.find((s) => s[0] === slot)[2]; return Object.keys(cat).filter((k) => !cat[k].npc); }
