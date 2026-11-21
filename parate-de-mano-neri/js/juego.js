@@ -174,7 +174,7 @@ export class Juego {
   // ---------- jugador
   controlJugador(dt, E) {
     const j = this.j; if (!j || j.muerto) return;
-    j.intent.mx = E.dx; j.intent.my = E.dy;
+    j.intent.mx = E.dx; j.intent.my = E.dy; j.corre = E.corre || 0;
     if (j.est === 'agarrado') { // agarrado por el patova: machacá para zafar
       if (E.buf.pina > 0 || E.buf.patada > 0 || E.buf.salto > 0 || Math.abs(E.dx) > 0.8 && !this._zafo) { j.escape += 0.24; }
       this._zafo = Math.abs(E.dx) > 0.8; E.buf.pina = 0; E.buf.patada = 0; E.buf.salto = 0;
@@ -291,6 +291,7 @@ export class Juego {
       case 'quieto': case 'camina': {
         const mx = e.intent.mx, my = e.intent.my; const m = Math.hypot(mx, my);
         if (m > 0.15) {
+          if (e.corre && Math.sign(mx) === e.corre && !e.agarrando) { vel *= 1.8; e.corriendo = true; if ((e._polvo = (e._polvo || 0) - dt) <= 0) { e._polvo = 0.09; this.fx.polvo(e.x - e.corre * 8, e.y, 1); } } else e.corriendo = false;
           e.vx = mx * vel; e.vy = my * vel * 0.62; if (Math.abs(mx) > 0.2 && e.equipo === 'j') e.cara = Math.sign(mx);
           if (e.est !== 'camina') { e.est = 'camina'; e.t = 0; }
         } else { e.vx *= 0.5; e.vy *= 0.5; if (e.est !== 'quieto') { e.est = 'quieto'; e.t = 0; } }
@@ -815,7 +816,7 @@ export class Juego {
     const nomA = conArma && (o.equipo === 'j' || listaAnim(o.sp, o.anim + 'Arma')) ? o.anim + 'Arma' : o.anim;
     let fi = 0;
     if (o.anim === 'quieto') fi = Math.floor(this.t * 4.4 + o.id) % 4;
-    else if (o.anim === 'camina') fi = Math.floor(o.t * 15 * (o.st.vel || 60) / 70) % 8;
+    else if (o.anim === 'camina') fi = Math.floor(o.t * 15 * (o.st.vel || 60) / 70 * (o.corriendo ? 1.6 : 1)) % 8;
     else if (o.est === 'ataca' && o.atq) { const A = o.atq; fi = A.giro ? Math.floor(o.t / 0.09) % 2 : A.cubre ? 0 : cuadroAtaque(o.anim, o.t, A); }
     else if (o.anim === 'levanta') fi = o.t < 0.07 ? 0 : o.t < 0.14 ? 1 : o.t < 0.21 ? 2 : 3;
     else if (o.anim === 'piso') fi = o.t < 0.1 ? 0 : 1;

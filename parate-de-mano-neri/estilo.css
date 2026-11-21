@@ -6,10 +6,18 @@ html, body { margin: 0; height: 100%; background: #120a18 radial-gradient(ellips
 #tactil { position: fixed; inset: 0; pointer-events: none; display: none; }
 body.en-juego.tactil #tactil { display: block; }
 #zona-stick { position: absolute; left: 0; top: 18%; bottom: 0; width: 48%; pointer-events: auto; }
-#stick { position: absolute; width: 110px; height: 110px; margin: -55px 0 0 -55px; border-radius: 50%; border: 3px solid rgba(255,255,255,.25); background: rgba(20,10,30,.25); opacity: 0; transition: opacity .1s; pointer-events: none; left: 120px; top: 70%; }
-body.en-juego.tactil #stick { opacity: .4; }
-#stick.activo { opacity: .9 !important; }
-#perilla { position: absolute; left: 50%; top: 50%; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,210,58,.85); border: 3px solid #1b1220; transform: translate(-50%,-50%); }
+/* D-pad (cruceta) pixel: fijo abajo a la izquierda; se toca en toda la zona izquierda, la dirección sale del ángulo respecto al centro */
+#dpad { position: absolute; left: calc(18px + env(safe-area-inset-left)); bottom: calc(14px + env(safe-area-inset-bottom)); width: 132px; height: 132px; pointer-events: none; opacity: .5; transition: opacity .1s; }
+#dpad.activo { opacity: .95; }
+#dpad i, #dpad b { position: absolute; background: #3c2850; border: 3px solid #1b1220; box-shadow: inset 0 -4px 0 rgba(0,0,0,.35), inset 0 3px 0 rgba(255,255,255,.12); }
+#dpad .up, #dpad .dn { left: 44px; width: 44px; height: 47px; } #dpad .up { top: 0; border-bottom: 0; } #dpad .dn { bottom: 0; border-top: 0; }
+#dpad .lf, #dpad .rt { top: 44px; height: 44px; width: 47px; } #dpad .lf { left: 0; border-right: 0; } #dpad .rt { right: 0; border-left: 0; }
+#dpad b { left: 44px; top: 44px; width: 44px; height: 44px; border: 0; box-shadow: none; }
+#dpad i::after { content: ''; position: absolute; left: 50%; top: 50%; border: 7px solid transparent; transform: translate(-50%,-50%); }
+#dpad .up::after { border-bottom-color: #c8b8d8; margin-top: -4px; } #dpad .dn::after { border-top-color: #c8b8d8; margin-top: 4px; }
+#dpad .lf::after { border-right-color: #c8b8d8; margin-left: -4px; } #dpad .rt::after { border-left-color: #c8b8d8; margin-left: 4px; }
+#dpad i.on { background: #ffd23a; } #dpad i.on::after { filter: brightness(.3); }
+#dpad.corre i.on { background: #ff8a3a; }
 #botones { position: absolute; right: calc(14px + env(safe-area-inset-right)); bottom: calc(12px + env(safe-area-inset-bottom)); width: 172px; height: 150px; pointer-events: none; transition: opacity .15s; }
 body.tapado #botones { opacity: .38; } /* hay un luchador debajo de los botones: se vuelven casi transparentes */
 .b { position: absolute; pointer-events: auto; border-radius: 50%; border: 3px solid #1b1220; font: 9px 'PS2P', monospace; color: #fff; text-shadow: 1px 1px 0 #1b1220; box-shadow: inset 0 -4px 0 rgba(0,0,0,.3), 0 2px 0 rgba(0,0,0,.3); opacity: .42; padding: 0; }

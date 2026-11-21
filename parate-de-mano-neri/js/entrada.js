@@ -1,5 +1,6 @@
-// Entrada unificada: teclado, joystick (Gamepad API) y controles táctiles (stick flotante + botones).
-export const E = { dx: 0, dy: 0, buf: { pina: 0, patada: 0, salto: 0, especial: 0, pausa: 0, ok: 0, atras: 0 }, mant: { pina: false, patada: false, salto: false, especial: false }, tactil: false, ultimo: 'teclado', taps: [] };
+// Entrada unificada: teclado, joystick (Gamepad API) y controles táctiles (D-pad de 8 direcciones + botones).
+// Doble toque izquierda/derecha (≤ 280 ms) = correr mientras se mantiene (E.corre = -1/1); vale para cruceta, teclado y pad.
+export const E = { dx: 0, dy: 0, corre: 0, buf: { pina: 0, patada: 0, salto: 0, especial: 0, pausa: 0, ok: 0, atras: 0 }, mant: { pina: false, patada: false, salto: false, especial: false }, tactil: false, ultimo: 'teclado', taps: [] };
 const teclas = new Set();
 const MAPA = { KeyJ: 'pina', KeyZ: 'pina', KeyK: 'patada', KeyX: 'patada', KeyL: 'salto', Space: 'salto', KeyC: 'salto', KeyI: 'especial', KeyU: 'especial', KeyV: 'especial', Escape: 'pausa', KeyP: 'pausa', Enter: 'ok' };
 const BUF = 0.16;
@@ -15,26 +16,20 @@ export function initEntrada(raiz) {
   addEventListener('keyup', (e) => { teclas.delete(e.code); const b = MAPA[e.code]; if (b) soltar(b); });
   addEventListener('blur', () => { teclas.clear(); for (const k in E.mant) E.mant[k] = false; });
   // ---- táctil ----
-  const stick = raiz.querySelector('#stick'), perilla = raiz.querySelector('#perilla');
-  let tid = null, ox = 0, oy = 0; const R = 46;
-  const zonaStick = raiz.querySelector('#zona-stick');
-  zonaStick.addEventListener('touchstart', (e) => {
-    e.preventDefault(); E.tactil = true; E.ultimo = 'tactil';
-    const t = e.changedTouches[0]; if (tid !== null) return; tid = t.identifier; ox = t.clientX; oy = t.clientY;
-    stick.style.left = ox + 'px'; stick.style.top = oy + 'px'; stick.classList.add('activo'); perilla.style.transform = 'translate(-50%,-50%)';
+  // D-pad de 8 direcciones: la zona táctil es toda la mitad izquierda; la dirección es el sector (de 45°) del dedo respecto
+  // al centro de la cruceta, así se puede deslizar entre brazos y las diagonales salen apretando entre dos brazos
+  const dpad = raiz.querySelector('#dpad'), brazos = { up: dpad.querySelector('.up'), dn: dpad.querySelector('.dn'), lf: dpad.querySelector('.lf'), rt: dpad.querySelector('.rt') };
+  const zona = raiz.querySelector('#zona-stick'); let tid = null, cx = 0, cy = 0; const MUERTA = 12;
+  const pintar = () => { brazos.up.classList.toggle('on', E.tdy < 0); brazos.dn.classList.toggle('on', E.tdy > 0); brazos.lf.classList.toggle('on', E.tdx < 0); brazos.rt.classList.toggle('on', E.tdx > 0); };
+  const dir = (t) => { const dx = t.clientX - cx, dy = t.clientY - cy; if (Math.hypot(dx, dy) < MUERTA) { E.tdx = 0; E.tdy = 0; } else { const s = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)); const a = s * Math.PI / 4; E.tdx = Math.round(Math.cos(a)); E.tdy = Math.round(Math.sin(a)); } pintar(); };
+  zona.addEventListener('touchstart', (e) => {
+    e.preventDefault(); E.tactil = true; E.ultimo = 'tactil'; if (tid !== null) return; const t = e.changedTouches[0]; tid = t.identifier;
+    const r = dpad.getBoundingClientRect(); cx = r.left + r.width / 2; cy = r.top + r.height / 2; dpad.classList.add('activo'); dir(t);
   }, { passive: false });
-  const mover = (e) => {
-    for (const t of e.changedTouches) if (t.identifier === tid) {
-      let dx = t.clientX - ox, dy = t.clientY - oy; const d = Math.hypot(dx, dy);
-      if (d > R) { // el stick "sigue" al dedo
-        ox += dx * (1 - R / d); oy += dy * (1 - R / d); stick.style.left = ox + 'px'; stick.style.top = oy + 'px'; dx = t.clientX - ox; dy = t.clientY - oy;
-      }
-      E.tdx = dx / R; E.tdy = dy / R; perilla.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-    }
-  };
-  const fin = (e) => { for (const t of e.changedTouches) if (t.identifier === tid) { tid = null; E.tdx = 0; E.tdy = 0; stick.classList.remove('activo'); } };
-  zonaStick.addEventListener('touchmove', (e) => { e.preventDefault(); mover(e); }, { passive: false });
-  zonaStick.addEventListener('touchend', fin); zonaStick.addEventListener('touchcancel', fin);
+  const fin = (e) => { for (const t of e.changedTouches) if (t.identifier === tid) { tid = null; E.tdx = 0; E.tdy = 0; dpad.classList.remove('activo'); pintar(); } };
+  zona.addEventListener('touchmove', (e) => { e.preventDefault(); for (const t of e.changedTouches) if (t.identifier === tid) dir(t); }, { passive: false });
+  zona.addEventListener('touchend', fin); zona.addEventListener('touchcancel', fin);
+  E.dpad = dpad;
   raiz.querySelectorAll('[data-b]').forEach((el) => {
     const b = el.dataset.b;
     el.addEventListener('touchstart', (e) => { e.preventDefault(); E.tactil = true; E.ultimo = 'tactil'; apretar(b); el.classList.add('on'); if (navigator.vibrate && b !== 'pausa') navigator.vibrate(8); }, { passive: false });
@@ -62,6 +57,11 @@ export function leerEntrada() {
     for (const i in m) { const v = bt(+i); const prev = padPrev[p.index * 20 + +i]; if (v && !prev) { apretar(m[i]); E.ultimo = 'pad'; } if (!v && prev) soltar(m[i]); padPrev[p.index * 20 + +i] = v; }
   }
   E.dx = Math.max(-1, Math.min(1, dx)); E.dy = Math.max(-1, Math.min(1, dy));
+  // doble toque horizontal = correr (el bot de pruebas no corre)
+  const hx = Math.abs(E.dx) > 0.5 ? Math.sign(E.dx) : 0;
+  if (hx !== hPrev) { if (hx) { const now = performance.now(); E.corre = hx === hUlt && now - tUlt < 280 && !(globalThis.__bb && globalThis.__bb.bot) ? hx : 0; hUlt = hx; tUlt = now; } else E.corre = 0; hPrev = hx; }
+  if (E.dpad) E.dpad.classList.toggle('corre', !!E.corre);
 }
+let hPrev = 0, hUlt = 0, tUlt = -1e9;
 export function consumir(b) { if (E.buf[b] > 0) { E.buf[b] = 0; return true; } return false; }
 export function tickBuf(dt) { for (const k in E.buf) if (E.buf[k] > 0) E.buf[k] = Math.max(0, E.buf[k] - dt); }

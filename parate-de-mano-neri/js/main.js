@@ -16,7 +16,7 @@ import { NIVELES } from './niveles.js';
 import { abrirMapa, pasoMapa, dibujarMapa, precargarMapa } from './mapa.js';
 import { calle, cielo, ALTO, EXTRA } from './escenario.js';
 
-export const VERSION = 'bb-v9';
+export const VERSION = 'bb-v10';
 // sonidos de menú por ID (audio-ids.js): sin archivo, no suena (o suena el respaldo sintetizado si el ID lo tiene)
 const UI = { menu: 'ui.mover', dale: 'ui.ok', pausa: 'ui.pausa', item: 'ui.ropa', atras: 'ui.atras' };
 function sfx(k) { sonar(UI[k] || k); }
