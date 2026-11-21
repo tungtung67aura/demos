@@ -1,0 +1,23 @@
+<!doctype html><body style="background:#3a2c44;margin:0"><canvas id=c></canvas><script type=module>
+// Revisión anatómica: cuadros ampliados (sin recortar) y, con ?huesos=1, el esqueleto encima. ?ks=cacho&poses=quieto:0,camina:2&z=6&q=2
+import {depurarPose, fijarQ} from '../js/sprites.js';
+const q=new URLSearchParams(location.search); const Z=+(q.get('z')||5); fijarQ(+(q.get('q')||2));
+const ks=(q.get('ks')||'cacho').split(','), poses=(q.get('poses')||'quieto:0').split(','), hues=q.get('huesos')==='1';
+const CW=+(q.get('cw')||90), CH=+(q.get('ch')||130), OX=+(q.get('ox')||22);
+const c=document.getElementById('c'); c.width=ks.length*poses.length*CW*Z; c.height=CH*Z+28; const x=c.getContext('2d'); x.imageSmoothingEnabled=false;
+x.fillStyle='#8a7f8e'; x.fillRect(0,0,c.width,c.height);
+let px=0;
+for(const k of ks) for(const p of poses){ const [n,i]=p.split(':'); const r=depurarPose(k,n,+(i||0)); const s=Z/r.q;
+  // pies del personaje en (px + OX*Z, CH*Z - 6*Z)
+  const ox=px+OX*Z+ (0) - r.pies[0]*Z + 18*Z, oy=(CH-4)*Z - r.pies[1]*Z;
+  x.fillStyle='#6d6372'; x.fillRect(px,(CH-4)*Z,CW*Z,4*Z);
+  x.drawImage(r.lienzo, ox, oy, r.lienzo.width*s, r.lienzo.height*s);
+  if(hues){ const H=r.huesos, P=(a)=>[ox+a[0]*Z, oy+a[1]*Z];
+    const L=(a,b,c2)=>{x.strokeStyle=c2; x.lineWidth=Math.max(2,Z*0.5); x.beginPath(); x.moveTo(...P(a)); x.lineTo(...P(b)); x.stroke();};
+    L(H.caderaF,H.rodillaF,'#3cf'); L(H.rodillaF,H.tobilloF,'#3cf'); L(H.hombroF,H.codoF,'#3cf'); L(H.codoF,H.munecaF,'#3cf');
+    L(H.caderaN,H.rodillaN,'#f3c'); L(H.rodillaN,H.tobilloN,'#f3c'); L(H.hombroN,H.codoN,'#f3c'); L(H.codoN,H.munecaN,'#f3c');
+    L(H.cadera,H.cuello,'#ff3'); L(H.cuello,H.cabeza,'#ff3'); L(H.hombroN,H.hombroF,'#ff3'); L(H.caderaN,H.caderaF,'#ff3');
+    for(const k2 in H){ const [a,b]=P(H[k2]); x.fillStyle='#fff'; x.beginPath(); x.arc(a,b,Math.max(3,Z*0.8),0,7); x.fill(); x.strokeStyle='#000'; x.lineWidth=1.5; x.stroke(); } }
+  x.fillStyle='#fff'; x.font='bold 18px monospace'; x.fillText(k+' '+p, px+6, CH*Z+20); px+=CW*Z; }
+window.__ok=1;
+</script>

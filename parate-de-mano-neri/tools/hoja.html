@@ -1,0 +1,8 @@
+<!doctype html><body style="background:#556;margin:0"><canvas id=c></canvas><script type=module>
+import {generar} from '../js/sprites.js';
+const ks=['seba','pelado','pato','buzo','mati','cacho','tano'];
+const c=document.getElementById('c'); c.width=2400; c.height=ks.length*190; const x=c.getContext('2d'); x.imageSmoothingEnabled=false;
+let t=performance.now();
+ks.forEach((k,j)=>{const g=generar(k); let i=0; for(const a in g.anims){for(const f of g.anims[a]){x.drawImage(f.d,i*72-30,j*190); i++;}} x.drawImage(g.retrato,2360,j*190);});
+window.__t=performance.now()-t; window.__ok=1;
+</script>

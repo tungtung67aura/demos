@@ -57,7 +57,7 @@ add('armas', 'arma.tiro', 'Tirar un arma (zumbido)', { sinte: 'aire' });
 add('items', 'item.arma', 'Juntar un arma', { sinte: 'item' });
 add('items', 'item.comida', 'Comer (bizcochos, chivito, torta frita...)', { sinte: 'come' });
 add('items', 'item.mate', 'Tomar mate (carga MANO)', { sinte: 'come' });
-add('items', 'item.plata', 'Juntar plata', { sinte: 'plata' });
+add('items', 'item.plata', 'Juntar plata ($U): monedas y billetes', { sinte: 'plata' });
 add('items', 'item.robado', 'Te roban algo (El Rata)', {});
 // --- movimientos
 add('mov', 'mov.aire', 'Golpe al aire (zumbido)', { sinte: 'aire' });
@@ -113,7 +113,7 @@ add('ambiente', 'amb.lluvia', 'Loop de lluvia', { loop: true });
 // --- música
 add('musica', 'mus.titulo', 'Pantalla de título', { loop: true, sinte: 'menu' });
 add('musica', 'mus.menu', 'Menús (selección, vestuario, mapa)', { loop: true, sinte: 'menu' });
-for (let i = 1; i <= 6; i++) add('musica', 'mus.nivel' + i, 'Nivel ' + i, { loop: true, sinte: 'nivel' });
+for (let i = 1; i <= 8; i++) add('musica', 'mus.nivel' + i, 'Nivel ' + i, { loop: true, sinte: 'nivel' });
 add('musica', 'mus.jefe', 'Pelea con jefe', { loop: true, sinte: 'jefe' });
 add('musica', 'mus.jefe.final', 'Pelea con el jefe final', { loop: true, sinte: 'jefe' });
 add('musica', 'mus.victoria', 'Nivel ganado (jingle)', {});
@@ -137,5 +137,19 @@ add('ui', 'ui.atras', 'Volver', { sinte: 'menu' });
 add('ui', 'ui.pausa', 'Pausa', { sinte: 'pausa' });
 add('ui', 'ui.ropa', 'Cambiar ropa en el vestuario', { sinte: 'item' });
 add('ui', 'ui.mapa', 'Se abre el mapa de Montevideo');
+// --- cinemáticas, economía y progresión (v9)
+add('ui', 'cine.letra', 'Texto a máquina de escribir en la caja de diálogo (cada 2 letras)', { sinte: 'letra' });
+add('ui', 'cine.avanza', 'Pasar al siguiente diálogo', { sinte: 'menu' });
+add('ui', 'cine.saltar', 'Saltear la cinemática', { sinte: 'pausa' });
+add('eventos', 'cine.capitulo', 'Cartel de capítulo (golpe de orquesta corto)', { sinte: 'capitulo' });
+add('eventos', 'cine.robo', 'El Rata manotea el termo', { sinte: 'robo' });
+add('ui', 'tienda.compra', 'Comprar en el almacén', { sinte: 'caja' });
+add('ui', 'tienda.nopuede', 'No alcanza la plata / ya está comprado', { sinte: 'nopuede' });
+add('ui', 'ui.punto', 'Asignar un punto de atributo', { sinte: 'punto' });
+add('ui', 'ui.conteo', 'Conteo de cifras en la pantalla de resultados', { sinte: 'letra' });
+add('armas', 'arma.botella.rompe', 'La botella se rompe y queda el pico en la mano', { sinte: 'botella' });
+add('golpes', 'golpe.pisoton', 'Pisotón a un enemigo tirado', { sinte: 'pisoton' });
+add('golpes', 'golpe.cabezazo', 'Cabezazo desde el agarre', { sinte: 'fuerte' });
+add('golpes', 'golpe.remate', 'Remate cargado (golpe final del combo)', { sinte: 'fuerte' });
 add('ui', 'ui.bloqueado', 'Elegir un nivel que todavía está cerrado', { sinte: 'menu' });
 export const CATALOGO = C;

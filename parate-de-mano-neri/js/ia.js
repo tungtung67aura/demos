@@ -8,7 +8,10 @@ import { sonar, voz } from './audio.js';
 const A = {
   toque: { anim: 'tamborOnda', ini: 0.25, act: 0.02, rec: 0.9, dmg: 0, x: [0, 0], son: 'enem.tambor.toque', hs: 0, buffo: true },
   silbato: { anim: 'golpe', ini: 0.35, act: 0.02, rec: 0.7, dmg: 0, x: [0, 0], son: 'enem.silbato', hs: 0, silba: true },
+  ladrillo: { anim: 'golpe', ini: 0.26, act: 0.04, rec: 0.3, dmg: 0, x: [0, 0], son: 'arma.tiro', hs: 0, proy: { t: 'ladrillo', v: 230, z: 54, vz: 120, arco: true, n: 1 } },
   brasas: { anim: 'golpe', ini: 0.4, act: 0.02, rec: 0.6, dmg: 0, x: [0, 0], son: 'enem.parrilla.fuego', hs: 0, brasas: true },
+  ronda: { anim: 'golpe', ini: 0.2, act: 0.04, rec: 0.22, dmg: 0, x: [0, 0], son: 'arma.tiro', hs: 0, proy: { t: 'botella', v: 260, z: 50, n: 1 } },
+  rondaF: { anim: 'golpe', ini: 0.16, act: 0.04, rec: 0.3, dmg: 0, x: [0, 0], son: 'arma.tiro', hs: 0, proy: { t: 'botella', v: 250, z: 50, n: 3, abanico: 34 } },
   abre: { anim: 'bloquea', ini: 0.05, act: 1.5, rec: 0.2, dmg: 0, x: [0, 0], son: 'enem.paraguas.abre', hs: 0, cubre: true },
 };
 const cl = (v) => (v < -1 ? -1 : v > 1 ? 1 : v);
@@ -268,5 +271,36 @@ function capo(g, e, dt, dx, dy, adx) {
   }
   acomodar(g, e, dx, dy, 38);
 }
-const TIPOS = { base, chorro, patova, guri, faca, cuida, dona, tambor, mozo, pescador, tano, chola, guarda, bocha, parrillero, capo };
+// ---------- mamado: se tambalea (zigzag), se cae solo a veces, tira botellas y suelta un cross de ropero
+function mamado(g, e, dt, dx, dy, adx) {
+  const ia = e.ia; ia.tamb = (ia.tamb || Math.random() * 6) + dt;
+  if (!ia.tropiezo) ia.tropiezo = 4 + Math.random() * 6; ia.tropiezo -= dt;
+  if (ia.tropiezo <= 0 && adx > 40) { ia.tropiezo = 0; e.est = 'vuela'; e.t = 0; e.vz = 90; e.z = 1; e.vx = e.cara * 70; e.juggle = 2; g.globo(e, '¡HIP! ¿QUIÉN ME EMPUJÓ?', 1.2); return; }
+  base(g, e, dt, dx, dy, adx);
+  e.intent.my += Math.sin(ia.tamb * 2.7) * 0.55; e.intent.mx += Math.sin(ia.tamb * 1.9) * 0.3; // el zigzag
+}
+// ---------- el Chapa: jefe de Los Pibes del Cerro. Rápido y sucio: ladrillazos de lejos, barrida, combos y a la mitad llama a la barra
+function chapa(g, e, dt, dx, dy, adx) {
+  const ia = e.ia;
+  fases(g, e, 0.5, () => { g.encolar([['guri', 0], ['chorro', 1], ['buzo', 2]]); ia.furia = true; e.st = { ...e.st, vel: e.st.vel * 1.15 }; });
+  if (ia.cd > 0) return acomodar(g, e, dx, dy, 60);
+  const r = Math.random();
+  if (adx > 100 && adx < 260 && Math.abs(dy) < 14 && r < dt * (ia.furia ? 2.4 : 1.5)) { e.cara = Math.sign(dx); g.atacar(e, A.ladrillo); ia.cd = ia.furia ? 0.35 : 0.6; if (Math.random() < 0.3) g.globo(e, '¡PEAJE, GIL!', 0.8); return; }
+  if (adx > 50 && adx < 120 && Math.abs(dy) < 8 && r < dt * 1.2) { e.cara = Math.sign(dx); g.atacar(e, ATQ.e_barrida); ia.cd = 0.5; return; }
+  if (adx < 52 && Math.abs(dy) < 8) { e.cara = Math.sign(dx); g.atacar(e, r < 0.4 ? ATQ.e_combo : r < 0.75 ? ATQ.e_jab : ATQ.j_upper); ia.cd = ia.furia ? 0.25 : 0.42; return; }
+  acomodar(g, e, dx, dy, 44);
+}
+// ---------- el Gallego: dueño del boliche. Rondas de botellas, embestida desde la barra, y a la mitad paga una ronda (llama a los mamados)
+function gallego(g, e, dt, dx, dy, adx) {
+  const ia = e.ia;
+  fases(g, e, 0.5, () => { g.encolar([['mamado', 0], ['mamado', 1]]); ia.furia = true; });
+  if (ia.ronda > 0) { if (ia.cd <= 0) { ia.ronda--; e.cara = Math.sign(dx) || 1; g.atacar(e, ia.furia && ia.ronda === 0 ? A.rondaF : A.ronda); ia.cd = 0.25; } return; }
+  if (ia.cd > 0) return acomodar(g, e, dx, dy, 70);
+  const r = Math.random();
+  if (adx > 110 && Math.abs(dy) < 14 && r < dt * (ia.furia ? 2.2 : 1.4)) { ia.ronda = ia.furia ? 3 : 2; g.globo(e, '¡LA CASA INVITA!', 0.9); return; }
+  if (adx > 70 && adx < 170 && Math.abs(dy) < 8 && r < dt * 0.9) { e.cara = Math.sign(dx); g.atacar(e, ATQ.e_embestida); ia.cd = 0.6; return; }
+  if (adx < 56 && Math.abs(dy) < 8) { e.cara = Math.sign(dx); g.atacar(e, r < 0.45 ? ATQ.e_pesada : r < 0.8 ? ATQ.e_combo : ATQ.j_upper); ia.cd = ia.furia ? 0.3 : 0.5; return; }
+  acomodar(g, e, dx, dy, 48);
+}
+const TIPOS = { chapa, mamado, gallego, base, chorro, patova, guri, faca, cuida, dona, tambor, mozo, pescador, tano, chola, guarda, bocha, parrillero, capo };
 export const ATQ_IA = A;

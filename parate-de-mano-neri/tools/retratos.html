@@ -1,0 +1,8 @@
+<!doctype html><body style="background:#3a2c44;margin:0"><canvas id=c></canvas><script type=module>
+// Retratos del HUD de todos los personajes (ampliados) ?z=6
+import {generar, fijarQ} from '../js/sprites.js';
+const q=new URLSearchParams(location.search); const Z=+(q.get('z')||6); fijarQ(+(q.get('q')||2));
+const lista=(q.get('ks')||'seba,pelado,pato,buzo:0,buzo:1,mati:0,mati:1,cacho:0,cacho:1,tano').split(',').map(s=>{const [k,v]=s.split(':');return [k,+(v||0)];});
+const c=document.getElementById('c'); c.width=lista.length*(34*Z+12)+12; c.height=50*Z+30; const x=c.getContext('2d'); x.imageSmoothingEnabled=false;
+lista.forEach(([k,v],i)=>{const g=generar(k,v); const X=12+i*(34*Z+12); x.fillStyle='#1b1220'; x.fillRect(X,12,34*Z,34*Z); x.fillStyle='#5a3a6a'; x.fillRect(X+Z,12+Z,32*Z,32*Z); x.fillStyle='#7a4a7a'; x.fillRect(X+Z,12+Z,32*Z,10*Z); x.drawImage(g.retrato,X+2*Z,12+2*Z,30*Z,30*Z); if(g.retratoChico){x.fillStyle='#1b1220'; x.fillRect(X,34*Z+16,15*Z,15*Z); x.drawImage(g.retratoChico,X+Z,34*Z+16+Z,13*Z,13*Z);}});
+</script>

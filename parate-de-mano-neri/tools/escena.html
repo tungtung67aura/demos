@@ -1,0 +1,15 @@
+<!doctype html><body style="background:#222;margin:0"><canvas id=c></canvas><script type=module>
+// Vista previa de un escenario completo: ?esc=feria&hora=manana&L=3600&lejos=feria&w=640&h=300&tramos=6
+import { calle, cielo, lejos, medio, sol, ALTO, EXTRA } from '../js/escenario.js';
+const q = new URLSearchParams(location.search); const esc = q.get('esc') || 'cuadra', hora = q.get('hora') || 'atardecer', L = +(q.get('L') || 3400), tipo = q.get('lejos') || 'ciudad';
+const W = +(q.get('w') || 640), H = +(q.get('h') || 300), n = +(q.get('tramos') || Math.ceil(L / W));
+const c = document.getElementById('c'); c.width = W; c.height = H * n; const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
+const t0 = performance.now(); const capa = calle({ escena: esc, hora, L }); const t1 = performance.now();
+const cl = cielo(W, H, hora), lj = lejos(1600, tipo, hora), md = medio(2400, tipo, hora), so = sol(hora); const off = H - ALTO;
+for (let i = 0; i < n; i++) { const cam = Math.min(L - W, i * W); const y = i * H; x.save(); x.beginPath(); x.rect(0, y, W, H); x.clip();
+  x.drawImage(cl, 0, y); if (so) x.drawImage(so, Math.round(W * 0.62 - cam * 0.02), y + off + 96);
+  const ljx = Math.round(cam * 0.15) % (lj.width - W); x.drawImage(lj, ljx, 0, W, ALTO, 0, y + off, W, ALTO);
+  const mdx = Math.min(md.width - W, Math.round(cam * 0.45)); x.drawImage(md, mdx, 0, W, ALTO, 0, y + off, W, ALTO);
+  x.drawImage(capa.canvas, cam, 0, W, ALTO + EXTRA, 0, y + off - EXTRA, W, ALTO + EXTRA); x.restore(); }
+window.__ok = { ms: Math.round(t1 - t0) };
+</script>

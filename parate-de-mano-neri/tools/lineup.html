@@ -1,0 +1,15 @@
+<!doctype html><body style="background:#3a2c44;margin:0"><canvas id=c></canvas><script type=module>
+// Primer plano de personajes (para comparar antes/después). ?z=3&poses=quieto,pina1,...
+import {generar, VARIANTES, dibujarCuadro, fijarQ} from '../js/sprites.js';
+const q=new URLSearchParams(location.search); const Z=+(q.get('z')||3); fijarQ(+(q.get('q')||2));
+const lista=(q.get('ks')||'seba,pelado,pato,buzo,mati,cacho,tano').split(',').map(s=>{const [k,v]=s.split(':');return [k,+(v||0)];});
+const poses=(q.get('poses')||'quieto').split(',');
+const g0=generar(lista[0][0],lista[0][1]);
+const et=(q.get('et')||'').split(',').filter(Boolean); const paso=(poses.length>1?78:92)*Z; const cw=150, ch=170; const c=document.getElementById('c'); c.width=Math.min(3000,lista.length*poses.length*paso*1.08+60); c.height=ch*Z+30+(et.length?40:0);
+const x=c.getContext('2d'); x.imageSmoothingEnabled=false;
+let px=10;
+for(const [k,v] of lista){const g=generar(k,v); for(const p of poses){const [n,i]=p.split(':'); const an=g.anims[n]; const f=an[Math.min(+(i||0),an.length-1)];
+  x.fillStyle='rgba(0,0,0,.25)'; x.beginPath(); x.ellipse(px+40*Z,(ch-8)*Z,18*Z,4*Z,0,0,7); x.fill();
+  x.save(); x.scale(Z,Z); dibujarCuadro(x, f, px/Z+40, ch-6, +(q.get('cara')||1)); x.restore(); if(et.length){x.font='bold 22px monospace'; x.fillStyle='#fff'; x.textAlign='center'; x.fillText(et[lista.findIndex(l=>l[0]===k&&l[1]===v)]||'',px+40*Z,ch*Z+30);} px+=paso*(g.def.ancho>1.2?1.15:1);}}
+window.__ok=1;
+</script>

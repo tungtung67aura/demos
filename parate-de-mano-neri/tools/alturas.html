@@ -1,0 +1,6 @@
+<!doctype html><script type=module>
+// altura de cada luchador en px del juego (cuadro 'quieto' 0, sin contorno exterior) a cada densidad: tiene que ser la misma
+import {generar, fijarQ} from '../js/sprites.js';
+const r={}; for (const q of [1,2,3]) { fijarQ(q); r[q]={}; for (const k of ['seba','pelado','pato','buzo','mati','cacho','tano']) { const f=generar(k,0).anims.quieto[0]; r[q][k]=+((f.pies[1]+1)/f.q).toFixed(2); } }
+window.__r=r;
+</script>

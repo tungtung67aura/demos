@@ -1,0 +1,9 @@
+<!doctype html><meta charset=utf-8><body><script type=module>
+import {generar} from '../js/sprites.js'; import {cielo} from '../js/escenario.js'; import {texto} from '../js/pixel.js';
+const s=generar('seba'); const r=s.retrato;
+const [c,x]=(()=>{const c=document.createElement('canvas');c.width=64;c.height=64;const x=c.getContext('2d');x.imageSmoothingEnabled=false;return [c,x]})();
+const g=x.createLinearGradient(0,0,0,64); g.addColorStop(0,'#3a2f6a');g.addColorStop(0.5,'#d0606a');g.addColorStop(1,'#ffcc7a'); x.fillStyle=g; x.fillRect(0,0,64,64);
+x.drawImage(r,0,0,r.width*26/30,r.height*26/30,6,0,52,52); x.fillStyle='#1b1220'; x.fillRect(0,50,64,14); texto(x,'ÑERI',32,53,'#ffd23a',1,'centro');
+window.__png=(n)=>{const o=document.createElement('canvas');o.width=n;o.height=n;const ox=o.getContext('2d');ox.imageSmoothingEnabled=false;ox.drawImage(c,0,0,n,n);return o.toDataURL('image/png');};
+window.__ok=1;
+</script>

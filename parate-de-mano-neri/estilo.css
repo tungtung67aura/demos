@@ -23,3 +23,4 @@ body.tapado #botones { opacity: .38; } /* hay un luchador debajo de los botones:
 #girar span { font-size: 40px; }
 body.vertical #girar { display: flex; }
 @media (hover: hover) and (pointer: fine) { body:not(.tactil) #tactil { display: none; } }
+body.en-cine #tactil { display: none !important; }

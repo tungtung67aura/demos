@@ -1,0 +1,13 @@
+<!doctype html><body style="background:#3a2c44;margin:0"><canvas id=c></canvas><script type=module>
+// Todas las prendas de ARMÁ TU PINTA sobre el esqueleto, mirando a la derecha y a la izquierda. ?k=seba&z=2
+import {generar, dibujarCuadro, fijarQ} from '../js/sprites.js';
+import {opciones} from '../js/ropa.js';
+const q=new URLSearchParams(location.search); const Z=+(q.get('z')||2); fijarQ(+(q.get('q')||2)); const k=q.get('k')||'seba';
+const ar=opciones('arriba'), cb=opciones('cabeza'), ab=opciones('abajo'), cz=opciones('calzado');
+const combos=ar.map((a,i)=>({cabeza:cb[i%cb.length],arriba:a,abajo:ab[i%ab.length],calzado:cz[i%cz.length]}));
+const CW=70, CH=125, poses=[['quieto',0,1],['pina2',1,1],['camina',2,-1],['pina1',1,-1]];
+const c=document.getElementById('c'); c.width=combos.length*poses.length*CW*Z/2+20; c.height=CH*Z*2+10; const x=c.getContext('2d'); x.imageSmoothingEnabled=false;
+let i=0; for(const r of combos){ const g=generar(k,0,r); poses.forEach(([n,f,cara],j)=>{ const col=(i*poses.length+j)%(c.width/(CW*Z)|0), fila=((i*poses.length+j)/(c.width/(CW*Z)|0))|0;
+  const fr=g.anims[n][Math.min(f,g.anims[n].length-1)]; x.save(); x.scale(Z,Z); dibujarCuadro(x,fr,col*CW+CW/2,fila*CH+CH-6,cara); x.restore(); }); i++; }
+window.__ok=1;
+</script>

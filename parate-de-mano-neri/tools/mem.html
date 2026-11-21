@@ -1,0 +1,12 @@
+<!doctype html><script type=module>
+// memoria y tiempo de generación por densidad. Por animación (MB a q=3) para decidir qué se calienta.
+import {generar, fijarQ, POSES} from '../js/sprites.js';
+const out={porAnim:{}};
+for (const q of [2,3]) { fijarQ(q); let t=0, px=0, n=0;
+  for (const [k,v] of [['seba',0],['pelado',0],['pato',0],['buzo',0],['mati',0],['cacho',0],['tano',0]]) { const g=generar(k,v); const t0=performance.now();
+    for (const a in POSES) { let ap=0; for (const f of g.anims[a]) { ap+=f.d.width*f.d.height; if (f.parche) ap+=f.parche.c.width*f.parche.c.height; } px+=ap; if(q===3) out.porAnim[a]=((out.porAnim[a]||0)+ap*4/7/1e6); }
+    t+=performance.now()-t0; n++; }
+  out[q]={msPorSetCompleto:(t/n).toFixed(0), MBporSet:(px*4/n/1e6).toFixed(1)}; }
+for (const a in out.porAnim) out.porAnim[a]=+out.porAnim[a].toFixed(2);
+window.__r=out;
+</script>

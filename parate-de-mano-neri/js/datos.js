@@ -23,11 +23,14 @@ export const ENEMIGOS = {
   mozo: { ia: 'mozo', hp: 42, vel: 68, dmg: 7, reaccion: 0.2, nombres: ['EL MOZO', 'GARZÓN', 'EL PIBE DEL BAR'], puntos: 380, desc: 'Tira bandejas que vuelven.' },
   pescador: { ia: 'pescador', armaFija: 'cana', suelta: true, hp: 50, vel: 48, dmg: 8, reaccion: 0.28, nombres: ['EL PESCA', 'DON CORVINA', 'EL ANZUELO'], puntos: 450, desc: 'Te engancha con la caña y te trae.' },
   // --- jefes (cada uno con su patrón en ia.js)
+  mamado: { ia: 'mamado', hp: 58, vel: 44, dmg: 9, reaccion: 0.34, nombres: ['EL MAMADO', 'EL CHUPA', 'TATO', 'EL ESPONJA'], puntos: 420, tira: true, peso: 1.2, desc: 'Borracho: se tambalea, tira botellas y a veces se cae solo. Pega como un ropero.' },
   tano: { ia: 'tano', hp: 380, vel: 50, dmg: 11.5, reaccion: 0.3, nombres: ['EL TANO'], puntos: 5000, jefe: true, ancho: 18 },
   chola: { ia: 'chola', armaFija: 'cucharon', hp: 400, vel: 50, dmg: 11, reaccion: 0.3, nombres: ['DOÑA CHOLA'], puntos: 6000, jefe: true, ancho: 18, peso: 1.8 },
   guarda: { ia: 'guarda', armaFija: 'maquina', hp: 440, vel: 58, dmg: 11, reaccion: 0.28, nombres: ['EL GUARDA'], puntos: 7000, jefe: true, ancho: 16 },
   bocha: { ia: 'bocha', guardia: true, hp: 420, vel: 64, dmg: 11, reaccion: 0.25, nombres: ['EL BOCHA'], puntos: 8000, jefe: true, ancho: 16, peso: 1.4 },
   parrillero: { ia: 'parrillero', armaFija: 'pinza', hp: 500, vel: 44, dmg: 13, reaccion: 0.34, nombres: ['EL PARRILLERO'], puntos: 9000, jefe: true, ancho: 20, peso: 2.2 },
+  chapa: { ia: 'chapa', hp: 480, vel: 70, dmg: 12, reaccion: 0.24, nombres: ['EL CHAPA'], puntos: 9500, jefe: true, ancho: 17, peso: 1.5 },
+  gallego: { ia: 'gallego', hp: 520, vel: 50, dmg: 12, reaccion: 0.3, nombres: ['EL GALLEGO'], puntos: 10000, jefe: true, ancho: 19, peso: 2.0 },
   capo: { ia: 'capo', armaFija: 'paraguas', hp: 580, vel: 60, dmg: 13, reaccion: 0.24, nombres: ['DON PEPE, EL CAPO'], puntos: 15000, jefe: true, ancho: 17, peso: 1.6 },
 };
 // ini: arranque, act: activo, rec: recuperación (segundos). x: alcance [desde, hasta] hacia adelante
@@ -39,6 +42,11 @@ export const ATQ = {
   patada: { anim: 'patada', ini: 0.11, act: 0.09, rec: 0.22, dmg: 9, x: [10, 46], kb: 110, stun: 0.45, son: 'golpe.patada', hs: 0.08, tumbaSiAturdido: true, vz: 140, empuja: true },
   voladora: { anim: 'voladora', ini: 0.06, act: 9, rec: 0.0, dmg: 11, x: [4, 42], kb: 140, tumba: true, vz: 130, son: 'golpe.voladora', hs: 0.08, aire: true, empuja: true },
   especial: { anim: 'especial', ini: 0.04, act: 0.36, rec: 0.16, dmg: 12, x: [-40, 40], kb: 160, tumba: true, vz: 190, son: 'golpe.especial', hs: 0.06, giro: true, remate: true },
+  // v9: pisotón a un caído, remate (TÉCNICA 3), barrida y cabezazo (se compran en el almacén)
+  pisoton: { anim: 'pisoton', ini: 0.13, act: 0.07, rec: 0.2, dmg: 7, x: [0, 32], kb: 0, son: 'golpe.pisoton', hs: 0.08, alSuelo: true },
+  remate: { anim: 'patada', ini: 0.1, act: 0.09, rec: 0.3, dmg: 13, x: [8, 48], kb: 240, tumba: true, vz: 170, son: 'golpe.remate', hs: 0.15, remate: true, gira: true },
+  j_barrida: { anim: 'barrida', ini: 0.1, act: 0.22, rec: 0.3, dmg: 8, x: [0, 36], kb: 100, tumba: true, vz: 120, son: 'golpe.barrida', hs: 0.07, dash: 230, bajo: true },
+  cabezazo: { anim: 'cabezazo', ini: 0.09, act: 0.06, rec: 0.22, dmg: 13, x: [0, 30], kb: 170, tumba: true, vz: 130, son: 'golpe.cabezazo', hs: 0.13, remate: true },
   rodilla: { anim: 'rodilla', ini: 0.05, act: 0.06, rec: 0.14, dmg: 6, x: [0, 30], kb: 0, stun: 0.5, son: 'golpe.rodilla', hs: 0.06 },
   golpe: { anim: 'golpe', ini: 0.1, act: 0.08, rec: 0.2, dmg: 0, x: [8, 44], kb: 90, stun: 0.45, son: 'arma.palo', hs: 0.08, arma: true },
   e_golpe: { anim: 'golpe', ini: 0.3, act: 0.08, rec: 0.5, dmg: 1, x: [8, 44], kb: 100, stun: 0.45, son: 'arma.palo', hs: 0.08, arma: true },
@@ -85,7 +93,8 @@ export const ATQ = {
 export const ITEMS = {
   palo: { nombre: 'PALO', arma: true, dmg: 12, alcance: 46, dur: 8, vel: 1, kb: 95, son: 'arma.palo', tiro: 14, astilla: '#9a6a3a' },
   faca: { nombre: 'FACA', arma: true, dmg: 11, alcance: 34, dur: 6, vel: 1.3, kb: 50, son: 'arma.faca', tiro: 18, corta: true, metal: true },
-  botella: { nombre: 'BOTELLA', arma: true, dmg: 9, alcance: 36, dur: 2, vel: 1.15, son: 'arma.botella', tiro: 12, rompe: true },
+  botella: { nombre: 'BOTELLA', arma: true, dmg: 9, alcance: 36, dur: 2, vel: 1.15, son: 'arma.botella', tiro: 12, rompe: true, deja: 'pico', dejaTxt: '¡QUEDÓ EL PICO!' },
+  pico: { nombre: 'PICO DE BOTELLA', arma: true, dmg: 10, alcance: 30, dur: 4, vel: 1.4, kb: 40, son: 'arma.faca', tiro: 10, corta: true, rompe: true },
   termo: { nombre: 'TERMO', arma: true, dmg: 10, alcance: 38, dur: 14, vel: 1.05, son: 'arma.termo', tiro: 12, astilla: '#c0c4cc' },
   garrafa: { nombre: 'GARRAFA', arma: true, soloTiro: true, dmg: 0, alcance: 0, dur: 1, tiro: 22, explota: true },
   silla: { nombre: 'SILLA', arma: true, dmg: 16, alcance: 52, dur: 3, vel: 0.72, kb: 170, tumba: true, son: 'arma.silla', tiro: 18, deja: 'pata', astilla: '#c8c8c0', pesada: true },
@@ -107,7 +116,8 @@ export const ITEMS = {
   // comida y cosas
   bizcochos: { cura: 25, txt: '¡BIZCOCHOS!' }, chivito: { cura: 100, txt: '¡CHIVITO!' }, mate: { cura: 35, mano: 50, txt: '¡UN MATE!' },
   alfajor: { cura: 15, txt: '¡ALFAJOR!' }, tortafrita: { cura: 30, txt: '¡TORTA FRITA!' }, choripan: { cura: 60, txt: '¡CHORIPÁN!' },
-  billete: { puntos: 1000, txt: '+$1000' }, pelota: { pelota: true },
+  billete: { puntos: 1000, plata: 100, txt: '+$U 100' }, pelota: { pelota: true },
+  moneda: { plata: 10, auto: true }, // plata suelta: se junta sola al pasar por arriba
 };
 export const COMIDA = ['bizcochos', 'chivito', 'mate', 'alfajor', 'tortafrita', 'choripan'];
 // rompibles: golpes que aguantan, material (sonido y astillas) y lo que sueltan por defecto
@@ -136,6 +146,7 @@ export const FRASES = {
   cuida: ['¡TE LO CUIDO, JEFE!', '¡LA VOLUNTAD, MAESTRO!', '¡ACÁ NO ESTACIONÁS!', '¡DALE QUE TE LO LAVO!'],
   dona: ['¡ATORRANTE!', '¡QUÉ JUVENTUD!', '¡A MI EDAD!', '¡TE VOY A BARRER!', '¡LLAMO A TU MADRE!'],
   tambor: ['¡DALE QUE SUENA!', '¡CHICO, REPIQUE Y PIANO!', '¡QUE NO PARE!', '¡ESTO ES CANDOMBE!'],
+  mamado: ['¡VOS SOS MI HERMANO, LOCO!', '¡TE QUIERO MUCHO, BOLUDO!', '¡NO ESTOY MAMADO, ESTOY FELIZ!', '¡OTRA VUELTA, GALLEGO!', '¡HIP!'],
   mozo: ['¡LA CUENTA, CABALLERO!', '¡SALE UNA BANDEJA!', '¡LA PROPINA APARTE!', '¡MESA PARA UNO!'],
   pescador: ['¡PICÓ!', '¡VENÍ, PESCADITO!', '¡HOY NO PICA NADA!', '¡A LA OLLA!'],
   // jefes: intro, frases durante la pelea, al pasar la mitad (furia) y al caer
@@ -144,6 +155,8 @@ export const FRASES = {
   guarda: { intro: '¡BOLETO, CABALLERO!', pelea: ['¡PASE PARA EL FONDO!', '¡SIN BOLETO NO VIAJÁS!', '¡HAY LUGAR ATRÁS!'], furia: '¡QUE VENGA EL 121!', ko: '¡FIN DEL RECORRIDO!' },
   bocha: { intro: '¿VOS SOS EL GUAPO DEL BARRIO?', pelea: ['¡GUARDIA ALTA!', '¡ESTO ES BOX, NENE!', '¡AL CUERPO!'], furia: '¡AHORA ME ENOJÉ!', ko: '¡TIRO LA TOALLA!' },
   parrillero: { intro: '¡SE TE QUEMA EL ASADO!', pelea: ['¡VUELTA Y VUELTA!', '¡SALE CHORIZO!', '¡A LA PARRILLA!'], furia: '¡MÁS BRASAS!', ko: '¡SE ME APAGÓ EL FUEGO!' },
+  chapa: { intro: '¡ESTO ES TERRITORIO DE LOS PIBES!', pelea: ['¡PEAJE, GIL!', '¡ACÁ MANDO YO!', '¡TOMÁ, DE PARTE DEL CERRO!'], furia: '¡MUCHACHOS, CAÑO!', ko: '¡TÁ, TÁ, PASÁ GRATIS!' },
+  gallego: { intro: '¡EN MI BOLICHE SE CONSUME!', pelea: ['¡LA CASA INVITA!', '¡ESTO NO ES UN BAR, ES UNA IGLESIA!', '¡TOMÁ, CHAVAL!'], furia: '¡ESTA RONDA LA PAGO YO!', ko: '¡CERRAMOS POR HOY!' },
   capo: { intro: '¿VOS LIMPIASTE MONTEVIDEO?', pelea: ['¡LA RAMBLA ES MÍA!', '¡ME ARRUINASTE EL MATE!', '¡MUCHACHOS!'], furia: '¡SE ME VOLÓ EL PARAGUAS!', ko: '¡TÁ, LA RAMBLA ES TUYA!' },
 };
 export const pick = (a) => a[Math.floor(Math.random() * a.length)];

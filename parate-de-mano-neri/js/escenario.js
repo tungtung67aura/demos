@@ -8,6 +8,8 @@ import { pintarAvenida } from './escenarios/avenida.js';
 import { pintarBarrioSur } from './escenarios/barriosur.js';
 import { pintarCiudadVieja } from './escenarios/ciudadvieja.js';
 import { pintarRambla } from './escenarios/rambla.js';
+import { pintarBoliche } from './escenarios/boliche.js';
+import { pintarCerro } from './escenarios/cerro.js';
 
 export const PISO = { arriba: 182, abajo: 266 }; // rango de "y" (profundidad) caminable
 export const ALTO = 270;
@@ -74,6 +76,11 @@ export function lejos(ancho, tipo = 'ciudad', hora = 'atardecer') {
     R(sx + 29 * k, base - 162 * k, 2 * k, 2 * k, '#ff6a5a');
   };
   if (tipo === 'ciudad' || tipo === 'sur') { edificios(172, 40, 70); salvo(300); R(1120, 120, 30, 52, cs); R(1126, 100, 18, 20, cs); }
+  if (tipo === 'cerro') { // el Cerro de Montevideo de cerca: la loma con la Fortaleza, casitas en la falda y las chimeneas de los frigoríficos
+    edificios(176, 14, 26, 20, 30); const cx0 = 700; for (let a = -420; a <= 420; a++) { const h = Math.round(96 * Math.cos((a / 420) * Math.PI / 2) ** 1.3); R(cx0 + a, 172 - h, 1, h, c2); }
+    for (let i = 0; i < 60; i++) { const a = (r() - 0.5) * 700, h = Math.round(96 * Math.cos((a / 420) * Math.PI / 2) ** 1.3); R(cx0 + a, 172 - h * r() * 0.9 + 2, 6, 4, r() < pLuz ? vluz : c1); }
+    R(cx0 - 26, 64, 52, 14, cs); R(cx0 - 20, 58, 10, 6, cs); R(cx0 + 10, 58, 10, 6, cs); R(cx0 + 30, 52, 4, 26, cs); R(cx0 + 29, 48, 6, 4, vluz); // fortaleza y faro
+    for (const fx of [180, 1260, 1500]) { R(fx, 100, 10, 72, cs); R(fx - 2, 96, 14, 4, cs); R(fx - 30, 140, 70, 32, c1); } }
   if (tipo === 'centro') { edificios(176, 70, 90, 30, 50); salvo(420, 1.5, 176); salvo(1500, 1.2, 176); }
   if (tipo === 'feria') { edificios(176, 26, 40, 30, 46); for (let i = 0; i < ancho / 260; i++) { const tx = 60 + i * 260 + r() * 80; R(tx, 140, 3, 36, cs); for (let k = 0; k < 10; k++) { x.fillStyle = k < 6 ? P.arbol[0] : P.arbol[1]; const cx = tx + (r() - 0.5) * 36, cy = 128 + r() * 18; x.fillRect(Math.round(cx - 7), Math.round(cy - 5), 14, 10); } }
     // cúpula de iglesia y la torre de la Universidad a lo lejos
@@ -101,7 +108,7 @@ export function lejos(ancho, tipo = 'ciudad', hora = 'atardecer') {
 export function medio(ancho, tipo = 'ciudad', hora = 'atardecer') {
   const P = PAL[hora]; const [cv, x] = lienzo(ancho, ALTO); const R = (a, b, w, h, c) => { x.fillStyle = c; x.fillRect(Math.round(a), Math.round(b), Math.round(w), Math.round(h)); }; const r = rng(11);
   if (tipo === 'mar' || tipo === 'puerto') return cv; // se ve el agua: sin capa media
-  let px = 0; const hMin = tipo === 'centro' ? 90 : 60, hVar = tipo === 'centro' ? 70 : 60;
+  let px = 0; const hMin = tipo === 'centro' ? 90 : tipo === 'cerro' ? 22 : 60, hVar = tipo === 'centro' ? 70 : tipo === 'cerro' ? 26 : 60;
   while (px < ancho) {
     const w = 50 + Math.floor(r() * 50), h = hMin + Math.floor(r() * hVar), top = 176 - h;
     const base = P.medio[Math.floor(r() * 4)];
@@ -119,7 +126,7 @@ export function medio(ancho, tipo = 'ciudad', hora = 'atardecer') {
 }
 
 // ---------------- CALLE (capa principal) ----------------
-const PINTORES = { cuadra: pintarCuadra, feria: pintarFeria, avenida: pintarAvenida, barriosur: pintarBarrioSur, ciudadvieja: pintarCiudadVieja, rambla: pintarRambla };
+const PINTORES = { cuadra: pintarCuadra, feria: pintarFeria, avenida: pintarAvenida, barriosur: pintarBarrioSur, ciudadvieja: pintarCiudadVieja, rambla: pintarRambla, boliche: pintarBoliche, cerro: pintarCerro };
 // devuelve { canvas, luces: [[x, y, radio, color]] } — las luces se pintan después de la gradación (de noche brillan)
 // ven = { x0, w } pinta sólo una ventana del nivel (fotos del mapa): mismo dibujo, mucho menos trabajo de gradación
 export function calle(nv, ven = null) {

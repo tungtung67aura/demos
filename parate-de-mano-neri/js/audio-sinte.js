@@ -43,6 +43,13 @@ export function sinteSfx(n, fuerza = 1) {
     case 'bocina': tonoS(t, 0.5, 330, 330, 0.25, 'sawtooth'); tonoS(t, 0.5, 415, 415, 0.2, 'sawtooth'); break;
     case 'perro': tonoS(t, 0.08, 700, 400, 0.25, 'square'); tonoS(t + 0.12, 0.08, 700, 400, 0.25, 'square'); break;
     case 'menu': tonoS(t, 0.05, 880, 880, 0.12, 'square'); break;
+    case 'letra': tonoS(t, 0.025, 1240 + Math.random() * 160, 1100, 0.05, 'square'); break;
+    case 'capitulo': tonoS(t, 0.5, 110, 55, 0.6, 'sawtooth'); tonoS(t, 0.5, 165, 82, 0.35, 'sawtooth'); ruido(t, 0.4, 600, 0.6, 0.5, 'lowpass', sfxGain, 120); break;
+    case 'robo': ruido(t, 0.12, 2400, 1, 0.3, 'bandpass', sfxGain, 900); [880, 660, 440].forEach((f, i) => tonoS(t + 0.05 + i * 0.05, 0.06, f, f * 0.9, 0.14, 'square')); break;
+    case 'caja': [1318, 1760].forEach((f, i) => tonoS(t + i * 0.08, 0.14, f, f, 0.16, 'triangle')); ruido(t + 0.16, 0.12, 5000, 1, 0.12, 'highpass'); break;
+    case 'nopuede': tonoS(t, 0.12, 220, 180, 0.2, 'square'); tonoS(t + 0.13, 0.16, 180, 140, 0.2, 'square'); break;
+    case 'punto': [660, 880, 1320].forEach((f, i) => tonoS(t + i * 0.045, 0.07, f, f, 0.15, 'square')); break;
+    case 'pisoton': tonoS(t, 0.18, 110, 32, 0.85 * fuerza); ruido(t, 0.14, 500, 0.7, 0.5, 'lowpass', sfxGain, 150); ruido(t, 0.05, 2600, 0.8, 0.2, 'bandpass'); break;
     case 'pausa': tonoS(t, 0.1, 600, 300, 0.15, 'square'); break;
   }
 }

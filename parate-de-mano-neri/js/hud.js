@@ -1,4 +1,5 @@
 // HUD con el layout de la referencia: retrato + nombre + puntaje + barras HP/MANO, BONUS, VIDAS, TIEMPO, COMBO.
+import { P as PROG } from './progreso.js';
 import { texto, CONTORNO } from './pixel.js';
 import { ITEMS } from './datos.js';
 import { iconoNivel } from './mapa.js';
@@ -28,6 +29,7 @@ export function dibujarHUD(x, g, W, H, tactil, oculto = false) {
   texto(x, 'MANO', 41, 25, '#ffd23a', 1); barra(x, 75, 25, 95, 6, j.mano / 100, '#f0c020', '#fff0a0');
   if (j.mano >= 100) { const b = 0.35 + 0.35 * Math.sin(g.t * 8); x.fillStyle = `rgba(255,255,220,${b.toFixed(2)})`; x.fillRect(75, 25, 95, 6); if (Math.floor(g.t * 5) % 2) texto(x, '¡LISTA!', 122, 24, '#ffffff', 1, 'centro'); }
   const bonus = 100 + Math.min(14, g.combo) * 50;
+  if (g.plataNivel) texto(x, '$U ' + (PROG.plata + g.plataNivel.enemigos + g.plataNivel.objetos), 170, 39, '#7aff7a', 1, 'der', CONTORNO, '#1a5a1a');
   texto(x, 'BONUS', 4, 39, '#c8b8d8', 1); texto(x, bonus + '%', 48, 39, bonus > 100 ? '#ffd23a' : '#ffffff', 1, 'izq', CONTORNO, bonus > 100 ? '#8a5a10' : null);
   // arma en mano
   if (j.arma) { const d = ITEMS[j.arma.t]; texto(x, d.nombre, 4, 50, '#c8ffc8', 1);
@@ -60,10 +62,11 @@ export function dibujarHUD(x, g, W, H, tactil, oculto = false) {
     x.fillStyle = CONTORNO; x.fillRect(W - 76, yy + 22, 46, 12); x.fillStyle = '#ffd23a'; x.fillRect(W - 75, yy + 25, 32, 6);
     for (let i = 0; i < 10; i++) { x.fillStyle = CONTORNO; x.fillRect(W - 44 + i, yy + 17 + i, 1, 22 - i * 2); x.fillStyle = '#ffd23a'; if (i < 9) x.fillRect(W - 44 + i, yy + 18 + i, 1, 20 - i * 2); }
   }
-  if (g.t < 3.2 && g.estado === 'jugando') { // cartel de nivel
-    const a = g.t < 0.3 ? g.t / 0.3 : g.t > 2.8 ? (3.2 - g.t) / 0.4 : 1; const yy = Math.round(H * 0.34), bw = Math.round(W * a);
+  const tc = g.t - (g.t0 || 0);
+  if (tc < 4.2 && g.estado === 'jugando') { // cartel de nivel (arranca cuando termina la cinemática) + objetivo
+    const a = tc < 0.3 ? tc / 0.3 : tc > 3.8 ? (4.2 - tc) / 0.4 : 1; const yy = Math.round(H * 0.34), bw = Math.round(W * a);
     x.fillStyle = CONTORNO; x.fillRect(Math.round((W - bw) / 2), yy - 4, bw, 52); x.fillStyle = '#c8202a'; x.fillRect(Math.round((W - bw) / 2), yy - 2, bw, 2); x.fillRect(Math.round((W - bw) / 2), yy + 44, bw, 2);
-    if (a > 0.9) { const e2 = g.nv.nombre.length * 16 > W - 16 ? 1 : 2; texto(x, 'NIVEL ' + g.nv.num, Math.round(W / 2), yy + 1, '#ffffff', 1, 'centro'); texto(x, g.nv.nombre, Math.round(W / 2), yy + 13 + (e2 === 1 ? 4 : 0), '#ffd23a', e2, 'centro', CONTORNO, '#8a5a10'); texto(x, g.nv.lugar, Math.round(W / 2), yy + 33, '#9ad4ff', 1, 'centro');
+    if (a > 0.9) { const e2 = g.nv.nombre.length * 16 > W - 16 ? 1 : 2; texto(x, 'NIVEL ' + g.nv.num, Math.round(W / 2), yy + 1, '#ffffff', 1, 'centro'); texto(x, g.nv.nombre, Math.round(W / 2), yy + 13 + (e2 === 1 ? 4 : 0), '#ffd23a', e2, 'centro', CONTORNO, '#8a5a10'); texto(x, g.nv.lugar, Math.round(W / 2), yy + 33, '#9ad4ff', 1, 'centro'); if (g.nv.objetivo) { const ow = g.nv.objetivo.length * 8 + 12; x.fillStyle = CONTORNO; x.fillRect(Math.round((W - ow) / 2), yy + 52, ow, 14); texto(x, g.nv.objetivo, Math.round(W / 2), yy + 55, '#7aff7a', 1, 'centro'); }
       const tw = g.nv.nombre.length * 8 * e2, ic = iconoNivel(g.nv.id); if (W / 2 + tw / 2 + 40 < W) { x.drawImage(ic, Math.round(W / 2 - tw / 2 - 36), yy + 9); x.drawImage(ic, Math.round(W / 2 + tw / 2 + 10), yy + 9); } }
   }
   if (g.mensaje) { const m = g.mensaje; if (Math.floor(m.t * 5) % 2 === 0) texto(x, m.txt, Math.round(W / 2), Math.round(H * 0.3), '#ffd23a', m.txt.length * 16 > W - 16 ? 1 : 2, 'centro', CONTORNO, '#8a3a10'); }

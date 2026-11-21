@@ -89,6 +89,14 @@ export const POSES = {
     P({ alto: 2.0, lean: 0.5, head: -0.1, pn: [-0.95, 0.15, -0.7], pf: [0.85, 0, 0], bn: { m: [0.62, -1.2] }, bf: { m: [0.85, -1.15] }, cara: 'enojo' }),
     P({ y: -0.62, lean: 0.26, pn: [-0.62, 0, 0], pf: [0.5, 0, 0], bn: { m: [0.72, 0.16] }, bf: { m: [0.95, 0.1] }, cara: 'enojo' })],
   agarra: [P({ lean: 0.22, x: 0.1, bn: { m: [1.45, 0.12] }, bf: { m: [1.62, 0.22] }, cara: 'enojo', mano: 'abierta' })],
+  // pisotón: levanta la rodilla bien alto, pisa con todo el peso mirando al piso y se acomoda
+  pisoton: ataque(P({ y: -0.1, lean: -0.08, head: 0.05, pn: { fk: [1.35, -2.3, -0.2] }, pf: [0.15, 0, 0], bn: { m: [0.5, 0.5] }, bf: { m: [0.4, 0.62] }, cara: 'enojo' }),
+    P({ y: -0.42, lean: 0.38, head: 0.42, g: 0.5, pn: { fk: [0.62, -0.3, 0.25] }, pf: [-0.2, 0, 0], bn: { m: [0.2, 0.7] }, bf: { m: [0.1, 0.85] }, cara: 'grito' }),
+    P({ y: -0.38, lean: 0.3, head: 0.35, g: 0.5, pn: { fk: [0.55, -0.35, 0.2] }, pf: [-0.15, 0, 0], bn: { m: [0.3, 0.6] }, bf: { m: [0.2, 0.75] }, cara: 'enojo' })),
+  // cabezazo: se echa para atrás y la manda de frente
+  cabezazo: ataque(P({ y: -0.1, lean: -0.32, head: -0.4, x: -0.1, bn: { m: [1.2, 0.2] }, bf: { m: [1.3, 0.3] }, pn: [-0.3, 0, 0], pf: [0.35, 0, 0], cara: 'enojo', mano: 'abierta' }),
+    P({ y: -0.2, lean: 0.62, head: 0.55, x: 0.18, bn: { m: [1.1, 0.1] }, bf: { m: [1.2, 0.2] }, ...piernaAtras, pf: [0.5, 0, 0], cara: 'grito', mano: 'abierta' }),
+    P({ y: -0.16, lean: 0.4, head: 0.3, x: 0.12, bn: { m: [1.0, 0.2] }, bf: { m: [1.1, 0.3] }, pn: [-0.6, 0, 0], pf: [0.45, 0, 0], cara: 'enojo', mano: 'abierta' })),
   rodilla: [P({ lean: 0.2, bn: { m: [1.35, 0.08] }, bf: { m: [1.5, 0.18] }, pn: { fk: [0.9, -1.6, -0.4] }, pf: [0.2, 0, 0], cara: 'enojo', mano: 'abierta' }),
     P({ lean: 0.34, bn: { m: [1.25, -0.06] }, bf: { m: [1.4, 0.04] }, pn: { fk: [1.5, -2.2, -0.5] }, pf: [0.1, 0, 0], cara: 'grito', mano: 'abierta' })],
   revolea: [P({ lean: 0.16, y: -0.5, bn: { m: [1.5, 0.28] }, bf: { m: [1.6, 0.38] }, cara: 'enojo', mano: 'abierta' }),
@@ -123,7 +131,7 @@ export const POSES = {
 };
 // levanta: 4 cuadros (sentado, en cuatro patas, rodilla, parándose)
 // fases por cuadro de ataque: a = arranque (anticipación), g = golpe activo, r = recuperación
-export const FASES = { pina1: 'agrr', pina2: 'agrr', pina3: 'agrr', patada: 'agrr', golpe: 'agrr', barrida: 'aggr', tamborOnda: 'agrr', empuja: 'aggr', apunta: 'aagr' };
+export const FASES = { pisoton: 'agrr', cabezazo: 'agrr', pina1: 'agrr', pina2: 'agrr', pina3: 'agrr', patada: 'agrr', golpe: 'agrr', barrida: 'aggr', tamborOnda: 'agrr', empuja: 'aggr', apunta: 'aagr' };
 // elige el cuadro de un ataque según el tiempo y las fases
 export function cuadroAtaque(anim, t, A) {
   const f = FASES[anim]; if (!f) return t < A.ini ? 0 : t < A.ini + A.act + A.rec * 0.4 ? 1 : 2;
@@ -160,6 +168,12 @@ export const DEFS = {
     ropa: { cabeza: 'nada', arriba: 'blusaFlores', abajo: 'pollera', calzado: 'pantuflas' } },
   tambor: { nombre: 'EL PIANO', piel: '#7a4a32', pelo: '#120c0a', peinado: 'rapado', escala: 1.02, ancho: 1.12, musculo: 1.1, mandibula: 1.1,
     ropa: { cabeza: 'nada', arriba: 'comparsa', abajo: 'vestirBlanco', calzado: 'zapaNegra' } },
+  mamado: { nombre: 'EL MAMADO', piel: '#e8a08a', pelo: '#4a3020', peinado: 'corto', escala: 1.0, ancho: 1.12, panza: 6, barba: '#4a3020', barbaCorta: true, mandibula: 1.05, cachetes: true,
+    ropa: { cabeza: 'gorraAtras', arriba: 'abierta', abajo: 'jean', calzado: 'ojotas' } },
+  chapa: { nombre: 'EL CHAPA', piel: '#b07a54', pelo: '#120c0a', peinado: 'rapado', escala: 1.04, ancho: 1.12, musculo: 1.2, mandibula: 1.12, ceno: true, tatuajes: true, barba: '#120c0a', barbaCorta: true,
+    ropa: { cabeza: 'gorraNegra', arriba: 'canguroVerde', abajo: 'depNegro', calzado: 'zapaUY' } },
+  gallego: { nombre: 'EL GALLEGO', piel: '#eab494', pelo: '#2a1e18', peinado: 'pelado', bigote: '#2a1e18', escala: 1.1, ancho: 1.42, panza: 9, ceno: true, mandibula: 1.22, cachetes: true,
+    ropa: { cabeza: 'nada', arriba: 'camisetaBlanca', abajo: 'vestir', calzado: 'pantuflas' } },
   mozo: { nombre: 'EL MOZO', piel: '#e0a882', pelo: '#1a120e', peinado: 'engominado', bigote: '#1a120e', escala: 0.98, ancho: 0.9, flaco: true, mandibula: 1.0,
     ropa: { cabeza: 'nada', arriba: 'camisaMozo', abajo: 'vestir', calzado: 'zapatos' } },
   pescador: { nombre: 'EL PESCA', piel: '#c88a5e', pelo: '#8a8a8a', peinado: 'corto', escala: 1.0, ancho: 1.18, panza: 8, barba: '#9a9a9a', mandibula: 1.1, cachetes: true,
@@ -192,6 +206,7 @@ export const VARIANTES = {
   dona: [{}, { pelo: '#8a8a92', piel: '#d8a07a', lentes: false, ropa: { arriba: 'blusaChola', abajo: 'polleraChola' } }],
   tambor: [{}, { piel: '#5a3424', ropa: { cabeza: 'gorroRojo' } }],
   mozo: [{}, { pelo: '#8a8a8a', bigote: '#8a8a8a', panza: 6, flaco: false }],
+  mamado: [{}, { piel: '#d8906c', pelo: '#1a120e', ropa: { cabeza: 'nada', arriba: 'camisetaNegra', abajo: 'depGris', calzado: 'pantuflas' } }, { piel: '#f0b8a0', pelo: '#a86a3a', barba: null, ropa: { cabeza: 'gorroGris', arriba: 'penarol', abajo: 'jeanOscuro', calzado: 'zapaGris' } }],
   pescador: [{}, { pelo: '#3a2a20', barba: '#3a2a20', ropa: { arriba: 'camperaAzul' } }],
   cacho: [{}, { piel: '#d49a72', peinado: 'pelado', ropa: { cabeza: 'nada', arriba: 'danubio', abajo: 'depNegro', calzado: 'zapaNegra' } },
     { ropa: { cabeza: 'gorroGris', arriba: 'wanderers', abajo: 'jeanOscuro', calzado: 'zapaGris' } }],
@@ -768,9 +783,9 @@ export function dibujarCuadro(ctx, f, x, y, cara = 1, esc = 1) {
 export function siluetaBlanca(f) { if (f.blanca) return f.blanca; const [cv, x] = lienzo(f.d.width, f.d.height); x.drawImage(f.d, 0, 0); x.globalCompositeOperation = 'source-atop'; x.fillStyle = '#fff6e0'; x.fillRect(0, 0, cv.width, cv.height); f.blanca = { d: cv, q: f.q, pies: f.pies, parche: null }; return f.blanca; }
 
 // Retrato para el HUD: el mismo personaje (con la ropa elegida) dibujado en primer plano, cabeza y hombros
-export function retrato(def, T = 30) {
+export function retrato(def, T = 30, cara = null) {
   const d2 = Object.assign({}, def, { escala: T / ((7.5 * 2.6 * ALTO) / (CABEZAS_ALTO * 13.6)) }); const { w, h } = tamCuadro(d2);
-  const r = dibujarPose(d2, P({ y: -0.05, head: -0.1, lean: 0.03, enc: 0.03, bn: { fk: [0.12, 0.25] }, bf: { fk: [0.1, 0.2] }, pn: [-0.3, 0, 0], pf: [0.3, 0, 0] }), w, h, def.ceno ? 'enojo' : 'normal');
+  const r = dibujarPose(d2, P({ y: -0.05, head: -0.1, lean: 0.03, enc: 0.03, bn: { fk: [0.12, 0.25] }, bf: { fk: [0.1, 0.2] }, pn: [-0.3, 0, 0], pf: [0.3, 0, 0] }), w, h, cara || (def.ceno ? 'enojo' : 'normal'));
   const q = r.buf.q, lado = T * q; const cx = Math.round((r.cabeza[0] - r.radio * 0.05) * q), cy = Math.round((r.cabeza[1] + r.radio * 0.02) * q);
   return r.buf.aCanvasRec(cx - (lado >> 1), cy - (lado >> 1), lado, lado, false);
 }
@@ -791,9 +806,9 @@ const BASE_E = ['quieto', 'camina', 'dolor', 'vuela', 'piso', 'levanta', 'agarra
 const USA_ENEMIGO = { buzo: [...BASE_E, 'pina1', 'patada', 'golpe'], mati: [...BASE_E, 'pina1', 'pina2'], cacho: [...BASE_E, 'pina2', 'pina3'], tano: [...BASE_E, 'pina1', 'patada', 'golpe', 'agarra'],
   chorro: [...BASE_E, 'pina1', 'barrida', 'agarra'], patova: [...BASE_E, 'bloquea', 'pina2', 'pina3', 'agarra', 'revolea'], guri: [...BASE_E, 'apunta', 'pina1'],
   faca: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe', 'pina2'], cuida: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe'], dona: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe'], tambor: [...BASE_E, 'tamborOnda', 'pina1'],
-  mozo: [...BASE_E, 'golpe', 'pina1', 'pina2'], pescador: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe'],
+  mozo: [...BASE_E, 'golpe', 'pina1', 'pina2'], mamado: [...BASE_E, 'golpe', 'pina1', 'pina3'], gallego: [...BASE_E, 'golpe', 'pina2', 'pina3', 'agarra', 'festeja'], pescador: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe'],
   chola: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe', 'empuja', 'festeja'], guarda: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe', 'pina2', 'festeja'],
-  bocha: [...BASE_E, 'pina1', 'pina2', 'pina3', 'bloquea', 'festeja'], parrillero: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe', 'pina3', 'festeja'],
+  bocha: [...BASE_E, 'pina1', 'pina2', 'pina3', 'bloquea', 'festeja'], chapa: [...BASE_E, 'golpe', 'pina1', 'pina2', 'pina3', 'barrida', 'festeja'], parrillero: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe', 'pina3', 'festeja'],
   capo: [...BASE_E, 'quietoArma', 'caminaArma', 'golpe', 'pina2', 'especial', 'bloquea', 'festeja'] };
 // ¿la animación ya está dibujada? (si no, se pide en segundo plano)
 export function lista(sp, nombre) { if (!sp.parciales[nombre]) return true; pedidos.add(sp); (sp.pedidos || (sp.pedidos = new Set())).add(nombre); return false; }

@@ -15,6 +15,8 @@ const SITIO = {
   feria: { u: 0.52, v: 0.53, foto: 760, alto: 6 },
   avenida: { u: 0.43, v: 0.655, foto: 760, alto: 14 },
   barriosur: { u: 0.445, v: 0.795, foto: 1330, alto: 10 },
+  boliche: { u: 0.37, v: 0.76, foto: 1500, alto: 0 },
+  cerro: { u: 0.06, v: 0.69, foto: 1000, alto: 6 },
   ciudadvieja: { u: 0.292, v: 0.725, foto: 2600, alto: 8 },
   rambla: { u: 0.80, v: 0.80, foto: 1120, alto: 0 },
 };
@@ -101,6 +103,12 @@ function icono(tipo) {
     case 'barriosur': // tambor de candombe con lonjas y el palo
       O(7, 6, 12, 17, '#8a3a2a'); R(7, 6, 3, 17, '#a85a40'); for (let k = 0; k < 4; k++) R(7, 9 + k * 4, 12, 1, '#e8c040'); O(6, 4, 14, 3, '#f2ead8'); R(6, 4, 14, 1, '#ffffff');
       O(17, 1, 2, 9, '#d8b070'); R(17, 1, 2, 2, '#f0d090'); R(9, 23, 8, 1, CONTORNO); break;
+    case 'cerro': // bondi abandonado sobre ladrillos con un tag
+      O(2, 8, 22, 12, '#e6e0cc'); R(3, 16, 20, 2, '#2a7a5a'); for (let k = 0; k < 4; k++) R(5 + k * 5, 10, 3, 4, '#5a7080'); R(14, 12, 6, 2, '#e04a8a');
+      O(5, 21, 5, 3, '#a8483a'); O(16, 21, 5, 3, '#a8483a'); R(10, 9, 4, 3, '#a8582a'); break;
+    case 'boliche': // copa de grappamiel y botella sobre la barra del boliche
+      O(3, 18, 20, 5, '#7a4a2a'); R(3, 18, 20, 1, '#b07a4a'); O(6, 4, 4, 4, '#2f7a35'); O(5, 8, 6, 10, '#2f7a35'); R(6, 11, 4, 3, '#f2f2ea'); R(9, 9, 1, 7, '#5ab060');
+      O(15, 9, 6, 5, '#f0c860'); R(16, 9, 4, 2, '#fff0b0'); O(17, 14, 2, 3, '#e8e8f0'); O(15, 17, 6, 1, '#e8e8f0'); break;
     case 'ciudadvieja': // Mercado del Puerto: techo de hierro y torre del reloj
       O(2, 12, 22, 11, '#7a3a2a'); R(2, 12, 22, 2, '#a85a40'); for (let k = 0; k < 5; k++) R(4 + k * 4, 15, 2, 7, '#3a1a14');
       O(4, 9, 18, 3, '#5a5e66'); O(10, 3, 6, 7, '#6a6e76'); R(11, 4, 4, 4, '#f2ead8'); R(13, 5, 1, 2, CONTORNO); R(12, 6, 2, 1, CONTORNO); O(12, 0, 2, 3, '#5a5e66'); break;
@@ -220,7 +228,7 @@ const choca = (a, b) => a[0] < b[0] + b[2] && b[0] < a[0] + a[2] && a[1] < b[1] 
 function partir(s, maxc) { const out = []; let l = ''; for (const w of s.split(' ')) { if ((l + ' ' + w).trim().length > maxc && l) { out.push(l.trim()); l = w; } else l += ' ' + w; } if (l.trim()) out.push(l.trim()); return out; }
 export function dibujarMapa(x, W, H, tP, jugadorSp) {
   const Z = zonas(W, H);
-  if (!ST.iconos) { ST.iconos = {}; for (const k of ['cuadra', 'feria', 'avenida', 'barriosur', 'ciudadvieja', 'rambla', 'fortaleza', 'legislativo', 'estadio', 'faro']) { const c = icono(k); ST.iconos[k] = { c, off: apagado(c) }; } ST.candado = candado(); ST.estrella = estrella(); ST.horas = {}; }
+  if (!ST.iconos) { ST.iconos = {}; for (const k of [...NIVELES.map((n) => n.id), 'fortaleza', 'legislativo', 'estadio', 'faro']) { const c = icono(k); ST.iconos[k] = { c, off: apagado(c) }; } ST.candado = candado(); ST.estrella = estrella(); ST.horas = {}; }
   const k = Z.mw + 'x' + Z.mh; if (k !== ST.ciudadK) { ST.ciudad = pintarCiudad(Z.mw, Z.mh, Z.Hc); ST.ciudadK = k; ST.olas = null; }
   const D = x.getTransform().a || 1;
   // capa fija de abajo: lámina, títulos, marco y la ciudad (se arma una vez por tamaño)

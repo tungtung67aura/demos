@@ -5,7 +5,7 @@
 const MINI = (nombre, hp = 2.4) => ({ mini: true, nombre, hp });
 
 export const NIVELES = [
-  { id: 'cuadra', num: 1, nombre: 'LA CUADRA DEL CANA', lugar: 'BARRIO · ATARDECER', escena: 'cuadra', hora: 'atardecer', L: 3400, lejos: 'ciudad', medio: 'ciudad',
+  { id: 'cuadra', objetivo: 'OBJETIVO: ENCONTRÁ AL TANO Y AL RATA', num: 1, nombre: 'LA CUADRA DEL CANA', lugar: 'BARRIO · ATARDECER', escena: 'cuadra', hora: 'atardecer', L: 3400, lejos: 'ciudad', medio: 'ciudad',
     musica: 'mus.nivel1', ambiente: 'amb.cuadra', dif: 1.0, cupo: 2, max: 4, mapa: [0.28, 0.42],
     decor: [{ t: 'contenedor', x: 296, y: 192, empuja: true }, { t: 'moto', x: 610, y: 196 }, { t: 'contenedor', x: 1100, y: 192, empuja: true }, { t: 'carton', x: 760, y: 268 },
       { t: 'contenedor', x: 1520, y: 192, empuja: true }, { t: 'contenedor', x: 2250, y: 192, empuja: true }, { t: 'moto', x: 2700, y: 196 }, { t: 'contenedor', x: 3260, y: 192 }],
@@ -22,7 +22,7 @@ export const NIVELES = [
       { cam: 2420, enemigos: [['cacho', 0], ['mati', 2], ['buzo', 1], ['cacho', 2, MINI('EL GRAN CACHO')], ['mati', 3], ['buzo', 0]] },
       { cam: 9999, jefe: 'tano', enemigos: [['tano', 0]] }] },
 
-  { id: 'feria', num: 2, nombre: 'FERIA DE TRISTÁN NARVAJA', lugar: 'CORDÓN · DOMINGO DE MAÑANA', escena: 'feria', hora: 'manana', L: 3600, lejos: 'feria', medio: 'ciudad',
+  { id: 'feria', objetivo: 'OBJETIVO: LLEGÁ AL PUESTO DE DOÑA CHOLA', num: 2, nombre: 'FERIA DE TRISTÁN NARVAJA', lugar: 'CORDÓN · DOMINGO DE MAÑANA', escena: 'feria', hora: 'manana', L: 3600, lejos: 'feria', medio: 'ciudad',
     musica: 'mus.nivel2', ambiente: 'amb.feria', dif: 1.1, cupo: 2, max: 4, mapa: [0.36, 0.5],
     decor: [{ t: 'cono', x: 520, y: 214 }, { t: 'moto', x: 1500, y: 196 }, { t: 'contenedor', x: 2380, y: 192, empuja: true }, { t: 'banco', x: 3000, y: 190 }],
     rompibles: [{ t: 'puesto', x: 300, y: 200, da: 'naranja' }, { t: 'cajonFruta', x: 470, y: 262, da: 'tortafrita' }, { t: 'puesto', x: 960, y: 200, da: 'escoba' }, { t: 'cajonFruta', x: 1150, y: 258, da: 'cajonF' },
@@ -38,7 +38,7 @@ export const NIVELES = [
       { cam: 2620, enemigos: [['cuida', 1], ['dona', 0], ['guri', 0], ['buzo', 1], ['chorro', 1], ['mati', 0]], eventos: [{ t: 'changuitos', en: 8, n: 4 }] },
       { cam: 9999, jefe: 'chola', enemigos: [['chola', 0]] }] },
 
-  { id: 'avenida', num: 3, nombre: 'AVENIDA 18 DE JULIO', lugar: 'CENTRO · MEDIODÍA', escena: 'avenida', hora: 'mediodia', L: 3800, lejos: 'centro', medio: 'centro',
+  { id: 'avenida', objetivo: 'OBJETIVO: ALCANZÁ AL GUARDA DEL 121', num: 3, nombre: 'AVENIDA 18 DE JULIO', lugar: 'CENTRO · MEDIODÍA', escena: 'avenida', hora: 'mediodia', L: 3800, lejos: 'centro', medio: 'centro',
     musica: 'mus.nivel3', ambiente: 'amb.avenida', dif: 1.18, cupo: 3, max: 5, mapa: [0.46, 0.6],
     decor: [{ t: 'cono', x: 700, y: 212 }, { t: 'cono', x: 724, y: 222 }, { t: 'banco', x: 1600, y: 190 }, { t: 'banco', x: 1840, y: 190 }, { t: 'moto', x: 2500, y: 196 }, { t: 'contenedor', x: 3000, y: 192, empuja: true }],
     rompibles: [{ t: 'revistero', x: 2080, y: 198, da: 'billete' }, { t: 'revistero', x: 2160, y: 198, da: 'alfajor' }, { t: 'tacho', x: 460, y: 200, da: 'cano' }, { t: 'maceta', x: 1700, y: 196, da: 'mate' },
@@ -53,7 +53,7 @@ export const NIVELES = [
       { cam: 2780, enemigos: [['patova', 1], ['mozo', 0], ['faca', 1], ['cuida', 1], ['mati', 2], ['guri', 2]], eventos: [{ t: 'carro', en: 5 }] },
       { cam: 9999, jefe: 'guarda', enemigos: [['guarda', 0]] }] },
 
-  { id: 'barriosur', num: 4, nombre: 'BARRIO SUR, NOCHE DE LLAMADAS', lugar: 'BARRIO SUR · NOCHE', escena: 'barriosur', hora: 'noche', L: 3600, lejos: 'sur', medio: 'ciudad',
+  { id: 'barriosur', objetivo: 'OBJETIVO: ENCONTRÁ AL BOCHA EN LAS LLAMADAS', num: 4, nombre: 'BARRIO SUR, NOCHE DE LLAMADAS', lugar: 'BARRIO SUR · NOCHE', escena: 'barriosur', hora: 'noche', L: 3600, lejos: 'sur', medio: 'ciudad',
     musica: 'mus.nivel4', ambiente: 'amb.barriosur', dif: 1.2, cupo: 3, max: 5, mapa: [0.44, 0.74],
     decor: [{ t: 'contenedor', x: 380, y: 192, empuja: true }, { t: 'moto', x: 1880, y: 196 }, { t: 'contenedor', x: 2600, y: 192, empuja: true }],
     peligros: [{ t: 'fogata', x: 860, y: 194 }, { t: 'fogata', x: 2120, y: 196 }, { t: 'fogata', x: 3150, y: 194 }],
@@ -69,7 +69,35 @@ export const NIVELES = [
       { cam: 2640, enemigos: [['patova', 1], ['cacho', 1], ['faca', 2], ['mati', 3], ['guri', 0], ['tambor', 0]], eventos: [{ t: 'apagon', en: 10, dur: 6 }] },
       { cam: 9999, jefe: 'bocha', enemigos: [['bocha', 0]] }] },
 
-  { id: 'ciudadvieja', num: 5, nombre: 'CIUDAD VIEJA Y EL MERCADO', lugar: 'CIUDAD VIEJA · DÍA GRIS', escena: 'ciudadvieja', hora: 'gris', L: 3800, lejos: 'puerto', medio: 'ciudad',
+  { id: 'boliche', objetivo: 'OBJETIVO: CRUZÁ EL BOLICHE HASTA EL SALÓN DEL CLUB', interior: true, num: 5, nombre: 'EL BOLICHE DEL GALLEGO', lugar: 'BARRIO SUR · ADENTRO · NOCHE', escena: 'boliche', hora: 'atardecer', L: 3300, lejos: 'ciudad', medio: 'ciudad',
+    musica: 'mus.nivel7', ambiente: 'amb.barriosur', dif: 1.24, cupo: 3, max: 5, mapa: [0.37, 0.76],
+    decor: [],
+    rompibles: [{ t: 'cajaBiz', x: 300, y: 252, da: 'bizcochos' }, { t: 'mesa', x: 760, y: 214, da: 'botella' }, { t: 'barril', x: 1080, y: 196, da: 'mate' }, { t: 'mesa', x: 1320, y: 236, da: 'botella' },
+      { t: 'cajon', x: 1700, y: 258, da: 'botella' }, { t: 'mesa', x: 1960, y: 220, da: 'choripan' }, { t: 'barril', x: 2380, y: 198, da: 'cano' }, { t: 'mesa', x: 2700, y: 240, da: 'botella' }, { t: 'cajaBiz', x: 3000, y: 256, da: 'billete' }],
+    items: [{ t: 'botella', x: 460, y: 244 }, { t: 'silla', x: 880, y: 206 }, { t: 'botella', x: 1240, y: 228 }, { t: 'silla', x: 1820, y: 248 }, { t: 'botella', x: 2140, y: 236 }, { t: 'termo', x: 2560, y: 250 }, { t: 'silla', x: 2860, y: 210 }],
+    oleadas: [
+      { cam: 240, enemigos: [['mamado', 0], ['buzo', 1], ['mati', 2], ['mamado', 2]] },
+      { cam: 820, enemigos: [['mozo', 0], ['mamado', 1], ['chorro', 0], ['mozo', 2], ['cacho', 1]] },
+      { cam: 1380, enemigos: [['patova', 0, MINI('EL PATOVA DE LA PUERTA', 2.0)], ['mamado', 0], ['faca', 1], ['buzo', 2]], eventos: [{ t: 'apagon', en: 5, dur: 6 }] },
+      { cam: 1960, enemigos: [['mamado', 2], ['mozo', 1], ['cacho', 0], ['chorro', 1], ['mamado', 1], ['faca', 0]] },
+      { cam: 2440, enemigos: [['patova', 1], ['mamado', 0], ['mozo', 0], ['buzo', 3], ['mati', 1]], eventos: [{ t: 'apagon', en: 8, dur: 5 }] },
+      { cam: 9999, jefe: 'gallego', enemigos: [['gallego', 0]] }] },
+
+  { id: 'cerro', objetivo: 'OBJETIVO: CRUZÁ EL TERRITORIO DE LOS PIBES Y ENCONTRÁ AL CHAPA', num: 6, nombre: 'EL CERRO: ZONA DE LOS PIBES', lugar: 'CERRO · PLAZA, FRIGORÍFICO Y CANCHITA', escena: 'cerro', hora: 'mediodia', L: 3600, lejos: 'cerro', medio: 'cerro',
+    musica: 'mus.nivel8', ambiente: 'amb.cuadra', dif: 1.3, cupo: 3, max: 5, mapa: [0.06, 0.69],
+    decor: [{ t: 'contenedor', x: 2230, y: 200, empuja: true }],
+    rompibles: [{ t: 'cajaBiz', x: 340, y: 252, da: 'bizcochos' }, { t: 'tacho', x: 900, y: 214, da: 'palo' }, { t: 'cajon', x: 1220, y: 238, da: 'botella' }, { t: 'tacho', x: 1560, y: 200, da: 'cano' },
+      { t: 'cajon', x: 1900, y: 256, da: 'choripan' }, { t: 'tacho', x: 2380, y: 236, da: 'billete' }, { t: 'cajaBiz', x: 2700, y: 210, da: 'mate' }, { t: 'cajon', x: 3080, y: 248, da: 'botella' }],
+    items: [{ t: 'palo', x: 520, y: 236 }, { t: 'ladrillo', x: 1000, y: 248 }, { t: 'cano', x: 1460, y: 222 }, { t: 'botella', x: 1980, y: 214 }, { t: 'ladrillo', x: 2500, y: 252 }, { t: 'termo', x: 2840, y: 230 }],
+    oleadas: [
+      { cam: 260, enemigos: [['guri', 0], ['buzo', 1], ['guri', 2], ['chorro', 0]] },
+      { cam: 820, enemigos: [['buzo', 2], ['faca', 0], ['guri', 1], ['cacho', 1], ['chorro', 2]] },
+      { cam: 1400, enemigos: [['patova', 2, MINI('EL PORTERO DEL FRIGO', 2.1)], ['buzo', 0], ['guri', 0], ['faca', 1]] },
+      { cam: 1980, enemigos: [['mati', 0], ['chorro', 1], ['guri', 2], ['buzo', 1], ['faca', 2], ['cacho', 0]] },
+      { cam: 2560, enemigos: [['patova', 0], ['guri', 1], ['buzo', 2], ['chorro', 0], ['mamado', 1]] },
+      { cam: 9999, jefe: 'chapa', enemigos: [['chapa', 0]] }] },
+
+  { id: 'ciudadvieja', objetivo: 'OBJETIVO: METETE EN EL MERCADO DEL PUERTO', num: 7, nombre: 'CIUDAD VIEJA Y EL MERCADO', lugar: 'CIUDAD VIEJA · DÍA GRIS', escena: 'ciudadvieja', hora: 'gris', L: 3800, lejos: 'puerto', medio: 'ciudad',
     musica: 'mus.nivel5', ambiente: 'amb.ciudadvieja', dif: 1.3, cupo: 3, max: 5, mapa: [0.3, 0.82],
     decor: [{ t: 'banco', x: 1300, y: 190 }, { t: 'cono', x: 2300, y: 214 }],
     peligros: [{ t: 'parrilla', x: 2620, y: 194 }, { t: 'parrilla', x: 3060, y: 194 }, { t: 'parrilla', x: 3480, y: 194 }],
@@ -85,7 +113,7 @@ export const NIVELES = [
       { cam: 2780, enemigos: [['patova', 1], ['cacho', 0], ['mozo', 0], ['faca', 0], ['guri', 1], ['pescador', 0]] },
       { cam: 9999, jefe: 'parrillero', enemigos: [['parrillero', 0]] }] },
 
-  { id: 'rambla', num: 6, nombre: 'LA RAMBLA EN TORMENTA', lugar: 'RAMBLA · TORMENTA', escena: 'rambla', hora: 'tormenta', L: 3600, lejos: 'mar', medio: 'mar',
+  { id: 'rambla', objetivo: 'OBJETIVO: RECUPERÁ EL TERMO DE DON PEPE', num: 8, nombre: 'LA RAMBLA EN TORMENTA', lugar: 'RAMBLA · TORMENTA', escena: 'rambla', hora: 'tormenta', L: 3600, lejos: 'mar', medio: 'mar',
     musica: 'mus.nivel6', ambiente: 'amb.rambla', dif: 1.34, cupo: 3, max: 6, mapa: [0.62, 0.9], lluvia: true,
     decor: [{ t: 'banco', x: 274, y: 190 }, { t: 'banco', x: 594, y: 190 }, { t: 'banco', x: 1334, y: 190 }, { t: 'banco', x: 2334, y: 190 }],
     rompibles: [{ t: 'conservadora', x: 440, y: 262, da: 'corvina' }, { t: 'conservadora', x: 2560, y: 262, da: 'mate' }, { t: 'tacho', x: 1000, y: 200, da: 'cano' }, { t: 'cajaBiz', x: 1700, y: 258, da: 'choripan' },

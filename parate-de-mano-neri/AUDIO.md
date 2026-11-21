@@ -1,6 +1,6 @@
 # Audio de Párate de mano ñeri — lista de IDs
 
-Generado con `node tools/audio-doc.mjs`. Total: **306 IDs**.
+Generado con `node tools/audio-doc.mjs`. Total: **349 IDs**.
 
 ## Cómo cargar los audios
 1. Guardá cada archivo en `audio/<carpeta>/` con el **nombre exacto del ID** y extensión `.ogg` (ej.: `audio/golpes/golpe.pina.ogg`).
@@ -12,7 +12,7 @@ Generado con `node tools/audio-doc.mjs`. Total: **306 IDs**.
 
 Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga archivo. "—" = mudo hasta que lo cargues.
 
-## Golpes del cuerpo (piñas, patadas, especiales) — `audio/golpes/` (10)
+## Golpes del cuerpo (piñas, patadas, especiales) — `audio/golpes/` (13)
 
 | ID | Qué es | Respaldo | Archivo |
 |---|---|---|---|
@@ -26,6 +26,9 @@ Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga
 | `golpe.embestida` | Embestida de jefe / changuito | fuerte | — |
 | `golpe.barrida` | Barrida al piso (El Rata) | patada | — |
 | `golpe.contra` | Contragolpe del boxeador | fuerte | — |
+| `golpe.pisoton` | Pisotón a un enemigo tirado | pisoton | — |
+| `golpe.cabezazo` | Cabezazo desde el agarre | fuerte | — |
+| `golpe.remate` | Remate cargado (golpe final del combo) | fuerte | — |
 
 ## Impactos contra cuerpos, piso y objetos — `audio/impactos/` (14)
 
@@ -46,7 +49,7 @@ Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga
 | `impacto.fuego` | Quemadura en la parrilla | — | — |
 | `impacto.contenedor` | Contenedor que choca a alguien | fuerte | — |
 
-## Golpes y roturas de armas del piso — `audio/armas/` (17)
+## Golpes y roturas de armas del piso — `audio/armas/` (18)
 
 | ID | Qué es | Respaldo | Archivo |
 |---|---|---|---|
@@ -67,6 +70,7 @@ Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga
 | `arma.faca` | Golpe con Faca / cuchillo (tajo) | tajo | — |
 | `arma.rompe` | Arma que se rompe (madera) | madera | — |
 | `arma.tiro` | Tirar un arma (zumbido) | aire | — |
+| `arma.botella.rompe` | La botella se rompe y queda el pico en la mano | botella | — |
 
 ## Juntar objetos, comida y plata — `audio/items/` (5)
 
@@ -75,7 +79,7 @@ Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga
 | `item.arma` | Juntar un arma | item | — |
 | `item.comida` | Comer (bizcochos, chivito, torta frita...) | come | — |
 | `item.mate` | Tomar mate (carga MANO) | come | — |
-| `item.plata` | Juntar plata | plata | — |
+| `item.plata` | Juntar plata ($U): monedas y billetes | plata | — |
 | `item.robado` | Te roban algo (El Rata) | — | — |
 
 ## Movimientos (salto, aire, agarres) — `audio/mov/` (7)
@@ -107,7 +111,7 @@ Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga
 | `enem.chorizo` | Chorizo que rebota | — | — |
 | `enem.paraguas.abre` | Paraguas que se abre (bloquea) | — | — |
 
-## Eventos del nivel y del juego — `audio/eventos/` (25)
+## Eventos del nivel y del juego — `audio/eventos/` (27)
 
 | ID | Qué es | Respaldo | Archivo |
 |---|---|---|---|
@@ -136,6 +140,8 @@ Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga
 | `evento.record` | Récord nuevo | — | — |
 | `evento.final` | Final del juego | — | — |
 | `evento.perro` | Perro que ladra | perro | — |
+| `cine.capitulo` | Cartel de capítulo (golpe de orquesta corto) | capitulo | — |
+| `cine.robo` | El Rata manotea el termo | robo | — |
 
 ## Loops ambientales por nivel y sonidos del entorno — `audio/ambiente/` (7)
 
@@ -149,7 +155,7 @@ Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga
 | `amb.rambla` | Loop ambiental: Rambla con tormenta (loop) | — | — |
 | `amb.lluvia` | Loop de lluvia (loop) | — | — |
 
-## Música (loops) — `audio/musica/` (13)
+## Música (loops) — `audio/musica/` (15)
 
 | ID | Qué es | Respaldo | Archivo |
 |---|---|---|---|
@@ -161,13 +167,15 @@ Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga
 | `mus.nivel4` | Nivel 4 (loop) | nivel | — |
 | `mus.nivel5` | Nivel 5 (loop) | nivel | — |
 | `mus.nivel6` | Nivel 6 (loop) | nivel | — |
+| `mus.nivel7` | Nivel 7 (loop) | nivel | — |
+| `mus.nivel8` | Nivel 8 (loop) | nivel | — |
 | `mus.jefe` | Pelea con jefe (loop) | jefe | — |
 | `mus.jefe.final` | Pelea con el jefe final (loop) | jefe | — |
 | `mus.victoria` | Nivel ganado (jingle) | — | — |
 | `mus.derrota` | Game over (jingle) | — | — |
 | `mus.final` | Final del juego / créditos (loop) | — | — |
 
-## Voces por personaje (gritos, dolor, KO) — `audio/voces/` (81)
+## Voces por personaje (gritos, dolor, KO) — `audio/voces/` (92)
 
 | ID | Qué es | Respaldo | Archivo |
 |---|---|---|---|
@@ -228,6 +236,9 @@ Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga
 | `voz.pescador.ataque` | EL PESCA: grito al pegar | — | — |
 | `voz.pescador.dolor` | EL PESCA: le pegan | — | — |
 | `voz.pescador.ko` | EL PESCA: cae KO | — | — |
+| `voz.mamado.ataque` | EL MAMADO: grito al pegar | — | — |
+| `voz.mamado.dolor` | EL MAMADO: le pegan | — | — |
+| `voz.mamado.ko` | EL MAMADO: cae KO | — | — |
 | `voz.tano.ataque` | EL TANO: grito al pegar | — | — |
 | `voz.tano.dolor` | EL TANO: le pegan | — | — |
 | `voz.tano.ko` | EL TANO: derrotado | — | — |
@@ -248,12 +259,20 @@ Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga
 | `voz.parrillero.dolor` | EL PARRILLERO: le pegan | — | — |
 | `voz.parrillero.ko` | EL PARRILLERO: derrotado | — | — |
 | `voz.parrillero.risa` | EL PARRILLERO: se ríe / provoca | — | — |
+| `voz.chapa.ataque` | EL CHAPA: grito al pegar | — | — |
+| `voz.chapa.dolor` | EL CHAPA: le pegan | — | — |
+| `voz.chapa.ko` | EL CHAPA: derrotado | — | — |
+| `voz.chapa.risa` | EL CHAPA: se ríe / provoca | — | — |
+| `voz.gallego.ataque` | EL GALLEGO: grito al pegar | — | — |
+| `voz.gallego.dolor` | EL GALLEGO: le pegan | — | — |
+| `voz.gallego.ko` | EL GALLEGO: derrotado | — | — |
+| `voz.gallego.risa` | EL GALLEGO: se ríe / provoca | — | — |
 | `voz.capo.ataque` | DON PEPE, EL CAPO: grito al pegar | — | — |
 | `voz.capo.dolor` | DON PEPE, EL CAPO: le pegan | — | — |
 | `voz.capo.ko` | DON PEPE, EL CAPO: derrotado | — | — |
 | `voz.capo.risa` | DON PEPE, EL CAPO: se ríe / provoca | — | — |
 
-## Frases de los globos de diálogo (una por texto) — `audio/frases/` (108)
+## Frases de los globos de diálogo (una por texto) — `audio/frases/` (125)
 
 | ID | Qué es | Respaldo | Archivo |
 |---|---|---|---|
@@ -323,6 +342,11 @@ Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga
 | `frase.chico_repique_y_piano` | "¡CHICO, REPIQUE Y PIANO!" (tambor) | — | — |
 | `frase.que_no_pare` | "¡QUE NO PARE!" (tambor) | — | — |
 | `frase.esto_es_candombe` | "¡ESTO ES CANDOMBE!" (tambor) | — | — |
+| `frase.vos_sos_mi_hermano_loco` | "¡VOS SOS MI HERMANO, LOCO!" (mamado) | — | — |
+| `frase.te_quiero_mucho_boludo` | "¡TE QUIERO MUCHO, BOLUDO!" (mamado) | — | — |
+| `frase.no_estoy_mamado_estoy_feliz` | "¡NO ESTOY MAMADO, ESTOY FELIZ!" (mamado) | — | — |
+| `frase.otra_vuelta_gallego` | "¡OTRA VUELTA, GALLEGO!" (mamado) | — | — |
+| `frase.hip` | "¡HIP!" (mamado) | — | — |
 | `frase.la_cuenta_caballero` | "¡LA CUENTA, CABALLERO!" (mozo) | — | — |
 | `frase.sale_una_bandeja` | "¡SALE UNA BANDEJA!" (mozo) | — | — |
 | `frase.la_propina_aparte` | "¡LA PROPINA APARTE!" (mozo) | — | — |
@@ -359,6 +383,18 @@ Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga
 | `frase.sale_chorizo` | "¡SALE CHORIZO!" (parrillero) | — | — |
 | `frase.a_la_parrilla` | "¡A LA PARRILLA!" (parrillero) | — | — |
 | `frase.se_me_apago_el_fuego` | "¡SE ME APAGÓ EL FUEGO!" (parrillero) | — | — |
+| `frase.esto_es_territorio_de_los_pibes` | "¡ESTO ES TERRITORIO DE LOS PIBES!" (chapa) | — | — |
+| `frase.peaje_gil` | "¡PEAJE, GIL!" (chapa) | — | — |
+| `frase.aca_mando_yo` | "¡ACÁ MANDO YO!" (chapa) | — | — |
+| `frase.toma_de_parte_del_cerro` | "¡TOMÁ, DE PARTE DEL CERRO!" (chapa) | — | — |
+| `frase.muchachos_cano` | "¡MUCHACHOS, CAÑO!" (chapa) | — | — |
+| `frase.ta_ta_pasa_gratis` | "¡TÁ, TÁ, PASÁ GRATIS!" (chapa) | — | — |
+| `frase.en_mi_boliche_se_consume` | "¡EN MI BOLICHE SE CONSUME!" (gallego) | — | — |
+| `frase.la_casa_invita` | "¡LA CASA INVITA!" (gallego) | — | — |
+| `frase.esto_no_es_un_bar_es_una_iglesia` | "¡ESTO NO ES UN BAR, ES UNA IGLESIA!" (gallego) | — | — |
+| `frase.toma_chaval` | "¡TOMÁ, CHAVAL!" (gallego) | — | — |
+| `frase.esta_ronda_la_pago_yo` | "¡ESTA RONDA LA PAGO YO!" (gallego) | — | — |
+| `frase.cerramos_por_hoy` | "¡CERRAMOS POR HOY!" (gallego) | — | — |
 | `frase.vos_limpiaste_montevideo` | "¿VOS LIMPIASTE MONTEVIDEO?" (capo) | — | — |
 | `frase.la_rambla_es_mia` | "¡LA RAMBLA ES MÍA!" (capo) | — | — |
 | `frase.me_arruinaste_el_mate` | "¡ME ARRUINASTE EL MATE!" (capo) | — | — |
@@ -366,7 +402,7 @@ Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga
 | `frase.se_me_volo_el_paraguas` | "¡SE ME VOLÓ EL PARAGUAS!" (capo) | — | — |
 | `frase.ta_la_rambla_es_tuya` | "¡TÁ, LA RAMBLA ES TUYA!" (capo) | — | — |
 
-## Menús — `audio/ui/` (7)
+## Menús — `audio/ui/` (14)
 
 | ID | Qué es | Respaldo | Archivo |
 |---|---|---|---|
@@ -376,5 +412,12 @@ Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga
 | `ui.pausa` | Pausa | pausa | — |
 | `ui.ropa` | Cambiar ropa en el vestuario | item | — |
 | `ui.mapa` | Se abre el mapa de Montevideo | — | — |
+| `cine.letra` | Texto a máquina de escribir en la caja de diálogo (cada 2 letras) | letra | — |
+| `cine.avanza` | Pasar al siguiente diálogo | menu | — |
+| `cine.saltar` | Saltear la cinemática | pausa | — |
+| `tienda.compra` | Comprar en el almacén | caja | — |
+| `tienda.nopuede` | No alcanza la plata / ya está comprado | nopuede | — |
+| `ui.punto` | Asignar un punto de atributo | punto | — |
+| `ui.conteo` | Conteo de cifras en la pantalla de resultados | letra | — |
 | `ui.bloqueado` | Elegir un nivel que todavía está cerrado | menu | — |
 

@@ -75,6 +75,12 @@ export function crearProps() {
   SP.bizcochos = hacer(18, 10, (b) => { b.elipse(9, 7, 9, 3, c('#f2f2ea')); b.disco(5, 4, 3, c('#e2a040')); b.disco(10, 3, 3, c('#d89838')); b.disco(14, 5, 3, c('#e8b050')); b.px(9, 2, c('#f8e0a0')); });
   SP.chivito = hacer(22, 12, (b) => { b.elipse(11, 9, 11, 3, c('#f2f2ea')); b.elipse(11, 5, 9, 3, c('#d8a050')); b.rect(3, 6, 16, 2, c('#5aa83a')); b.rect(4, 7, 14, 1, c('#e0503a')); b.rect(3, 4, 16, 1, c('#f4e070')); b.elipse(11, 3, 8, 2, c('#e8b060')); });
   SP.mate = hacer(12, 16, (b) => { b.elipse(6, 11, 5, 5, c('#7a4a2a')); b.rect(2, 5, 8, 3, c('#c8a040')); b.rect(3, 6, 6, 1, c('#4f8f35')); b.seg(7, 6, 10, 0, 1.4, 1.4, c('#c8c8d0')); });
+  // pico de botella: la mitad de abajo con el vidrio partido en dientes (brillos claros en los filos)
+  SP.pico = hacer(8, 14, (b) => { b.rect(1, 5, 6, 9, c('#2f7a35')); b.rect(1, 8, 6, 4, c('#f0e6d0')); b.rect(1, 8, 6, 1, c('#d8c8a0'));
+    for (const [x, y, h] of [[1, 2, 3], [2, 4, 1], [3, 0, 5], [4, 3, 2], [5, 1, 4], [6, 4, 1]]) b.rect(x, y, 1, h, c('#3f9a45'));
+    for (const [x, y] of [[1, 2], [3, 0], [5, 1]]) b.rect(x, y, 1, 1, c('#c8f0c0')); b.rect(6, 6, 1, 6, c('#1f5a25')); b.rect(2, 6, 1, 1, c('#8ad08a')); });
+  // moneda de $U: dorada con brillo y el sol de la moneda grabado
+  SP.moneda = hacer(7, 7, (b) => { b.rect(1, 0, 5, 7, c('#c89020')); b.rect(0, 1, 7, 5, c('#c89020')); b.rect(1, 1, 5, 5, c('#f0c040')); b.rect(2, 2, 3, 3, c('#ffe080')); b.rect(3, 3, 1, 1, c('#c89020')); b.rect(1, 1, 1, 1, c('#fff6c0')); });
   SP.billete = hacer(14, 8, (b) => { b.rect(0, 0, 14, 8, c('#c96aa0')); b.rect(2, 2, 4, 4, c('#e8a8c8')); b.rect(8, 2, 4, 1, c('#8a3a6a')); b.rect(8, 5, 4, 1, c('#8a3a6a')); });
   // ======== armas nuevas (escala 56 px/m; las largas apuntan a la derecha con el mango a la izquierda) ========
   SP.silla = hacer(28, 46, (b) => { // silla de bar de madera, de costado

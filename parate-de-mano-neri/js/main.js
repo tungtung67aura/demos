@@ -7,6 +7,8 @@ import { SLOTS, opciones } from './ropa.js';
 import { Juego } from './juego.js';
 import { dibujarHUD } from './hud.js';
 import { E, initEntrada, leerEntrada, tickBuf, registrarTap } from './entrada.js';
+import { P as PROG, nivelMaxIdx, ganadosIdx, ganarNivel, guardar as guardarProg, gastarUso } from './progreso.js';
+import { abrirTienda, pasoTienda, dibujarTienda } from './tienda.js';
 import { iniciarAudio, sonar, musica, setMusica, suspender } from './audio.js';
 import { texto, lienzo, CONTORNO } from './pixel.js';
 import { JUGADORES, ATQ, COMIDA, ITEMS } from './datos.js';
@@ -14,13 +16,13 @@ import { NIVELES } from './niveles.js';
 import { abrirMapa, pasoMapa, dibujarMapa, precargarMapa } from './mapa.js';
 import { calle, cielo, ALTO, EXTRA } from './escenario.js';
 
-export const VERSION = 'bb-v8';
+export const VERSION = 'bb-v9';
 // sonidos de menú por ID (audio-ids.js): sin archivo, no suena (o suena el respaldo sintetizado si el ID lo tiene)
 const UI = { menu: 'ui.mover', dale: 'ui.ok', pausa: 'ui.pausa', item: 'ui.ropa', atras: 'ui.atras' };
 function sfx(k) { sonar(UI[k] || k); }
-let nivelMax = Math.min(NIVELES.length - 1, +(localStorage.getItem('bb-nivel-max') || 0)), nivelSel = 0;
-let ganados = (() => { try { return JSON.parse(localStorage.getItem('bb-ganados') || '[]'); } catch (e) { return []; } })(); let spMapa = null;
-const musJuego = () => (juego ? (juego.lock && juego.lock.jefe ? (juego.nv.num === 6 ? 'mus.jefe.final' : 'mus.jefe') : juego.nv.musica) : 'mus.menu');
+let nivelMax = nivelMaxIdx(), nivelSel = 0; // guardado v9 (progreso.js) — migra solo el guardado viejo
+let ganados = ganadosIdx(); let spMapa = null;
+const musJuego = () => (juego ? (juego.lock && juego.lock.jefe ? (juego.nv.id === 'rambla' ? 'mus.jefe.final' : 'mus.jefe') : juego.nv.musica) : 'mus.menu');
 const DT = 1 / 120;
 const cv = document.getElementById('juego'); const x = cv.getContext('2d', { alpha: false });
 let W = 480, H = 270, escala = 2, D = 2; // D: densidad del lienzo (subpíxeles por píxel del juego; los luchadores se dibujan con el doble de detalle)
@@ -110,9 +112,9 @@ function zonasVest() {
 }
 const dentro = (t, r) => t[0] >= r[0] && t[0] <= r[0] + r[2] && t[1] >= r[1] && t[1] <= r[1] + r[3];
 
-function empezar(nivel = 0, previo = null) {
+function empezar(nivel = 0, previo = null, opciones = null) {
   nivel = Math.max(0, Math.min(NIVELES.length - 1, nivel));
-  juego = new Juego(CLAVES[elegido], { w: W, h: H }, ropaDe(CLAVES[elegido]), nivel, previo); pantalla = 'juego'; tP = 0; mostrarControles(true);
+  juego = new Juego(CLAVES[elegido], { w: W, h: H }, ropaDe(CLAVES[elegido]), nivel, previo, opciones); gastarUso(); /* lo de un solo uso del almacén ya se aplicó al crear el nivel */ pantalla = 'juego'; tP = 0; mostrarControles(true);
   window.__bb.juego = juego;
 }
 // después del vestuario: si ya hay niveles abiertos, se elige en el mapa de Montevideo
@@ -122,7 +124,10 @@ function siguienteNivel() {
   if (n >= NIVELES.length) { pantalla = 'final'; tP = 0; juego = null; mostrarControles(false); musica('mus.final'); sonar('evento.final'); return; }
   empezar(n, prev);
 }
-function mostrarControles(v) { document.body.classList.toggle('en-juego', v); }
+let tiendaDesde = 'juego';
+function irTienda(desde) { tiendaDesde = desde; const sig = desde === 'juego' && juego ? NIVELES[juego.nivelIdx + 1] : null; abrirTienda(sig ? 'NIVEL ' + sig.num : ''); pantalla = 'tienda'; tP = 0; mostrarControles(false); musica('mus.menu'); }
+function mostrarControles(v) { document.body.classList.toggle('en-juego', v); if (!v) enCine(false); }
+let cineAnt = false; function enCine(v) { if (v !== cineAnt) { cineAnt = v; document.body.classList.toggle('en-cine', v); } }
 
 // sprites que se terminan de dibujar en los menús (8 ms por cuadro): el personaje elegido y los enemigos del nivel, en orden de aparición
 let saltarCal = 0; const setsNivel = [];
@@ -135,19 +140,24 @@ function bucle(ahora) {
   med.frames++; med.dtMax = Math.max(med.dtMax, dt); med.hist.push(dt * 1000); if (med.hist.length > 240) med.hist.shift();
   if (ahora - med.t0 > 1000) { med.fps = Math.round(med.frames * 1000 / (ahora - med.t0)); med.frames = 0; med.t0 = ahora; }
   const t0b = performance.now(); leerEntrada();
-  if (window.__bb.bot && juego && pantalla === 'juego') botControl();
+  if (window.__bb.bot && juego && pantalla === 'juego') { if (juego.cine && !window.__bb.verCine) juego.cine.saltar(); botControl(); botControl.activo = true; }
+  else if (botControl.activo) { botControl.activo = false; E.tdx = 0; E.tdy = 0; E.dx = 0; E.dy = 0; } // el bot suelta el stick simulado al apagarse
   if (window.__bb.bot && pantalla === 'continuar') { E.buf.ok = 0.1; }
   tP += dt;
   if (pantalla === 'juego') {
-    E.taps.length = 0;
+    if (juego.cine && E.taps.length) juego.cine.tocar(E.taps[0], W, H);
+    E.taps.length = 0; enCine(!!juego.cine);
     const tb = window.__bb.turbo || 1; acc += dt * tb; let n = 0; const t0 = performance.now();
     while (acc >= DT && n < 8 * tb) { juego.paso(DT, E); tickBuf(DT); acc -= DT; n++; }
     if (n >= 8 * tb) acc = 0; med.pasos = n; med.tLogica = performance.now() - t0;
     if (E.buf.pausa > 0) { E.buf.pausa = 0; pantalla = 'pausa'; pausaSel = 0; sfx('pausa'); }
     if (juego.estado === 'pierde' && juego.tEstado > 1.2) { pantalla = 'continuar'; contador = 9.99; tP = 0; }
-    if (juego.estado === 'gana' && juego.tEstado > 2.5) { pantalla = 'gana'; tP = 0; const p = juego.puntos; if (p > record) { record = p; localStorage.setItem('bb-record', p); sonar('evento.record'); }
-      if (!ganados.includes(juego.nivelIdx)) { ganados.push(juego.nivelIdx); try { localStorage.setItem('bb-ganados', JSON.stringify(ganados)); } catch (e) { /* sin almacenamiento */ } }
-      const abre = Math.min(NIVELES.length - 1, juego.nivelIdx + 1); if (abre > nivelMax) { nivelMax = abre; localStorage.setItem('bb-nivel-max', nivelMax); } nivelSel = abre; }
+    if (juego.estado === 'gana' && juego.tEstado > 2.5 && !juego.cine) { pantalla = 'gana'; tP = 0; const p = juego.puntos; if (p > record) { record = p; localStorage.setItem('bb-record', p); sonar('evento.record'); }
+      // premio: plata del nivel + objetivo + tiempo; 2 puntos de atributo (3 si no perdiste ninguna vida)
+      { const pl = juego.plataNivel, ob = 150 + 50 * juego.nv.num, ti = Math.ceil(juego.tiempo / 2), pts = 2 + (juego.vidasPerdidas ? 0 : 1);
+        juego.premio = { enemigos: pl.enemigos, objetos: pl.objetos, objetivo: ob, tiempo: ti, total: pl.enemigos + pl.objetos + ob + ti, puntos: pts };
+        PROG.plata += juego.premio.total; PROG.puntos += pts; ganarNivel(juego.nv.id); guardarProg(); }
+      ganados = ganadosIdx(); nivelMax = nivelMaxIdx(); nivelSel = Math.min(NIVELES.length - 1, juego.nivelIdx + 1); }
   } else { tickBuf(dt); acc = 0; menus(dt); }
   const PF = globalThis.__pf, pf0 = PF ? PF.gen + PF.grad + PF.sil + PF.set : 0, pfA = PF ? [PF.gen, PF.grad, PF.sil, PF.set, PF.nGen, PF.nGrad] : null;
   const t1 = performance.now();
@@ -187,8 +197,11 @@ function menus(dt) {
     contador -= dt; juego.paso(0, E);
     if (ok() || t) { juego.vidas = 2; juego.puntos = 0; juego.proxVida = 100000; juego.estado = 'jugando'; sonar('evento.continuar'); const j = juego.j; j.hp = j.hpMax; j.muerto = false; j.est = 'levanta'; j.t = 0; j.invul = 3; pantalla = 'juego'; }
     else if (contador <= 0) { pantalla = 'titulo'; juego = null; mostrarControles(false); if (nuevaVersion) location.reload(); }
+  } else if (pantalla === 'tienda') {
+    const r = pasoTienda(dt, W, H, { nx: n.x, ny: n.y, ok: ok(), atras: E.buf.atras > 0 || E.buf.pausa > 0, tab: E.buf.patada > 0, tap: t || null }); E.buf.atras = 0; E.buf.pausa = 0; E.buf.patada = 0;
+    if (r && r.seguir) { if (tiendaDesde === 'mapa') { aLaCancha(); } else siguienteNivel(); }
   } else if (pantalla === 'gana') {
-    if ((ok() || t) && tP > 1.5) { sfx('dale'); if (nuevaVersion) { location.reload(); return; } siguienteNivel(); }
+    if ((ok() || t) && tP > 1.5) { sfx('dale'); if (nuevaVersion) { location.reload(); return; } if (juego.nivelIdx + 1 >= NIVELES.length) siguienteNivel(); else irTienda('juego'); }
     if (E.buf.atras > 0 && tP > 1.5) { E.buf.atras = 0; pantalla = 'titulo'; juego = null; mostrarControles(false); musica('mus.menu'); }
   } else if (pantalla === 'mapa') {
     const atras = E.buf.atras > 0 || E.buf.pausa > 0; E.buf.atras = 0; E.buf.pausa = 0;
@@ -204,7 +217,7 @@ function menus(dt) {
 function dibujar(alfa) {
   if (pantalla === 'juego' || pantalla === 'pausa' || pantalla === 'continuar' || (pantalla === 'gana' && juego)) {
     juego.dibujar(x, pantalla === 'juego' ? alfa : 1, W, H);
-    dibujarHUD(x, juego, W, H, E.tactil || matchMedia('(pointer:coarse)').matches, pantalla !== 'juego');
+    if (juego.cine) juego.cine.dibujar(x, W, H, esTactil()); else dibujarHUD(x, juego, W, H, E.tactil || matchMedia('(pointer:coarse)').matches, pantalla !== 'juego');
     if (E.tactil && (med.frames & 7) === 0) revisarTapado();
     if (pantalla === 'pausa') {
       velo(0.55); const py = Math.round(H / 2 - 58); panel(W / 2 - 92, py, 184, 132);
@@ -222,21 +235,31 @@ function dibujar(alfa) {
       texto(x, String(n), cx, cy - 12, '#ffffff', 3, 'centro', CONTORNO);
       if (Math.floor(tP * 2.5) % 2 === 0) texto(x, esTactil() ? 'TOCÁ PARA SEGUIR' : 'APRETÁ PIÑA', W / 2, py + 98, '#ffd23a', 1, 'centro');
       texto(x, 'LOS PUNTOS VUELVEN A CERO', W / 2, py + 113, '#9a8aa8', 1, 'centro'); }
-    if (pantalla === 'gana' || (juego && juego.estado === 'gana')) {
+    if (pantalla === 'gana' || (juego && juego.estado === 'gana' && !juego.cine)) {
       if (juego.tEstado > 0.8) {
         const tit = juego.nv.num === NIVELES.length ? '¡MONTEVIDEO LIMPIO!' : '¡ZONA LIMPIA!';
         if (pantalla !== 'gana') texto(x, tit, W / 2, 60, '#ffd23a', 2, 'centro', CONTORNO, '#8a5a10');
         if (pantalla === 'gana') {
-          velo(0.35); panel(W / 2 - 172, 46, 344, 160);
-          texto(x, tit, W / 2, 60, '#ffd23a', 2, 'centro', CONTORNO, '#8a5a10'); texto(x, 'NIVEL ' + juego.nv.num + ' · ' + juego.nv.nombre, W / 2, 84, '#ffffff', 1, 'centro');
-          // las cifras se cuentan de a poco (tablero de arcade)
+          velo(0.35); panel(W / 2 - 180, 22, 360, 224);
+          texto(x, tit, W / 2, 34, '#ffd23a', 2, 'centro', CONTORNO, '#8a5a10'); texto(x, 'NIVEL ' + juego.nv.num + ' · ' + juego.nv.nombre, W / 2, 56, '#ffffff', 1, 'centro');
+          // las cifras se cuentan de a poco (tablero de arcade); después se cuenta la plata
           const k = Math.min(1, tP / 1.1), ke = 1 - (1 - k) ** 3; const cnt = (v) => String(Math.round(v * ke)).padStart(7);
-          texto(x, 'PUNTOS       ' + cnt(juego.puntos), W / 2, 100, '#ffffff', 1, 'centro');
-          texto(x, 'BONO TIEMPO  ' + cnt(juego.bonus), W / 2, 114, '#ffffff', 1, 'centro');
-          texto(x, 'COMBO MÁXIMO ' + cnt(juego.comboMax), W / 2, 128, '#ffffff', 1, 'centro');
-          texto(x, 'RÉCORD       ' + String(record).padStart(7), W / 2, 146, '#ffd23a', 1, 'centro');
-          const sig = NIVELES[juego.nivelIdx + 1]; if (sig) { texto(x, 'SIGUIENTE: NIVEL ' + sig.num, W / 2, 168, '#7cc4ee', 1, 'centro'); texto(x, sig.nombre, W / 2, 180, '#7cc4ee', 1, 'centro'); } else texto(x, '¡TERMINASTE EL JUEGO!', W / 2, 176, '#7aff7a', 1, 'centro');
-          if (tP > 1.5 && Math.floor(tP * 2) % 2) texto(x, 'TOCÁ PARA SEGUIR', W / 2, H - 30, '#ffffff', 1, 'centro');
+          const k2 = Math.min(1, Math.max(0, (tP - 1.0) / 1.2)), ke2 = 1 - (1 - k2) ** 3; const cP = (v) => ('$U ' + Math.round(v * ke2)).padStart(8);
+          if (k2 > 0 && k2 < 1 && (Math.floor(tP * 30) & 3) === 0) sonar('ui.conteo');
+          texto(x, 'PUNTOS       ' + cnt(juego.puntos), W / 2, 70, '#ffffff', 1, 'centro');
+          texto(x, 'BONO TIEMPO  ' + cnt(juego.bonus), W / 2, 81, '#ffffff', 1, 'centro');
+          texto(x, 'COMBO MÁXIMO ' + cnt(juego.comboMax), W / 2, 92, '#ffffff', 1, 'centro');
+          texto(x, 'RÉCORD       ' + String(record).padStart(7), W / 2, 103, '#ffd23a', 1, 'centro');
+          const pr = juego.premio;
+          if (pr) { x.fillStyle = '#5a3a6a'; x.fillRect(Math.round(W / 2 - 150), 116, 300, 1);
+            texto(x, 'PLATA DE LOS GILES ' + cP(pr.enemigos), W / 2, 122, '#c8ffc8', 1, 'centro');
+            texto(x, 'COSAS ROTAS        ' + cP(pr.objetos), W / 2, 133, '#c8ffc8', 1, 'centro');
+            texto(x, 'OBJETIVO CUMPLIDO  ' + cP(pr.objetivo), W / 2, 144, '#c8ffc8', 1, 'centro');
+            texto(x, 'SOBRÓ TIEMPO       ' + cP(pr.tiempo), W / 2, 155, '#c8ffc8', 1, 'centro');
+            texto(x, 'TOTAL              ' + cP(pr.total), W / 2, 168, '#7aff7a', 1, 'centro', CONTORNO, '#1a5a1a');
+            if (k2 >= 1) { texto(x, 'EN EL BOLSILLO: $U ' + PROG.plata, W / 2, 181, '#ffffff', 1, 'centro'); texto(x, '+' + pr.puntos + ' PUNTOS DE ATRIBUTO' + (pr.puntos > 2 ? ' (SIN MORIR: +1)' : ''), W / 2, 193, '#ffd23a', 1, 'centro'); } }
+          const sig = NIVELES[juego.nivelIdx + 1]; if (sig) texto(x, 'SIGUIENTE: ' + sig.nombre, W / 2, 210, '#7cc4ee', 1, 'centro'); else texto(x, '¡TERMINASTE EL JUEGO!', W / 2, 210, '#7aff7a', 1, 'centro');
+          if (tP > 1.5 && Math.floor(tP * 2) % 2) texto(x, sig ? (esTactil() ? 'TOCÁ PARA IR AL ALMACÉN' : 'PIÑA: AL ALMACÉN DE DON TITO') : 'TOCÁ PARA SEGUIR', W / 2, 228, '#ffffff', 1, 'centro');
         }
       }
     }
@@ -244,6 +267,7 @@ function dibujar(alfa) {
   else if (pantalla === 'seleccion') dibujarSeleccion();
   else if (pantalla === 'vestuario') dibujarVestuario();
   else if (pantalla === 'mapa') dibujarMapa(x, W, H, tP, spMapa);
+  else if (pantalla === 'tienda') dibujarTienda(x, W, H, tP, esTactil());
   else if (pantalla === 'final') dibujarFinal();
   fundidoPantalla();
   if (window.__bb.debug) texto(x, med.fps + ' FPS', W - 4, H - 12, '#7aff7a', 1, 'der');
@@ -338,7 +362,7 @@ function dibujarVestuario() {
 function dibujarFinal() {
   fondo(2000 + tP * 10); velo(0.4); panel(W / 2 - 192, 30, 384, 128);
   texto(x, '¡MONTEVIDEO ES TUYO!', W / 2, 40, '#ffd23a', 2, 'centro', CONTORNO, '#8a5a10');
-  ['Le ganaste al Tano, a Doña Chola, al Guarda,', 'al Bocha, al Parrillero y a Don Pepe.', '', 'La rambla está tranquila. El mate, caliente.', 'Mañana hay feria.'].forEach((l, i) => texto(x, l.toUpperCase(), W / 2, 66 + i * 12, '#ffffff', 1, 'centro', CONTORNO));
+  ['Le ganaste al Tano, a Doña Chola, al Guarda, al Bocha,', 'al Gallego, al Chapa, al Parrillero y a Don Pepe.', '', 'Recuperaste el termo. El mate, caliente.', 'La yerba... mañana hay feria.'].forEach((l, i) => texto(x, l.toUpperCase(), W / 2, 66 + i * 12, '#ffffff', 1, 'centro', CONTORNO));
   CLAVES.forEach((k, i) => { const s = generar(k, 0, ropaDe(k)); const an = s.anims.festeja || s.anims.quieto; const f = an[Math.floor(tP * 3 + i) % an.length]; dibujarCuadro(x, f, Math.round(W / 2 - 80 + i * 80), H - 16, 1); });
   texto(x, 'RÉCORD ' + record, W / 2, 128, '#7aff7a', 1, 'centro', CONTORNO);
   if (tP > 2 && Math.floor(tP * 2) % 2) texto(x, 'TOCÁ PARA VOLVER', W / 2, 142, '#ffd23a', 1, 'centro', CONTORNO);
@@ -393,8 +417,8 @@ function botControl() {
   E.tdx = dx; E.tdy = dy; E.dx = dx; E.dy = dy;
 }
 
-window.__bb = { version: VERSION, med, bot: false, gore: GORE, debug: /debug/.test(location.search), get pantalla() { return pantalla; }, juego: null,
-  empezar: (i = 0, nivel = 0) => { elegido = i; empezar(nivel); }, siguiente: () => siguienteNivel(), NIVELES, irA: (p) => { pantalla = p; }, ajustar, D: () => D, escala: () => escala };
+window.__bb = { version: VERSION, med, bot: false, prog: PROG, gore: GORE, debug: /debug/.test(location.search), get pantalla() { return pantalla; }, juego: null,
+  empezar: (i = 0, nivel = 0) => { elegido = i; empezar(nivel, null, window.__bb.verCine ? null : { sinCine: true }); }, siguiente: () => siguienteNivel(), NIVELES, irA: (p) => { pantalla = p; }, ajustar, D: () => D, escala: () => escala };
 
 // ---------- service worker: se actualiza solo en el menú ----------
 if ('serviceWorker' in navigator && location.protocol !== 'file:' && !/nosw/.test(location.search)) {

@@ -12,25 +12,52 @@ import { Sangre, GORE, etapa } from './sangre.js';
 import { director, pensar, seguirCombo } from './ia.js';
 import { Eventos } from './eventos.js';
 import { gradoSuave, cuadroG, spriteG, silueta, purgarGrado } from './grado.js';
+import { Cinematica, retratoCara } from './cinematica.js';
+import { guionInicio, JEFE, FIN } from './guion.js';
+import { efectos } from './progreso.js';
 
 const GRAV = 920;
 let uid = 1;
 const porY = (a, b) => a._ys - b._ys;
-// ataque con arma: se deriva del golpe base según la velocidad y el alcance del arma (cacheado, sin crear objetos por golpe)
+// ataques con arma: cada clase de arma tiene su cadena (piña, piña, piña…), derivada de los golpes base según la
+// velocidad y el alcance del arma (cacheado por arma y paso, sin crear objetos por golpe)
+// [anim, ×daño, ×alcance, extras]
+// reacción al golpe: estos entran al cuerpo (se dobla); el resto a la cara (cabeza para atrás)
+const AL_CUERPO = { patada: 1, rodilla: 1, pina2: 1, barrida: 1, empuja: 1 };
+const MOVES = {
+  contundente: [['golpe', 1, 1], ['pina2', 0.9, 1.05, { stun: 0.4 }], ['pina3', 1.4, 0.95, { tumba: true, vz: 180, kb: 170, hs: 0.11, remate: true, txt: '¡ESTOCADA!' }]],
+  pesada: [['golpe', 1, 1], ['especial', 1.2, 1, { giro: true, tumba: true, vz: 200, kb: 190, hs: 0.1, remate: true, txt: '¡MOLINETE!' }]],
+  corta: [['pina1', 0.7, 0.9, { ini: 0.04, rec: 0.08 }], ['pina2', 0.8, 1], ['pina1', 0.7, 0.9, { ini: 0.04, rec: 0.08 }], ['pina3', 1.5, 0.9, { tumba: true, vz: 150, kb: 120, hs: 0.12, remate: true, txt: '¡DESTRIPE!' }]],
+  botella: [['golpe', 1, 1], ['pina2', 1.1, 1, { stun: 0.5 }]],
+  impro: [['golpe', 1, 1], ['pina2', 0.9, 1], ['golpe', 1.3, 1.05, { tumba: true, vz: 170, kb: 180, hs: 0.1, remate: true, txt: '¡A LO BRUTO!' }]],
+};
+const IMPRO = { termo: 1, corvina: 1, bandeja: 1, cana: 1 };
+export function claseArma(t) { const d = ITEMS[t]; return d.corta ? 'corta' : d.rompe ? 'botella' : d.pesada ? 'pesada' : IMPRO[t] ? 'impro' : 'contundente'; }
 const ATQ_ARMA = {};
-export function atqArma(t) {
-  let a = ATQ_ARMA[t]; if (a) return a; const d = ITEMS[t], v = d.vel || 1, g = ATQ.golpe;
-  a = ATQ_ARMA[t] = { ...g, ini: g.ini / v, rec: g.rec / v, x: [6, d.alcance], kb: d.kb || g.kb, stun: d.stun || g.stun, tumba: !!d.tumba, vz: d.tumba ? 150 : 0, son: d.son || g.son, hs: d.pesada ? 0.11 : g.hs, remate: !!d.pesada, pesada: !!d.pesada, arma: true };
+export function atqArma(t, paso = 0) {
+  const k = t + paso; let a = ATQ_ARMA[k]; if (a) return a; const d = ITEMS[t], v = d.vel || 1, M = MOVES[claseArma(t)], m = M[Math.min(paso, M.length - 1)];
+  const g = ATQ[m[0]], ex = m[3] || {}, al = Math.round(d.alcance * m[2]);
+  a = ATQ_ARMA[k] = { ...g, anim: g.anim, ini: (ex.ini || g.ini) / v, act: g.act, rec: (ex.rec || g.rec) / v, x: ex.giro ? [-al, al] : [6, al], kb: ex.kb || d.kb || ATQ.golpe.kb, stun: ex.stun || d.stun || ATQ.golpe.stun,
+    tumba: !!(ex.tumba || d.tumba), vz: ex.vz || (d.tumba ? 150 : 0), son: d.son || ATQ.golpe.son, hs: ex.hs || (d.pesada ? 0.11 : ATQ.golpe.hs), remate: !!(ex.remate || d.pesada), pesada: !!d.pesada,
+    giro: !!ex.giro, arma: true, paso, n: M.length, kDmg: m[1], txt: ex.txt || null, dmg: 0 };
   return a;
 }
 const TIRO = { anim: 'golpe', ini: 0.08, act: 0, rec: 0.18, dmg: 0, x: [0, 0], son: 'arma.tiro', hs: 0 };
 const ROTO = { cajon: 'cajonRoto', tacho: 'tachoRoto', cajaBiz: 'carton' };
+const MUERTE_ARMA = {
+  palo: { txt: '¡PALAZO Y A DORMIR!', vuelo: 210, vz: 200, gira: 0.4 }, cano: { txt: '¡CAÑAZO! LO MANDASTE AL CERRO', vuelo: 300, vz: 230, gira: 0.7 },
+  silla: { txt: '¡SILLAZO DE BOLICHE!', vuelo: 340, vz: 240, gira: 0.6 }, pata: { txt: '¡LA PATA DE LA SILLA!', vuelo: 180, vz: 180 },
+  botella: { txt: '¡BOTELLAZO! SALUD', vuelo: 160, vz: 160, sangra: 2.5 }, pico: { txt: '¡TAJO DE PICO!', seca: true, sangra: 5, col: '#ff5a5a' },
+  faca: { txt: '¡FACAZO! SE DESANGRA', seca: true, sangra: 5.5, col: '#ff5a5a' }, termo: { txt: '¡TERMAZO! ...Y NO SE ROMPIÓ', vuelo: 220, vz: 190 },
+  corvina: { txt: '¡CORVINAZO! QUEDÓ OLIENDO A PESCADO', vuelo: 170, vz: 170, gira: 0.3 }, bandeja: { txt: '¡BANDEJAZO! LA CUENTA', vuelo: 160, vz: 170 },
+  escoba: { txt: '¡ESCOBAZO! BARRIDO', vuelo: 200, vz: 140 }, cana: { txt: '¡LO PESCASTE!', vuelo: 150, vz: 220 },
+};
 const FRENTE = { cuadra: ['carton', 'cajon', 'garrafa', 'cajaBiz', 'carton', 'botella'], feria: ['cajonFruta', 'carton', 'cajonF', 'naranja', 'carton'], avenida: ['cono', 'carton', 'botella', 'cajaBiz'],
-  barriosur: ['carton', 'ladrillo', 'tacho', 'botella', 'cajaBiz'], ciudadvieja: ['barril', 'cajonFruta', 'botella', 'carton'], rambla: ['conservadora', 'carton', 'cajon', 'corvina'] };
+  barriosur: ['carton', 'ladrillo', 'tacho', 'botella', 'cajaBiz'], ciudadvieja: ['barril', 'cajonFruta', 'botella', 'carton'], rambla: ['conservadora', 'carton', 'cajon', 'corvina'], boliche: ['barril', 'cajon', 'carton', 'botella'], cerro: ['ladrillo', 'carton', 'tacho', 'botella', 'cajon'] };
 
 export class Juego {
   // nivel: índice en NIVELES; previo: {puntos, vidas, comboMax} que vienen del nivel anterior
-  constructor(claveJugador, vista, ropa = null, nivel = 0, previo = null) {
+  constructor(claveJugador, vista, ropa = null, nivel = 0, previo = null, opciones = null) {
     this.ropa = ropa; this.vista = vista; this.nivelIdx = nivel; const nv = this.nv = NIVELES[nivel];
     this.capaCalle = calle(nv).canvas;
     this.capaLejos = lejos(1600, nv.lejos, nv.hora); this.capaMedio = medio(2400, nv.medio, nv.hora); this.sol = sol(nv.hora);
@@ -44,7 +71,10 @@ export class Juego {
     this.proxVida = previo && previo.proxVida ? previo.proxVida : 100000;
     this.stats = { golpes: 0, recibidos: 0, ko: 0 }; this._pan = { x: 0.5 };
     this.fx = new FX(); this.ev = new Eventos(this); this.sangre = new Sangre(this); if (GORE.nivel) this.sangre.calentar(this.grado);
+    this.mods = efectos(); this.plataNivel = { enemigos: 0, objetos: 0 }; this.mods.vel0 = 1;
     this.j = this.crearJugador(claveJugador, 80, 228);
+    { const j = this.j, m = this.mods; j.st = Object.assign({}, j.st, { vel: (j.st.vel || 60) * m.vel, atk: (j.st.atk || 1) * m.atk }); j.hpMax = Math.round(j.hpMax * m.hp) + m.hpExtra; j.hp = j.hpMax;
+      this.vidas += m.vida; if (m.manoLlena) j.mano = 100; if (m.arma && ITEMS[m.arma]) { const it = this.soltarItem(m.arma, j.x, j.y, 0, 0); this.darArma(j, it); } }
     for (const d of nv.decor) this.decor.push({ ...d, sp: SP[d.t], solido: d.t !== 'carton' && d.t !== 'cono', vx: 0, golpeados: null, px: d.x });
     for (const r of nv.rompibles) this.rompibles.push({ ...r, hp: (ROMPIBLES[r.t] || { hp: 2 }).hp, roto: false, sacude: 0, id: uid++ });
     for (const it of nv.items) this.soltarItem(it.t, it.x, it.y, 0, 0);
@@ -55,7 +85,29 @@ export class Juego {
     this.olas = nv.oleadas.map((o) => ({ ...o }));
     { const sets = [this.j.sp]; for (const o of this.olas) for (const [k, v] of o.enemigos) sets.push(generar(k, v)); if (nv.oleadas.some((o) => (o.eventos || []).some((e) => e.t === 'llamadas'))) for (let v = 0; v < 3; v++) sets.push(generar('tambor', v)); partida(sets); this.setsG = sets; purgarGrado(sets, this.grado ? this.grado.clave : null); }
     this.olas[this.olas.length - 1].cam = nv.L - vista.w;
+    // cinemáticas del nivel: sets de actores y retratos se preparan ya (al arrancar), no en medio de la pelea
+    this.cine = null; this.t0 = 0; this.jefeClave = null;
+    for (const o of nv.oleadas) for (const [k, v] of o.enemigos) if (ENEMIGOS[k].jefe) this.jefeClave = [k, v];
+    { const gi = guionInicio(nv.id), gj = this.jefeClave ? JEFE[this.jefeClave[0]] : null, gf = FIN[nv.id]; const extra = [];
+      for (const gl of [gi, gj, gf]) if (gl) for (const c of gl) { if (c.c === 'aparece') extra.push(generar(c.clave, c.v || 0)); if (c.c === 'dice') { const sp = c.id === 'j' ? this.j.sp : c.id === 'jefe' && this.jefeClave ? generar(this.jefeClave[0], this.jefeClave[1]) : c.clave ? generar(c.clave, c.v || 0) : null; if (sp) retratoCara(sp, c.cara); } }
+      if (extra.length) partida([this.j.sp, ...extra]);
+      this.sinCine = !!(opciones && opciones.sinCine);
+      if (gi.length && !this.sinCine) this.iniciarCine(gi, () => { this.t0 = this.t; }); }
     musica(nv.musica); ambiente(nv.ambiente); sonar('evento.nivel.inicio'); this.dale = 3; this.cartel = 3.2;
+  }
+  // ------------------------------------------------------------- cinemáticas
+  iniciarCine(guion, alTerminar) {
+    const j = this.j; if (j && !j.muerto && j.est !== 'piso' && j.est !== 'vuela' && j.est !== 'agarrado') { if (j.agarrando) this.soltarAgarre(j); j.est = j.est === 'festeja' ? 'festeja' : 'quieto'; j.t = 0; j.atq = null; j.vx = j.vy = 0; }
+    for (const e of this.ents) if (e.equipo === 'e' && !e.muerto && e.est === 'ataca') { e.est = 'quieto'; e.t = 0; e.atq = null; }
+    this.cine = new Cinematica(this, guion, () => { this.cine = null; if (this.j) this.j.invul = Math.max(this.j.invul, 0.8); if (alTerminar) alTerminar(); });
+    const bb = globalThis.__bb; if (bb && bb.bot && !bb.verCine) this.cine.saltar();
+  }
+  pasoCine(dt, entrada) {
+    this.cine.paso(dt, entrada);
+    for (const e of this.ents) this.fisica(e, dt);
+    this.pasoItems(dt); this.fx.paso(dt); if (GORE.nivel) this.sangre.paso(dt);
+    { const G = this.globos; let k = 0; for (let i = 0; i < G.length; i++) { const g = G[i]; g.t += dt; if (g.t < g.dur && !g.e.borrar) G[k++] = g; } G.length = k; }
+    compactar(this.ents); compactar(this.items);
   }
   // ------------------------------------------------------------- creación
   crearJugador(clave, x, y) {
@@ -72,7 +124,8 @@ export class Juego {
     const st = ENEMIGOS[clave]; const sp = generar(clave, variante);
     const e = this.nuevoLuchador(sp, x, y); const hp = Math.round(st.hp * this.hpMul * (mini ? mini.hp || 1.8 : 1));
     Object.assign(e, { equipo: 'e', clave, st, hp, hpMax: hp, nombre: pick(st.nombres), ia: { rol: 'rodear', retro: 0, cd: 0.6 + Math.random(), react: 0, ang: Math.random() * 6.28, tiro: 2 + Math.random() * 3, frase: 2 + Math.random() * 6, tCerca: 0, hits: 0, seguidos: 0, bloqueos: 0, dd: 0 } });
-    if (st.jefe) { e.nombre = st.nombres[0]; this.jefe = e; }
+    if (st.jefe) { e.nombre = st.nombres[0]; this.jefe = e;
+      const gj = JEFE[clave]; if (gj && !this._jefeCine && !this.sinCine) { this._jefeCine = true; this.iniciarCine(gj, () => { this.jefeIntro = 2.2; this.jefeIntroMax = 2.2; sonar('evento.jefe.aparece'); }); } }
     if (mini) { e.mini = true; e.nombre = mini.nombre; this.miniActual = e; this.mensaje = { txt: '¡' + mini.nombre + '!', t: 0, dur: 2 }; sonar('evento.mini.aparece'); this.globo(e, pick(FRASES.mini), 1.6); }
     if (st.armaFija) { const it = this.soltarItem(st.armaFija, x, y, 0, 0); this.darArma(e, it); it.fija = !st.suelta; }
     e.cara = x < this.j.x ? 1 : -1;
@@ -99,6 +152,8 @@ export class Juego {
     if (this.cartel > 0) this.cartel -= dt;
     if (this.lento > 0) { this.lento -= dt; dt *= 0.35; }
     this.temblor = Math.max(0, this.temblor - dt);
+    if (this.cine) { this.temblor = Math.max(0, this.temblor - dt); this.pasoCine(dt, entrada); return; }
+    if (this.estado === 'gana' && !this._finCine && this.tEstado > 1.1) { this._finCine = true; const gf = FIN[this.nv.id]; if (gf && !this.sinCine) this.iniciarCine(gf, null); }
     if (this.hitstop > 0) { this.hitstop -= dt; this.fx.paso(dt * 0.3); if (GORE.nivel) this.sangre.paso(dt * 0.3); return; }
     if (this.estado === 'jugando' && !(this.jefeIntro > 0)) { this.tiempo -= dt; if (this.tiempo <= 0) { this.tiempo = 120; this.danar(this.j, null, 999, { tumba: true, kb: 0, vz: 100 }, true); } }
     if (this.tCombo > 0) { this.tCombo -= dt; if (this.tCombo <= 0) this.combo = 0; }
@@ -138,7 +193,11 @@ export class Juego {
       return;
     }
     if (enAire && !j.aereo && (E.buf.pina > 0 || E.buf.patada > 0) && j.t > 0.05) { E.buf.pina = 0; E.buf.patada = 0; j.aereo = true; this.atacar(j, ATQ.voladora, true); return; }
+    // cadena con arma: cada arma tiene su combo (ver MOVES)
+    if (j.arma && E.buf.pina > 0 && j.est === 'ataca' && j.atq && j.atq.arma && j.atq.paso + 1 < j.atq.n && j.t > j.atq.ini + j.atq.act * 0.5 && !ITEMS[j.arma.t].soloTiro) {
+      E.buf.pina = 0; const a = atqArma(j.arma.t, j.atq.paso + 1); this.atacar(j, a); if (a.txt) this.fx.flotante(j.x, j.y, 74, a.txt, '#ffd040'); return; }
     if (cadenaOk && E.buf.pina > 0) { E.buf.pina = 0; this.atacar(j, j.atq === ATQ.pina1 ? ATQ.pina2 : ATQ.pina3); return; }
+    if (this.mods.remate && j.est === 'ataca' && j.atq === ATQ.pina3 && j.conecto && j.t > j.atq.ini + j.atq.act && (E.buf.patada > 0 || E.buf.pina > 0)) { E.buf.patada = 0; E.buf.pina = 0; this.atacar(j, ATQ.remate); this.fx.flotante(j.x, j.y, 74, '¡REMATE!', '#ff6aff'); return; }
     if (j.est === 'ataca' && j.atq === ATQ.pina2 && j.conecto && E.buf.patada > 0 && j.t > j.atq.ini) { E.buf.patada = 0; this.atacar(j, ATQ.patada); return; }
     if (!libre) return;
     if (E.buf.salto > 0) { E.buf.salto = 0; this.saltar(j); return; }
@@ -149,7 +208,11 @@ export class Juego {
       if (it && !enem) { this.juntar(j, it); return; }
       this.atacar(j, ATQ.pina1); return;
     }
-    if (E.buf.patada > 0) { E.buf.patada = 0; if (j.arma) { this.tirarArma(j); return; } this.atacar(j, ATQ.patada); return; }
+    if (E.buf.patada > 0) { E.buf.patada = 0; if (j.arma) { this.tirarArma(j); return; }
+      // pisotón: hay un caído al alcance y nadie parado pegado
+      const caido = this.caidoCerca(j); if (caido && !this.enemigoCerca(j, 26)) { j.cara = Math.sign(caido.x - j.x) || j.cara; this.atacar(j, ATQ.pisoton); return; }
+      if (this.mods.barrida && (E.dy > 0.6 || (Math.abs(E.dx) > 0.6 && Math.sign(E.dx) === -j.cara))) { if (Math.abs(E.dx) > 0.6) j.cara = Math.sign(E.dx); this.atacar(j, ATQ.j_barrida); return; }
+      this.atacar(j, ATQ.patada); return; }
     // agarre: caminar contra un enemigo
     if (Math.abs(E.dx) > 0.5 && j.est === 'camina') {
       for (const e of this.ents) if (e.equipo === 'e' && !e.muerto && (e.est === 'quieto' || e.est === 'camina' || e.est === 'dolor') && e.z === 0 && !((e.st.jefe || e.st.noAgarre) && e.est !== 'dolor')) {
@@ -163,6 +226,7 @@ export class Juego {
     if (j.tAg > 1.8) { this.soltarAgarre(j); e.est = 'quieto'; e.t = 0; e.vx = e.cara * -60; return; }
     if (j.anim === 'rodilla' && j.t < 0.22) return;
     if (j.anim === 'revolea') return;
+    if (this.mods.cabezazo && E.buf.especial > 0) { E.buf.especial = 0; this.soltarAgarre(j); j.est = 'quieto'; this.atacar(j, ATQ.cabezazo); j.golpeados.add(e.id); this.impacto(j, e, ATQ.cabezazo, e.x - j.cara * 4, e.y, 50); j.conecto = true; return; }
     const atras = Math.sign(E.dx) === -j.cara && Math.abs(E.dx) > 0.5;
     if (E.buf.patada > 0 || (E.buf.pina > 0 && atras)) { E.buf.patada = 0; E.buf.pina = 0; j.anim = 'revolea'; j.t = 0; j.revolea = true; sonar('golpe.revoleo'); voz(j.clave, 'agarra'); return; }
     if (E.buf.pina > 0) {
@@ -187,12 +251,13 @@ export class Juego {
     else if (!a.proy && a.dmg) sonar('mov.aire', this.pan(e.x));
     if (Math.random() < (e.equipo === 'j' ? 0.25 : 0.3)) voz(e.clave, 'ataque', this.pan(e.x));
   }
-  itemCerca(e) { let m = null, md = 1e9; for (const it of this.items) { const d0 = ITEMS[it.t]; if (it.est === 'piso' && d0 && !d0.pelota && !d0.npc && !d0.proy) { const d = Math.abs(it.x - e.x) + Math.abs(it.y - e.y) * 2; if (Math.abs(it.x - e.x) < 18 && Math.abs(it.y - e.y) < 10 && d < md) { m = it; md = d; } } } return m; }
+  itemCerca(e) { let m = null, md = 1e9; for (const it of this.items) { const d0 = ITEMS[it.t]; if (it.est === 'piso' && d0 && !d0.pelota && !d0.npc && !d0.proy && !d0.auto) { const d = Math.abs(it.x - e.x) + Math.abs(it.y - e.y) * 2; if (Math.abs(it.x - e.x) < 18 && Math.abs(it.y - e.y) < 10 && d < md) { m = it; md = d; } } } return m; }
+  caidoCerca(e) { for (const o of this.ents) if (o.equipo === 'e' && !o.muerto && o.est === 'piso' && o.t > 0.12 && (o.pisados || 0) < 2 && Math.abs(o.x - e.x) < 40 && Math.abs(o.y - e.y) < 10) return o; return null; }
   enemigoCerca(e, r) { for (const o of this.ents) if (o.equipo !== e.equipo && !o.muerto && Math.abs(o.x - e.x) < r && Math.abs(o.y - e.y) < 12 && o.est !== 'piso') return o; return null; }
   juntar(j, it) {
     const d = ITEMS[it.t]; j.est = 'junta'; j.t = 0; j.anim = 'junta'; j.vx = 0; j.vy = 0;
-    if (d.cura) { j.hp = Math.min(j.hpMax, j.hp + d.cura); if (d.mano) j.mano = Math.min(100, j.mano + d.mano); it.borrar = true; sonar(it.t === 'mate' ? 'item.mate' : 'item.comida'); this.fx.flotante(it.x, it.y, 40, d.txt, '#7aff7a'); this.globo(j, pick(FRASES.come), 1.2); }
-    else if (d.puntos) { this.puntos += d.puntos; it.borrar = true; sonar('item.plata'); this.fx.flotante(it.x, it.y, 30, d.txt); }
+    if (d.cura) { j.hp = Math.min(j.hpMax, j.hp + d.cura * this.mods.comida); if (d.mano) j.mano = Math.min(100, j.mano + d.mano); it.borrar = true; sonar(it.t === 'mate' ? 'item.mate' : 'item.comida'); this.fx.flotante(it.x, it.y, 40, d.txt, '#7aff7a'); this.globo(j, pick(FRASES.come), 1.2); }
+    else if (d.puntos) { this.puntos += d.puntos; if (d.plata) this.sumarPlata(d.plata, 'objetos'); it.borrar = true; sonar('item.plata'); this.fx.flotante(it.x, it.y, 30, d.txt); }
     else if (d.arma) { this.darArma(j, it); this.fx.flotante(it.x, it.y, 40, d.nombre, '#ffd040'); }
   }
   tirarArma(e) {
@@ -256,13 +321,13 @@ export class Juego {
         } else { e.x = a.x + a.cara * 21; e.y = a.y; e.z = 0; }
         e.anim = 'agarrado'; e.vx = 0; break;
       }
-      case 'vuela': e.anim = 'vuela'; break;
+      case 'vuela': e.anim = 'vuela'; if (e.gira > 0) { e.gira -= dt; if (Math.floor(e.gira / 0.07) % 2 !== Math.floor((e.gira + dt) / 0.07) % 2) e.cara = -e.cara; } break;
       case 'piso': e.vx *= 0.8; e.anim = 'piso';
         if (e.muerto && e.equipo === 'e') { if (e.t > 0.9) { e.blink = 1; if (e.t > 1.6) this.morir(e); } }
         else if (e.muerto) { /* jugador: lo resuelve revisarJugador */ }
-        else if (e.t > (e.equipo === 'j' ? 0.55 : 0.75)) { e.est = 'levanta'; e.t = 0; sonar('mov.levanta', this.pan(e.x)); }
+        else if (e.t > (e.equipo === 'j' ? 0.55 * this.mods.levanta : 0.75)) { e.est = 'levanta'; e.t = 0; sonar('mov.levanta', this.pan(e.x)); }
         break;
-      case 'levanta': e.anim = 'levanta'; e.juggle = 0; e.invul = Math.max(e.invul, 0.1); if (e.t > 0.28) { e.est = 'quieto'; e.t = 0; e.invul = e.equipo === 'j' ? 0.9 : 0.3; } break;
+      case 'levanta': e.anim = 'levanta'; e.juggle = 0; e.pisados = 0; e.invul = Math.max(e.invul, 0.1); if (e.t > 0.28) { e.est = 'quieto'; e.t = 0; e.invul = e.equipo === 'j' ? 0.9 : 0.3; } break;
       case 'junta': e.anim = 'junta'; if (e.t > 0.16) { e.est = 'quieto'; e.t = 0; } break;
       case 'agarra': if (!e.agarrando) { e.est = 'quieto'; e.t = 0; } else if (e.anim !== 'revolea' && e.anim !== 'rodilla') e.anim = 'agarra'; else if (e.anim === 'rodilla' && e.t > 0.2) e.anim = 'agarra'; break;
       case 'festeja': e.anim = 'festeja'; e.vx = 0; e.vy = 0; break;
@@ -340,7 +405,8 @@ export class Juego {
     const fac = e.equipo === 'j' ? 1.25 : 1.25; const a0 = a.x[0] * fac, a1 = a.x[1] * fac;
     for (const o of this.ents) {
       if (o === e || o.equipo === e.equipo || e.golpeados.has(o.id) || o.muerto) continue;
-      if (o.est === 'piso' || o.est === 'levanta' || o.invul > 0) continue;
+      if (a.alSuelo) { if (o.est !== 'piso' || (o.pisados || 0) >= 2) continue; }
+      else if (o.est === 'piso' || o.est === 'levanta' || o.invul > 0) continue;
       if (o.est === 'agarrado' && o.agarradoPor !== e) continue;
       if (o.est === 'vuela' && o.juggle >= 2) continue;
       if (a.bajo && o.z > 10) continue; // la barrida no le pega al que salta
@@ -351,7 +417,7 @@ export class Juego {
       else if (dx < a0 - ancho || dx > a1 + ancho) continue;
       e.golpeados.add(o.id); e.conecto = true;
       const hx = a.giro ? o.x : e.x + e.cara * Math.min(a1, Math.max(a0, dx));
-      this.impacto(e, o, a, hx, (e.y + o.y) / 2, a.aire ? e.z + 40 : (a === ATQ.pina3 ? 54 : a.anim === 'patada' ? 52 : 46));
+      this.impacto(e, o, a, hx, (e.y + o.y) / 2, a.alSuelo ? 6 : a.aire ? e.z + 40 : (a === ATQ.pina3 ? 54 : a.anim === 'patada' ? 52 : 46));
       if (!a.onda && !a.giro && e.equipo === 'e') break;
     }
     if (e.equipo !== 'j') return;
@@ -390,6 +456,7 @@ export class Juego {
   }
   romper(r) {
     r.roto = true; const R = ROMPIBLES[r.t] || { mat: 'madera', c: '#9a6a3a' };
+    if (this.j && Math.random() < 0.7) this.soltarPlata(r.x, r.y, 10 + Math.round(Math.random() * 3) * 10, 'objetos');
     sonar('impacto.' + R.mat, this.pan(r.x));
     if (R.mat === 'vidrio') { this.fx.vidrios(r.x, r.y, 10); this.fx.astillas(r.x, r.y, 10, R.c); }
     else this.fx.astillas(r.x, r.y, 10, R.c);
@@ -420,9 +487,12 @@ export class Juego {
     }
     let dmg;
     if (a.crudo) dmg = a.dmg;
-    else if (e.equipo === 'j') dmg = conArma && !dArma.npc ? dArma.dmg * (e.st.dmg || 1) : a.dmg * (e.st.dmg || 1);
+    else if (e.equipo === 'j') dmg = conArma && !dArma.npc ? dArma.dmg * (a.kDmg || 1) * (e.st.dmg || 1) : a.dmg * (e.st.dmg || 1);
     else { dmg = (conArma && !e.st.armaFija ? dArma.dmg * 0.75 : a.dmg * e.st.dmg) * this.dif * (e.mini ? 1.25 : 1) * (e.buff > 0 ? 1.18 : 1); }
     if (o.equipo === 'j' && o.clave === 'pelado') dmg *= 0.9;
+    let crit = false;
+    if (e.equipo === 'j' && !a.crudo) { const m = this.mods; dmg *= m.dmg * (conArma ? 1 : m.dmgMano); if (m.crit > 0 && Math.random() < m.crit) { dmg *= 1.6; crit = true; } }
+    if (o.equipo === 'j') dmg *= this.mods.def;
     const grande = !!(a.tumba || dmg >= 10);
     this.fx.chispa(hx, hy, hz, grande);
     // tipo de golpe para la sangre, el hit-stop y el temblor: 0 piña, 1 patada, 2 pesado, 3 arma, 4 corte, 5 especial
@@ -435,32 +505,43 @@ export class Juego {
     sonar(conArma && dArma.son ? dArma.son : a.son || 'golpe.pina', { x: this.pan(hx).x, vol: grande ? 1.2 : 1 });
     this.hitstop = Math.max(this.hitstop, a.hs || 0.05);
     if (grande) this.temblor = Math.max(this.temblor, 0.14);
+    this._armaGolpe = conArma ? e.arma.t : null; // para la muerte según el arma (se lee en danar)
     // durabilidad del arma (las armas propias de jefes no se gastan)
     if (conArma && !e.arma.fija && dArma.dur && (e.equipo === 'j' || !e.st.armaFija)) { const it = e.arma; it.dur--; if (it.dur <= 0) this.romperArma(e, it, hx, hy, hz); }
     if (e.equipo === 'j' && e !== o) this.contarGolpe(e, dmg, o);
     // el chorro te arrebata el arma o la plata
     if (a.roba && o.equipo === 'j' && e.ia) {
       if (o.arma) { const it = o.arma; o.arma = null; this.darArma(e, it); it.fija = false; this.fx.flotante(o.x, o.y, 70, '¡TE ROBÓ EL ' + ITEMS[it.t].nombre + '!', '#ff8a5a'); }
-      else { const p = Math.min(300, this.puntos); this.puntos -= p; e.ia.plata = (e.ia.plata || 0) + p; if (p) this.fx.flotante(o.x, o.y, 70, '-$' + p, '#ff8a5a'); }
+      else { const tot = this.plataNivel.enemigos + this.plataNivel.objetos, p = Math.min(80, tot); const pe = Math.min(p, this.plataNivel.enemigos); this.plataNivel.enemigos -= pe; this.plataNivel.objetos -= p - pe; e.ia.plata = (e.ia.plata || 0) + p; if (p) this.fx.flotante(o.x, o.y, 70, '-$U ' + p, '#ff8a5a'); }
       sonar('item.robado', this.pan(o.x)); e.ia.huye = 3.2; e.ia.dirHuye = 0; this.globo(e, pick(FRASES.robo), 1.2);
     }
-    this.danar(o, e, dmg, a);
+    this.danar(o, e, dmg, a); this._armaGolpe = null;
+    if (e.equipo === 'j' && o.hpMax) { if (this.mods.kb !== 1 && (o.est === 'vuela' || o.est === 'dolor')) o.vx *= this.mods.kb; if (crit) { this.fx.flotante(hx, hy, hz + 26, '¡CRÍTICO!', '#ff6aff'); this.hitstop = Math.max(this.hitstop, 0.08); this.temblor = Math.max(this.temblor, 0.12); } }
     // la caña engancha y te trae
     if (a.engancha && o.est === 'dolor') { o.vx = Math.sign(e.x - o.x) * 300; o.tiron = 0.32; sonar('enem.cana.engancha', this.pan(o.x)); }
     // el patova te agarra
     if (a.agarre && o.equipo === 'j' && !o.muerto && o.hp > 0 && o.est !== 'vuela') { this.agarrar(e, o); e.tAg = 0; o.escape = 0; this.fx.flotante(o.x, o.y, 80, '¡MACHACÁ PARA ZAFAR!', '#ffd040'); }
   }
+  // remate según el arma: cada una deja al finado distinto (texto, vuelo, sangre)
+  muerteArma(o, dir, t) {
+    const d = ITEMS[t]; if (!d) return; const M = MUERTE_ARMA[t] || (d.corta ? MUERTE_ARMA.faca : d.pesada ? MUERTE_ARMA.cano : null); if (!M) return;
+    if (M.vuelo) { o.vx = dir * Math.max(Math.abs(o.vx), M.vuelo); o.vz = Math.max(o.vz, M.vz || 180); }
+    if (M.gira) o.gira = M.gira;
+    if (M.seca) { o.vx = dir * 40; o.vz = 70; } // se desploma en el lugar
+    if (M.sangra && GORE.nivel) o.sangra = Math.max(o.sangra || 0, M.sangra);
+    this.fx.flotante(o.x, o.y, (o.sp ? o.sp.h : 44) + 18, M.txt, M.col || '#ffd040'); this.hitstop = Math.max(this.hitstop, 0.09); this.temblor = Math.max(this.temblor, 0.16);
+  }
   romperArma(e, it, hx, hy, hz) {
     const d = ITEMS[it.t]; e.arma = null; it.borrar = true;
     if (d.rompe) { this.fx.vidrios(hx, hy, hz); sonar('impacto.vidrio', this.pan(hx)); }
     else { this.fx.astillas(hx, hy, hz, d.astilla || '#9a6a3a'); sonar('arma.rompe', this.pan(hx)); }
-    if (d.deja) { const n = this.soltarItem(d.deja, e.x, e.y, 0, 0); this.darArma(e, n); this.fx.flotante(hx, hy, hz + 20, '¡QUEDÓ LA PATA!', '#ffd040'); }
+    if (d.deja) { const n = this.soltarItem(d.deja, e.x, e.y, 0, 0); this.darArma(e, n); this.fx.flotante(hx, hy, hz + 20, d.dejaTxt || '¡QUEDÓ LA PATA!', '#ffd040'); if (d.dejaTxt) sonar('arma.botella.rompe', this.pan(hx)); }
   }
   contarGolpe(e, dmg, o) {
     if (!e || e.equipo !== 'j') return;
     this.combo++; this.tCombo = 2.2; this.comboMax = Math.max(this.comboMax, this.combo); this.stats.golpes++;
     const bonus = 1 + Math.min(14, this.combo) * 0.5; this.puntos += Math.round(dmg * 10 * bonus);
-    e.mano = Math.min(100, (e.mano || 0) + dmg * 1.6); void o;
+    e.mano = Math.min(100, (e.mano || 0) + dmg * 1.6 * this.mods.mano); void o;
   }
   danar(o, por, dmg, a, sinInvul = false) {
     if (o.invul > 0 && !sinInvul) return;
@@ -471,6 +552,7 @@ export class Juego {
     this._golpeado = null;
     if (o.equipo === 'j') { this.combo = 0; this.tCombo = 0; this.stats.recibidos++; if (o.arma && (a.tumba || o.hp <= 0)) this.soltarArma(o); if (Math.random() < 0.3) this.globo(o, pick(FRASES.dolor), 0.9); voz(o.clave, o.hp <= 0 ? 'ko' : 'dolor'); }
     else { if (o.ia) o.ia.hits++; if (o.hp > 0 && Math.random() < 0.12) this.globo(o, pick(FRASES.dolor), 0.9); if (Math.random() < 0.3) voz(o.clave, 'dolor', this.pan(o.x)); }
+    if (a.alSuelo && o.est === 'piso') { o.pisados = (o.pisados || 0) + 1; o.t = 0; o.z = 0; o.vz = 0; o.vx = 0; this.temblor = Math.max(this.temblor, 0.12); this.fx.polvo(o.x, o.y, 6); if (o.hp <= 0) { o.hp = 0; o.muerto = true; if (GORE.nivel && !o.ko) this.sangre.ko(o, por, true); if (o.equipo === 'e') this.koEnemigo(o); } return; }
     const dir = por ? Math.sign(o.x - por.x) || por.cara : -o.cara;
     let tumba = a.tumba || (a.tumbaSiAturdido && o.est === 'dolor') || o.hp <= 0 || o.est === 'vuela' || o.z > 0;
     // jefes y mini jefes aguantan: sólo caen con remates
@@ -480,9 +562,11 @@ export class Juego {
       if (o.arma && o.equipo === 'e' && !o.arma.fija) this.soltarArma(o);
       o.est = 'vuela'; o.t = 0; o.vx = dir * (a.kb || 100) / (o.st.peso || (o.st.jefe ? 1.6 : 1)); o.vz = a.vz || 140; o.z = Math.max(o.z, 1); o.rebotes = 0; o.atq = null; o.cara = -dir; o.juggle = (o.juggle || 0) + 1;
       if (o.z > 1) o.vz = Math.max(o.vz, 120);
+      if (a.gira) o.gira = 0.55;
       if (o.ia) o.ia.hits = 0;
+      if (o.hp <= 0 && o.equipo === 'e' && this._armaGolpe) this.muerteArma(o, dir, this._armaGolpe);
     } else {
-      o.est = 'dolor'; o.t = 0; o.tStun = a.stun || 0.3; o.vx = dir * (a.kb || 30); o.atq = null; o.anim = 'dolor'; o.fr = Math.random() < 0.5 ? 0 : 1; o.cara = -dir; o.juggle = 0;
+      o.est = 'dolor'; o.t = 0; o.tStun = a.stun || 0.3; o.vx = dir * (a.kb || 30); o.atq = null; o.anim = 'dolor'; o.fr = (AL_CUERPO[a.anim] ? 1 : 0) ^ (Math.random() < 0.2 ? 1 : 0); // cabeza para atrás o doblado según dónde entró o.cara = -dir; o.juggle = 0;
     }
     if (o.hp <= 0) { o.hp = 0; if (GORE.nivel && !o.ko) this.sangre.ko(o, por, o.equipo === 'e' && (o.st.jefe || a === ATQ.especial || a.remate || a.giro || dmg >= 14)); if (o.equipo === 'e') this.koEnemigo(o); }
   }
@@ -498,10 +582,17 @@ export class Juego {
     if (o.st.jefe) { this.lento = 1.4; this.temblor = 0.5; sonar('evento.jefe.ko'); this.globo(o, FRASES[o.clave].ko, 2); }
     else if (Math.random() < 0.5) this.globo(o, pick(FRASES.ko), 1.1);
     if (o.ia.botin) this.soltarItem(o.ia.botin, o.x, o.y, 20, 100);
-    if (o.ia.plata) this.soltarItem('billete', o.x, o.y, 20, 100);
+    if (o.ia.plata) this.soltarPlata(o.x, o.y, o.ia.plata);
+    this.soltarPlata(o.x, o.y, Math.round(o.st.puntos / (o.st.jefe ? 20 : 16)) * (o.mini ? 2 : 1));
     if (o.mini) this.soltarItem(pick(['chivito', 'choripan']), o.x, o.y, 20, 110);
     else if (!o.st.jefe && Math.random() < 0.12) this.soltarItem(pick(['billete', 'bizcochos', 'alfajor']), o.x, o.y, 20, 100);
   }
+  // plata: monedas que saltan y se juntan solas (cada una vale lo suyo; como mucho 6 por golpe)
+  soltarPlata(x, y, total, de = 'enemigos') {
+    if (!(total > 0)) return; const n = Math.max(1, Math.min(6, Math.round(total / 15))); let resto = total;
+    for (let i = 0; i < n; i++) { const v = i === n - 1 ? resto : Math.round(total / n); resto -= v; const it = this.soltarItem('moneda', x, y, 24, 110 + Math.random() * 70, (Math.random() - 0.5) * 120); it.vy = (Math.random() - 0.5) * 40; it.valor = v; it.de = de; }
+  }
+  sumarPlata(v, de) { const n = Math.round(v * this.mods.plata); this.plataNivel[de] += n; return n; }
   escapo(e) { // el chorro se fue con el botín
     e.borrar = true; e.muerto = true; if (e.arma) { e.arma.borrar = true; e.arma = null; }
     this.mensaje = { txt: e.ia.botin ? '¡SE LLEVÓ LA COMIDA!' : e.ia.plata ? '¡SE LLEVÓ TU PLATA!' : '¡SE TE ESCAPÓ!', t: 0, dur: 1.6 };
@@ -514,7 +605,7 @@ export class Juego {
     const j = this.j;
     if (j.hp <= 0 && j.est !== 'piso' && j.est !== 'vuela') { j.tCero = (j.tCero || 0) + 1 / 120; if (j.tCero > 0.4) { this.anomalias = (this.anomalias || 0) + 1; this.ultimaAnomalia = j.est + '/' + j.anim; j.tCero = 0; if (j.agarradoPor) this.soltarAgarre(j.agarradoPor); if (j.agarrando) this.soltarAgarre(j); j.est = 'vuela'; j.vz = 120; j.z = 1; j.atq = null; } } else j.tCero = 0;
     if ((j.hp <= 0 || j.muerto) && j.est === 'piso' && j.t > 0.8 && this.estado === 'jugando') {
-      this.vidas--;
+      this.vidas--; this.vidasPerdidas = (this.vidasPerdidas || 0) + 1;
       if (this.vidas < 0) { this.estado = 'pierde'; this.tEstado = 0; this.vidas = 0; musica('mus.derrota'); return; }
       j.hp = j.hpMax; j.muerto = false; j.est = 'levanta'; j.t = 0; j.invul = 2.5; sonar('evento.revive');
       for (const e of this.ents) if (e.equipo === 'e' && !e.muerto && Math.abs(e.x - j.x) < 120) this.danar(e, j, 0, { tumba: true, kb: 140, vz: 130 }, true);
@@ -566,6 +657,7 @@ export class Juego {
       it.y = Math.max(PISO.arriba, Math.min(PISO.abajo, it.y));
       if (it.est === 'piso') for (const d of this.decor) { if (!d.solido) continue; const hw = d.sp.w * 0.5 - 4; if (Math.abs(it.x - d.x) < hw && Math.abs(it.y - d.y) < 8) { it.y = d.y + 9 <= PISO.abajo ? d.y + 9 : d.y - 9; } /* siempre adelante del decorado: alcanzable en línea recta (atrás quedaba escondido e inalcanzable contra el borde) */ }
       if (it.est === 'piso' || it.est === 'cae') it.x = Math.max(this.cam + 10, Math.min(this.cam + this.vista.w - 10, it.x));
+      if (it.t === 'moneda' && it.est === 'piso' && it.vida > 0.35) { const j = this.j; if (!j.muerto && Math.abs(j.x - it.x) < 18 && Math.abs(j.y - it.y) < 11 && j.z < 20) { it.borrar = true; const n = this.sumarPlata(it.valor || 10, it.de || 'enemigos'); sonar('item.plata', this.pan(it.x)); this.fx.flotante(it.x, it.y, 26, '+$U ' + n, '#7aff7a'); continue; } }
       if (it.t === 'pelota' && it.est === 'piso') { const j = this.j; if (Math.abs(j.x - it.x) < 10 && Math.abs(j.y - it.y) < 6 && j.est === 'camina') { it.est = 'rueda'; it.vx = j.cara * 120; it.vz = 40; it.equipo = null; it.dueno = j; } }
     }
   }
@@ -613,12 +705,12 @@ export class Juego {
     const o = this.olas[this.ola];
     if (!this.lock && o && this.cam >= o.cam - 0.5) {
       this.lock = o; this.encolar(o.enemigos); this.tSpawn = 0.3; this.tLock = 0; this.ev.programar(o.eventos);
-      if (o.jefe) { this.jefeIntro = 2.2; this.jefeIntroMax = 2.2; this.tiempo = Math.max(this.tiempo, this.nv.num === 6 ? 180 : 150); /* piso de reloj para el jefe */ musica(this.nv.num === 6 ? 'mus.jefe.final' : 'mus.jefe'); sonar('evento.jefe.aparece'); }
+      if (o.jefe) { if (this.sinCine || !JEFE[this.jefeClave && this.jefeClave[0]]) { this.jefeIntro = 2.2; this.jefeIntroMax = 2.2; } this.tiempo = Math.max(this.tiempo, this.nv.id === 'rambla' ? 180 : 150); /* piso de reloj para el jefe */ musica(this.nv.id === 'rambla' ? 'mus.jefe.final' : 'mus.jefe'); if (this.jefeIntro > 0) sonar('evento.jefe.aparece'); }
       for (const p of this.perros) if (p.est === 'quieto') p.t = 0;
     }
     if (this.lock) {
       this.tLock += dt;
-      if (this.jefeIntro > 0) { this.jefeIntro -= dt; if (this.jefeIntro <= 0 && this.jefe) { this.globo(this.jefe, FRASES[this.jefe.clave].intro, 2); voz(this.jefe.clave, 'risa'); } }
+      if (this.jefeIntro > 0) { this.jefeIntro -= dt; if (this.jefeIntro <= 0 && this.jefe) { if (!this._jefeCine) this.globo(this.jefe, FRASES[this.jefe.clave].intro, 2); voz(this.jefe.clave, 'risa'); } }
       this.tSpawn -= dt;
       let enPantalla = 0; for (const e of this.ents) if (e.equipo === 'e' && !e.muerto) enPantalla++;
       // red de seguridad: un enemigo que se quedó afuera de la pantalla (huyendo, trabado contra un decorado) más de 5 s vuelve a entrar por el borde
@@ -650,10 +742,11 @@ export class Juego {
     let sx = 0, sy = 0; if (this.temblor > 0) { const k = Math.min(1, this.temblor * 8); sx = Math.round((Math.random() - 0.5) * 4 * k); sy = Math.round((Math.random() - 0.5) * 3 * k); }
     const C = Math.round(cam) - sx;
     const key = W + 'x' + H; if (this.cieloKey !== key) { this.cieloC = cielo(W, H, this.nv.hora); this.cieloKey = key; }
+    if (this.nv.interior) { x.fillStyle = '#1e1614'; x.fillRect(0, 0, W, off + sy - EXTRA + 1); } else {
     x.drawImage(this.cieloC, 0, 0);
     if (this.sol) x.drawImage(this.sol, Math.round(W * 0.62 - cam * 0.02), off + (this.nv.hora === 'noche' ? 30 : this.nv.hora === 'manana' ? 50 : 96));
     const lj = Math.round(cam * 0.15) % (this.capaLejos.width - W); x.drawImage(this.capaLejos, lj, 0, W, ALTO, 0, off + sy, W, ALTO);
-    const md = Math.min(this.capaMedio.width - W, Math.round(cam * 0.45)); x.drawImage(this.capaMedio, md, 0, W, ALTO, 0, off + sy, W, ALTO);
+    const md = Math.min(this.capaMedio.width - W, Math.round(cam * 0.45)); x.drawImage(this.capaMedio, md, 0, W, ALTO, 0, off + sy, W, ALTO); }
     x.drawImage(this.capaCalle, Math.max(0, C), 0, W, ALTO + EXTRA, 0, off + sy - EXTRA, W, ALTO + EXTRA);
     const Y = off + sy;
     this.ev.fondo(x, C, Y);
