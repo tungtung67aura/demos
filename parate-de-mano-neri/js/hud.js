@@ -1,5 +1,5 @@
 // HUD con el layout de la referencia: retrato + nombre + puntaje + barras HP/MANO, BONUS, VIDAS, TIEMPO, COMBO.
-import { P as PROG } from './progreso.js';
+import { P as PROG, DIOS } from './progreso.js';
 import { texto, CONTORNO } from './pixel.js';
 import { ITEMS } from './datos.js';
 import { iconoNivel } from './mapa.js';
@@ -16,6 +16,7 @@ let fantasma = 1, fantasmaJ = null; // la vida perdida se vacía de a poco (fran
 export function dibujarHUD(x, g, W, H, tactil, oculto = false) {
   const j = g.j; const sp = j.sp;
   placa(x, 1, 1, 174, j.arma ? 60 : 50);
+  if (DIOS.on) texto(x, 'DIOS', 4, j.arma ? 63 : 53, '#ff8a3a', 1, 'izq', CONTORNO);
   { const cx0 = Math.max(220, Math.round(W * 0.42)); placa(x, cx0 - 30, 1, 130, 33); }
   // retrato
   x.fillStyle = CONTORNO; x.fillRect(3, 3, 34, 34); x.fillStyle = '#5a3a6a'; x.fillRect(4, 4, 32, 32); x.fillStyle = '#7a4a7a'; x.fillRect(4, 4, 32, 10);

@@ -101,3 +101,7 @@ export function efectos() {
 export function gastarUso() { P.uso = {}; P.arma = null; guardar(); }
 export function sumarPlata(n) { P.plata += n; guardar(); }
 export function sumarPuntos(n) { P.puntos += n; guardar(); }
+
+// truco de prueba (modo dios): clave propia 'bb-dios', fuera de la partida y de la economía
+export const DIOS = { on: (() => { try { return localStorage.getItem('bb-dios') === '1'; } catch (e) { return false; } })() };
+export function alternarDios() { DIOS.on = !DIOS.on; try { localStorage.setItem('bb-dios', DIOS.on ? '1' : '0'); } catch (e) { /* sin almacenamiento */ } return DIOS.on; }

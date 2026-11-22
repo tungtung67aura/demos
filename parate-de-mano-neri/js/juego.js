@@ -14,7 +14,7 @@ import { Eventos } from './eventos.js';
 import { gradoSuave, cuadroG, spriteG, silueta, purgarGrado } from './grado.js';
 import { Cinematica, retratoCara } from './cinematica.js';
 import { guionInicio, JEFE, FIN } from './guion.js';
-import { efectos } from './progreso.js';
+import { efectos, DIOS } from './progreso.js';
 
 const GRAV = 920;
 let uid = 1;
@@ -156,6 +156,7 @@ export class Juego {
     if (this.estado === 'gana' && !this._finCine && this.tEstado > 1.1) { this._finCine = true; const gf = FIN[this.nv.id]; if (gf && !this.sinCine) this.iniciarCine(gf, null); }
     if (this.hitstop > 0) { this.hitstop -= dt; this.fx.paso(dt * 0.3); if (GORE.nivel) this.sangre.paso(dt * 0.3); return; }
     if (this.estado === 'jugando' && !(this.jefeIntro > 0)) { this.tiempo -= dt; if (this.tiempo <= 0) { this.tiempo = 120; this.danar(this.j, null, 999, { tumba: true, kb: 0, vz: 100 }, true); } }
+    if (DIOS.on && this.j && this.j.hpMax && this.j.hp < this.j.hpMax) { this.j.hp = this.j.hpMax; this.j.muerto = false; } // cubre sangrado, agarres, pozos y cualquier daño directo
     if (this.tCombo > 0) { this.tCombo -= dt; if (this.tCombo <= 0) this.combo = 0; }
     this.dale = Math.max(0, this.dale - dt);
     this.controlJugador(dt, entrada);
@@ -549,6 +550,7 @@ export class Juego {
     if (o.agarradoPor && o.agarradoPor !== por) this.soltarAgarre(o.agarradoPor);
     if (o.agarrando) this.soltarAgarre(o);
     o.hp -= dmg;
+    if (DIOS.on && o.equipo === 'j') o.hp = o.hpMax; // modo dios: el golpe se ve y empuja, pero no saca vida
     if (GORE.nivel && o.hpMax && this._golpeado !== o && dmg > 0) this.sangre.golpe(o, por, o.x, o.y, (o.sp ? o.sp.h : 40) * 0.55, a.tumba ? 2 : 0, dmg, false);
     this._golpeado = null;
     if (o.equipo === 'j') { this.combo = 0; this.tCombo = 0; this.stats.recibidos++; if (o.arma && (a.tumba || o.hp <= 0)) this.soltarArma(o); if (Math.random() < 0.3) this.globo(o, pick(FRASES.dolor), 0.9); voz(o.clave, o.hp <= 0 ? 'ko' : 'dolor'); }

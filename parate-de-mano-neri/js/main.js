@@ -7,7 +7,7 @@ import { SLOTS, opciones } from './ropa.js';
 import { Juego } from './juego.js';
 import { dibujarHUD } from './hud.js';
 import { E, initEntrada, leerEntrada, tickBuf, registrarTap } from './entrada.js';
-import { P as PROG, nivelMaxIdx, ganadosIdx, ganarNivel, guardar as guardarProg, gastarUso } from './progreso.js';
+import { DIOS, alternarDios, P as PROG, nivelMaxIdx, ganadosIdx, ganarNivel, guardar as guardarProg, gastarUso } from './progreso.js';
 import { abrirTienda, pasoTienda, dibujarTienda } from './tienda.js';
 import { iniciarAudio, sonar, musica, setMusica, suspender } from './audio.js';
 import { texto, lienzo, CONTORNO } from './pixel.js';
@@ -16,7 +16,7 @@ import { NIVELES } from './niveles.js';
 import { abrirMapa, pasoMapa, dibujarMapa, precargarMapa } from './mapa.js';
 import { calle, cielo, ALTO, EXTRA } from './escenario.js';
 
-export const VERSION = 'bb-v10';
+export const VERSION = 'bb-v11';
 // sonidos de menú por ID (audio-ids.js): sin archivo, no suena (o suena el respaldo sintetizado si el ID lo tiene)
 const UI = { menu: 'ui.mover', dale: 'ui.ok', pausa: 'ui.pausa', item: 'ui.ropa', atras: 'ui.atras' };
 function sfx(k) { sonar(UI[k] || k); }
@@ -84,8 +84,22 @@ function iniciar() {
 }
 cv.addEventListener('pointerdown', (ev) => {
   iniciarAudio(); musica(pantalla === 'juego' ? musJuego() : pantalla === 'titulo' ? 'mus.titulo' : 'mus.menu');
+  if (pantalla === 'titulo') { gesto = [ev.clientX, ev.clientY]; return; } // en el título el toque se decide al soltar (toque o deslizada)
   const r = cv.getBoundingClientRect(); registrarTap((ev.clientX - r.left) / r.width * W, (ev.clientY - r.top) / r.height * H);
 });
+cv.addEventListener('pointerup', (ev) => {
+  if (!gesto || pantalla !== 'titulo') { gesto = null; return; }
+  const dx = ev.clientX - gesto[0], dy = ev.clientY - gesto[1]; gesto = null;
+  if (Math.hypot(dx, dy) < 25) { const r = cv.getBoundingClientRect(); registrarTap((ev.clientX - r.left) / r.width * W, (ev.clientY - r.top) / r.height * H); }
+  else trucoDir(Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'l' : 'r') : (dy < 0 ? 'u' : 'd'));
+});
+// truco secreto (título): ↑ ↑ ↓ ↓ ← → ← → + piña. Por toque: deslizar en esas direcciones y tocar.
+let gesto = null, truco = [], avisoDios = null;
+const TRUCO = 'uuddlrlr';
+function trucoDir(d) { truco.push(d); if (truco.length > 8) truco.shift(); }
+const TECLA_TRUCO = { ArrowUp: 'u', KeyW: 'u', ArrowDown: 'd', KeyS: 'd', ArrowLeft: 'l', KeyA: 'l', ArrowRight: 'r', KeyD: 'r' };
+addEventListener('keydown', (e) => { if (pantalla === 'titulo' && !e.repeat && TECLA_TRUCO[e.code]) trucoDir(TECLA_TRUCO[e.code]); });
+function trucoListo() { return truco.join('') === TRUCO; }
 addEventListener('touchend', () => { iniciarAudio(); }, { passive: true });
 addEventListener('keydown', () => { iniciarAudio(); musica(pantalla === 'juego' ? musJuego() : pantalla === 'titulo' ? 'mus.titulo' : 'mus.menu'); }, { once: false });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { if (pantalla === 'juego') { pantalla = 'pausa'; pausaSel = 0; } suspender(true); } else suspender(false); });
@@ -169,7 +183,10 @@ function bucle(ahora) {
 
 function menus(dt) {
   const n = nav(); const t = tap();
+  if (avisoDios) { avisoDios.t -= dt; if (avisoDios.t <= 0) avisoDios = null; }
   if (pantalla === 'titulo') {
+    if (E.ultimo !== 'teclado') { if (n.y) trucoDir(n.y < 0 ? 'u' : 'd'); else if (n.x) trucoDir(n.x < 0 ? 'l' : 'r'); } // teclado: va por keydown
+    if (trucoListo() && (E.buf.pina > 0 || t)) { E.buf.pina = 0; E.buf.ok = 0; truco = []; const on = alternarDios(); avisoDios = { s: on ? 'MODO DIOS ACTIVADO' : 'MODO DIOS DESACTIVADO', t: 1.8 }; sonar(on ? 'evento.record' : 'ui.mover'); return; }
     if (ok() || t) { pantalla = 'seleccion'; tP = 0; sfx('menu'); musica('mus.menu'); }
   } else if (pantalla === 'seleccion') {
     if (n.x) { elegido = (elegido + n.x + 3) % 3; sfx('menu'); }
@@ -297,6 +314,10 @@ function fondo(desp) {
   const sx = Math.round(desp) % (fondoMenu.width - W); x.drawImage(fondoMenu, sx, 0, W, ALTO + EXTRA, 0, off - EXTRA, W, ALTO + EXTRA);
 }
 function dibujarTitulo() {
+  dibujarTitulo0();
+  if (avisoDios) { x.fillStyle = 'rgba(18,10,26,0.85)'; x.fillRect(W / 2 - 110, H - 46, 220, 22); texto(x, avisoDios.s, W / 2, H - 41, DIOS.on ? '#ffd23a' : '#c8b8d8', 1, 'centro', CONTORNO); }
+}
+function dibujarTitulo0() {
   fondo(400 + Math.sin(tP * 0.2) * 60 + 60);
   velo(0.25);
   const cy = Math.round(H * 0.24);
