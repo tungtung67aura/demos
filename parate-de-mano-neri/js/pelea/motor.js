@@ -134,8 +134,10 @@ export class Pelea {
     // estados de castigo
     if (f.est === 'dolor' || f.est === 'dolorAg' || f.est === 'bloq' || f.est === 'bloqAg') { f.stun -= dt; f.vx *= Math.pow(0.0008, dt);
       // contraataque de guardia (cuesta 50 de súper): especial + adelante durante el bloqueo
+      // ESCAPE (universal): con 3+ golpes seguidos recibidos y 50 de súper, ESPECIAL te zafa del combo (empuja al rival, invulnerable un instante)
+      if ((f.est === 'dolor' || f.est === 'dolorAg') && I.s && f.super >= 50 && f.comboN >= 3 && !this.ult && f.stun < 50) { this.consumir(f, E, 's'); f.super -= 50; this.escape(f); return; }
       if ((f.est === 'bloq' || f.est === 'bloqAg') && I.s && f.super >= 50 && I.dx * f.cara > 0.5) { this.consumir(f, E, 's'); f.super -= 50; this.contraGuardia(f); return; }
-      if (f.stun <= 0) { f.est = 'quieto'; f.t = 0; } else return; }
+      if (f.stun <= 0) { if (f.est === 'dolor' || f.est === 'dolorAg') f.comboN = 0; f.est = 'quieto'; f.t = 0; } else return; } // v12.2: el combo termina al recuperarse (antes seguía contando y escalaba el daño de golpes sueltos)
     if (f.est === 'piso') { f.vx *= Math.pow(0.001, dt); if (f.t > (f.ko ? 99 : 0.55)) { f.est = 'levanta'; f.t = 0; f.invul = 0.45; sonar('pelea.levanta'); } return; }
     if (f.est === 'levanta') { if (f.t > 0.36) { f.est = 'quieto'; f.t = 0; f.invul = 0.12; } return; }
     if (f.est === 'vuela') return;
@@ -189,7 +191,8 @@ export class Pelea {
     const k = this.elegir(f); if (!k) return; const r0 = RANGO[a.k], r1 = RANGO[k];
     const ok = r1 > r0 || (a.k === 'l' && k === 'l' && f.cadena.length < 3 && fs === 'rec') || (k === 'firma');
     if (!ok || (r0 >= 3 && r1 < 4)) return; if (k === 'agarre') return;
-    this.usarBoton(f, E, k); if (k === 'ult') { if (f.super >= 100) this.iniciarUlt(f); return; } this.iniciarMov(f, k, true);
+    this.usarBoton(f, E, k); const op = f.op; if (op.est === 'bloq' || op.est === 'bloqAg') { const M = f.movs[k]; op.stun = Math.max(op.stun, ((M && M.ini) || 0.1) + 0.04); } // cancelar algo bloqueado: el rival sigue en bloqueo hasta el siguiente golpe
+    if (k === 'ult') { if (f.super >= 100) this.iniciarUlt(f); return; } this.iniciarMov(f, k, true);
   }
   iniciarMov(f, k, cancel = false) {
     const M = f.movs[k]; f.est = 'ataque'; f.atq = M; f.t = 0; f.conecto = false; f.hits = 0; f.sub = 0; f.aterrizo = false; f.whiff = 0; f.yaEfecto = false;
@@ -232,13 +235,16 @@ export class Pelea {
       f.est = 'lanza'; f.t = 0; f.agarrado = null; if (atras) { op.x = f.x - f.cara * 20; f.cara = -f.cara; }
       const dmg = g.comando ? g.a.dmg : 110; this.impacto(f, op, { dmg, tumba: true, lanza: 300, kb: 150, hs: 0.4, noBloq: true, agarre: true, dir }, op.x, 60 * op.esc); sonar('pelea.lanza.cuerpo'); this.temblor = 0.2; }
   }
+  escape(f) { const op = f.op, dir = Math.sign(op.x - f.x) || f.cara; f.est = 'quieto'; f.t = 0; f.stun = 0; f.comboN = 0; f.invul = 0.4; f.vx = -dir * 120; f.juggle = 0;
+    if (op.est === 'ataque' || NEUTRO.has(op.est)) { op.est = 'dolor'; op.t = 0; op.stun = 0.3; op.atq = null; } op.vx = dir * 300; op.cadena = []; this.hitstop = 0.08;
+    this.fx.aro(f.x, SUELO); this.fx.flotante(f.x, SUELO, 110, '¡ZAFÉ!', '#7aff7a'); sonar('pelea.contra'); vibrar(0.6, 120); }
   contraGuardia(f) { const op = f.op; f.est = 'ataque'; f.atq = Object.assign({}, f.movs.h, { k: 'contraG', dmg: 60, tumba: true, invul: 0.3, ini: 0.03, nombre: 'CONTRA' }); f.t = 0; f.conecto = false; f.hits = 0; f.invul = 0.3; f.stun = 0;
     this.fx.aro(f.x, SUELO); this.fx.flotante(f.x, SUELO, 110, '¡CONTRA!', '#9ad8f0'); sonar('pelea.contra'); void op; }
   // ---------------------------------------------------------------- definitivo
   iniciarUlt(f) { const op = f.op; f.super = 0; this.stats.ults += f === this.F[0] ? 1 : 0; f.est = 'ultAct'; f.t = 0; f.vx = 0; f.invul = 9; f.atq = f.movs.ult; this.zoomObj = 1.18; this.zoomT = 1.2; this.ultDe = f;
     sonar('pelea.superflash'); this.flash = { t: 0, dur: 0.85, f, fin: () => {
       // golpe de activación: ¿conecta?
-      const L = f.L.ult, dist = Math.abs(op.x - f.x); const bloquea = this.bloquea(op, f, { alto: false, bajo: false }) && L.alcance < 900; const alc = (L.alcance || 100) * f.esc + op.anchoC;
+      const L = f.L.ult, dist = Math.abs(op.x - f.x); const enBloq = (op.est === 'bloq' || op.est === 'bloqAg') && op.stun > 0; const bloquea = this.bloquea(op, f, { alto: false, bajo: false }) && (L.alcance < 900 || enBloq); /* cancelado desde un golpe bloqueado: también se bloquea */ const alc = (L.alcance || 100) * f.esc + op.anchoC;
       if (op.invul > 0 && op.est !== 'quieto' || dist > alc && L.alcance < 900 || op.ko) { f.est = 'ataque'; f.atq = f.movs.ult; f.t = 0; f.whiff = 0.3; f.invul = 0; sonar('pelea.aire.fuerte'); return; }
       if (bloquea) { f.est = 'ataque'; f.atq = f.movs.ult; f.t = 0; f.invul = 0; this.impacto(f, op, { dmg: L.dmg * 0.12, kb: 160, bs: 0.5, especial: true, chip: 1 }, op.x, 60); return; }
       this.ult = crearUlt(L.escena, this, f, op); if (!f.cpu || !op.cpu) vibrar(1, 400); f.est = 'ultAct'; op.est = 'dolor'; op.stun = 99; op.vx = 0; op.atq = null; musica('mus.pelea.ult'); } }; this.temblor = 0.3; }
@@ -293,7 +299,8 @@ export class Pelea {
   contraExito(v, atk) { v.contraOn = false; const M = v.atq; v.invul = 0.4; this.fx.aro(v.x, SUELO); this.fx.flotante(v.x, SUELO, 120, M.nombre || '¡CONTRA!', '#9ad8f0'); sonar('pelea.contra'); this.hitstop = 0.18; this.zoomObj = 1.1; this.zoomT = 0.4;
     atk.atq = null; this.impacto(v, atk, { dmg: (M.dmg || 110) * 1.0, tumba: true, lanza: 280, kb: 140, hs: 0.5, noBloq: true, especial: true }, atk.x, 60 * atk.esc); v.t = M.ini + M.act; }
   // ¿el defensor bloquea este golpe?
-  bloquea(v, atk, a) { if (a.noBloq) return false; if (!v.enSuelo || v.mareo > 0) return false; if (!(NEUTRO.has(v.est) || v.est === 'bloq' || v.est === 'bloqAg')) return false;
+  bloquea(v, atk, a) { if (a.noBloq) return false; if (!v.enSuelo || v.mareo > 0) return false;
+    if ((v.est === 'bloq' || v.est === 'bloqAg') && v.stun > 0) return true; // en bloqueo (blockstun) se sigue cubriendo: una cadena bloqueada no se abre if (!(NEUTRO.has(v.est) || v.est === 'bloq' || v.est === 'bloqAg')) return false;
     const haciaA = Math.sign(atk.x - v.x) || v.cara; const atras = v.inp.dx * haciaA < -0.5; if (!atras) return false; const ag = v.inp.dy > 0.5; if (a.bajo && !ag) return false; if (a.alto && ag) return false; return true; }
   danar(v, dmg, por) { if (this.dios && !v.cpu) dmg = 0; v.hp = Math.max(0, v.hp - dmg); if (por === this.F[0]) this.stats.danio += dmg; }
   impacto(atk, v, a, X, Z) {

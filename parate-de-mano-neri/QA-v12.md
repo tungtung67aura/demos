@@ -77,3 +77,14 @@ All checks passed.
 - [x] Mando sigue 33/33 tras la pasada táctil.
 - [x] Re-chequeos v12.1: ataques 39×11 sin fallas ni errores; flujo12 24/24 (la prueba ahora baja una opción más: PAUSA tiene CONTROLES); campaña nivel 3 (guarda) ganado con el jefe en PLENA MORTAL, 0 errores; perf: pelea total p99 1.1 ms, oleada p99 3.5 ms, 0 errores.
 - [x] VERSION y caché del sw: bb-v12.1.
+
+## v12.2 (todas las torres se pueden completar)
+- [x] Vida de jefes: Caos capo 1.25→1.1, monstruo 1.6→1.3; Infierno monstruo 1.5→1.2 (daño 1.1), capo 1.35→1.15 (daño 1.1), zombi 1.8→1.35 (daño 1.2→1.25), pisos comunes vida 1.15→1.05 (daño 1.1). El Infierno usa la IA nivel 4 (INFIERNO: reacción .075, agresión .95, castiga siempre, se zafa más).
+- [x] Reglas justas: en blockstun se sigue bloqueando; cancelar algo bloqueado extiende el bloqueo hasta el siguiente golpe; el definitivo cancelado desde un golpe bloqueado también se bloquea. tools-bb/v12/bloqueo12.py: 39 luchadores × FUERTE→ESP1/ESP2/DEFINITIVO: 99 ok, 0 huecos (con las reglas viejas: 4 huecos: veterano s1, físico s2, parrillero s2, monstruo s2). Agarres de comando/contras: no aplican (no bloqueables por diseño).
+- [x] ESCAPE universal: con 3+ golpes seguidos recibidos y 50 de súper, ESPECIAL zafa (empuja al rival, invulnerable 0.4 s). IA: 0/15/30/50 % por combo según nivel. En CONTROLES de la pelea.
+- [x] Bug: el contador de combo no se reiniciaba al recuperarse (escalaba el daño de golpes sueltos hasta 0.3): ahora vuelve a 0.
+- [x] IA nivel 3+: zonea con proyectil contra rivales más lentos o sin proyectil.
+- [x] Torres, bot CPU 3, sin boost: Barrio completa (8 peleas), Caos completa (9 peleas), Infierno completa (41 peleas, 10 pisos).
+- [x] Victorias por jefe (12 peleas, condiciones de torre): Caos capo 10/12, monstruo 7/12; Infierno monstruo 3/12, capo 1/12, zombi 1/12.
+- [x] Re-chequeos: ataques 39×11 sin fallas; flujo12 24/24; mando12 33/33; tactil12 23/23; campaña nivel 8 (capo) ganada; perf pelea p99 0.7 ms, oleada p99 2.1 ms; 0 errores.
+- [x] VERSION y caché: bb-v12.2.

@@ -13,14 +13,14 @@ import { modoPelea, usaPad, nomBoton } from '../entrada.js';
 export const TORRES = [
   { id: 'barrio', nombre: 'TORRE DEL BARRIO', dif: 'NORMAL', c: '#4aa03a', pisos: 7, medio: { piso: 4, id: 'patovica', hp: 1.3, esc: 'boliche' }, jefe: { id: 'parrillero', hp: 1.5, esc: 'ciudadvieja' }, cpu: (i) => (i < 3 ? 1 : 2), premio: 120, final: 1500,
     pool: ['turro', 'fachero', 'tachero', 'repartidor', 'feria', 'canillita', 'skate', 'borracho', 'cuidacoches', 'pizza', 'vecino', 'youtuber', 'policia', 'chef', 'mecanico', 'rapero'] },
-  { id: 'caos', nombre: 'TORRE DEL CAOS', dif: 'DIFÍCIL', c: '#e8a020', pisos: 8, medio: { piso: 4, id: 'capo', hp: 1.25, esc: 'rambla' }, jefe: { id: 'monstruo', hp: 1.6, esc: 'cerro' }, cpu: (i) => (i < 4 ? 2 : 3), premio: 200, final: 3000, caos: true,
+  { id: 'caos', nombre: 'TORRE DEL CAOS', dif: 'DIFÍCIL', c: '#e8a020', pisos: 8, medio: { piso: 4, id: 'capo', hp: 1.1, esc: 'rambla' }, jefe: { id: 'monstruo', hp: 1.3, esc: 'cerro' }, cpu: (i) => (i < 4 ? 2 : 3), premio: 200, final: 3000, caos: true,
     pool: ['turro', 'fachero', 'tachero', 'repartidor', 'feria', 'canillita', 'skate', 'veterano', 'borracho', 'fisico', 'policia', 'reventado', 'rapero', 'skin', 'milico', 'pisterito', 'cuidacoches', 'pizza', 'vecino', 'gitano', 'chef', 'youtuber', 'trapero', 'abogado', 'mecanico', 'tano', 'chola', 'guarda', 'bocha', 'gallego', 'chapa'] },
-  { id: 'infierno', nombre: 'TORRE DEL INFIERNO', dif: 'EXTREMO', c: '#e83a2a', pisos: 10, medio: { piso: 5, id: 'monstruo', hp: 1.5, esc: 'cerro' }, medio2: { piso: 8, id: 'capo', hp: 1.35, esc: 'rambla' }, jefe: { id: 'zombi', hp: 1.8, dmg: 1.2, esc: 'cerro' }, cpu: () => 3, premio: 350, final: 6000, caos: true, hp: 1.15,
+  { id: 'infierno', nombre: 'TORRE DEL INFIERNO', dif: 'EXTREMO', c: '#e83a2a', pisos: 10, medio: { piso: 5, id: 'monstruo', hp: 1.2, dmg: 1.1, esc: 'cerro' }, medio2: { piso: 8, id: 'capo', hp: 1.15, dmg: 1.1, esc: 'rambla' }, jefe: { id: 'zombi', hp: 1.35, dmg: 1.25, esc: 'cerro' }, cpu: () => 4, // v12.2: el Infierno es difícil por la IA (nivel 4) y el daño, no por vida inflada premio: 350, final: 6000, caos: true, hp: 1.05, dmg: 1.1,
     pool: ['veterano', 'fisico', 'policia', 'reventado', 'rapero', 'parrillero', 'skin', 'milico', 'pisterito', 'gitano', 'chef', 'trapero', 'abogado', 'mecanico', 'patovica', 'bocha', 'chapa', 'gallego', 'neri', 'fachero', 'turro'] },
 ];
 const MODS = [{ k: 'dobleDanio', t: 'DAÑO X2', s: 'DAÑO DOBLE' }, { k: 'superLleno', t: 'SÚPER LLENO', s: 'SÚPER LLENO' }, { k: 'gigante', t: 'GIGANTE', s: 'RIVAL CON +50% DE VIDA' }, { k: 'sinReloj', t: 'SIN RELOJ', s: 'SIN RELOJ' }, { k: 'espejo', t: 'ESPEJO', s: 'PELEA ESPEJO' }, { k: 'dobleSuper', t: 'AUTO-SÚPER', s: 'SÚPER QUE SE CARGA SOLO' }];
 const ESC_BOSS = { patovica: 'boliche', parrillero: 'ciudadvieja', capo: 'rambla', monstruo: 'cerro', zombi: 'cerro', tano: 'cuadra', chola: 'feria', guarda: 'avenida', bocha: 'barriosur', gallego: 'boliche', chapa: 'cerro' };
-const DIFS = ['FÁCIL', 'NORMAL', 'DIFÍCIL'];
+const DIFS = ['FÁCIL', 'NORMAL', 'DIFÍCIL', 'INFIERNO'];
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const DT = 1 / 120;
 // cortar un texto en renglones de n caracteres
@@ -104,9 +104,9 @@ export class Arcade {
   armarTorre() { const T = TORRES[this.torreSel]; const pool = T.pool.filter((i) => i !== this.p1); const pisos = [];
     for (let i = 0; i < T.pisos; i++) {
       let p; if (i === T.pisos - 1) p = { id: T.jefe.id, hp: T.jefe.hp, dmg: T.jefe.dmg || 1, tipo: 'JEFE FINAL', esc: T.jefe.esc, jefe: true };
-      else if (T.medio && i === T.medio.piso - 1) p = { id: T.medio.id, hp: T.medio.hp, tipo: 'MEDIO JEFE', esc: T.medio.esc, jefe: true };
-      else if (T.medio2 && i === T.medio2.piso - 1) p = { id: T.medio2.id, hp: T.medio2.hp, tipo: 'MEDIO JEFE', esc: T.medio2.esc, jefe: true };
-      else { let id; do { id = pick(pool); } while (pisos.some((q) => q.id === id) && pool.length > T.pisos); p = { id, hp: T.hp || 1, esc: ESC_BOSS[id] || IDS_ESC[(i * 3 + this.torreSel) % IDS_ESC.length] }; }
+      else if (T.medio && i === T.medio.piso - 1) p = { id: T.medio.id, hp: T.medio.hp, dmg: T.medio.dmg || 1, tipo: 'MEDIO JEFE', esc: T.medio.esc, jefe: true };
+      else if (T.medio2 && i === T.medio2.piso - 1) p = { id: T.medio2.id, hp: T.medio2.hp, dmg: T.medio2.dmg || 1, tipo: 'MEDIO JEFE', esc: T.medio2.esc, jefe: true };
+      else { let id; do { id = pick(pool); } while (pisos.some((q) => q.id === id) && pool.length > T.pisos); p = { id, hp: T.hp || 1, dmg: T.dmg || 1, esc: ESC_BOSS[id] || IDS_ESC[(i * 3 + this.torreSel) % IDS_ESC.length] }; }
       if (T.caos && !p.jefe && Math.random() < (T.id === 'caos' ? 0.8 : 0.5)) { const m = pick(MODS.filter((q) => q.k !== 'espejo' || !pisos.some((o) => o.mod && o.mod.k === 'espejo'))); p.mod = m; if (m.k === 'espejo') p.id = this.p1; }
       p.dif = T.cpu(i); pisos.push(p); }
     this.torre = { def: T, pisos, piso: 0, t0: performance.now(), plata: 0 }; this.ir('torre'); musica('mus.pelea.select'); }

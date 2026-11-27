@@ -19,7 +19,7 @@ import { Arcade } from './pelea/arcade.js';
 import { DE_CAMPANA } from './pelea/luchadores.js';
 import { recordInfinito, PP } from './pelea/progreso-pelea.js';
 
-export const VERSION = 'bb-v12.1';
+export const VERSION = 'bb-v12.2';
 // sonidos de menú por ID (audio-ids.js): sin archivo, no suena (o suena el respaldo sintetizado si el ID lo tiene)
 const UI = { menu: 'ui.mover', dale: 'ui.ok', pausa: 'ui.pausa', item: 'ui.ropa', atras: 'ui.atras' };
 function sfx(k) { sonar(UI[k] || k); }
@@ -284,7 +284,7 @@ function dibujarControles(c, W, H, pelea) {
     texto(c, (i < 2 ? '< ' : '') + s + (i < 2 ? ' >' : ''), W / 2, z[1], sel ? '#ffffff' : '#9a8aa8', 1, 'centro'); });
   texto(c, DESC_ESQ[CTRL.esquema], W / 2, py + 76, '#7aff7a', 1, 'centro');
   const mover = pad ? 'STICK / CRUCETA' : esTactil() ? 'CRUCETA' : 'FLECHAS / WASD';
-  const filas = pelea ? [['MOVER · SALTO ARRIBA', mover], ['LEVE · FUERTE', N('pina') + ' · ' + N('patada')], ['ESPECIAL (+ ATRÁS/ABAJO = 2)', N('especial') + (pad ? ' / ' + N('esp2') : '')], ['SÚPER (BARRA LLENA)', N('super')], ['AGARRE', N('agarre')], ['BLOQUEAR', 'MANTENER ATRÁS'], ['CORRER / DASH', pad ? N('correr') + ' O 2 TOQUES' : '2 TOQUES'], ['PAUSA', N('pausa')]]
+  const filas = pelea ? [['MOVER · SALTO ARRIBA', mover], ['LEVE · FUERTE', N('pina') + ' · ' + N('patada')], ['ESPECIAL (+ ATRÁS/ABAJO = 2)', N('especial') + (pad ? ' / ' + N('esp2') : '')], ['SÚPER (BARRA LLENA)', N('super')], ['AGARRE', N('agarre')], ['BLOQUEAR', 'MANTENER ATRÁS'], ['CORRER / DASH', pad ? N('correr') + ' O 2 TOQUES' : '2 TOQUES'], ['ZAFAR (3+ GOLPES · ½ SÚPER)', N('especial')]]
     : [['MOVER', mover], ['PIÑA · LEVANTAR', N('pina')], ['PATADA · TIRAR', N('patada')], ['SALTO', N('salto')], ['ESPECIAL · SÚPER', N('especial') + ' · ' + N('super')], ['AGARRE', 'CAMINAR CONTRA ÉL'], ['CORRER', pad ? N('correr') + ' O 2 TOQUES' : 'MANTENER O 2 TOQUES'], ['MENÚS', pad ? N('ok') + ' ACEPTA · ' + N('atras') + ' VUELVE' : 'PIÑA · ESC']];
   filas.forEach(([a, b], i) => { const yy = py + 90 + i * 12; texto(c, a, px + 12, yy, '#c8b8d8', 1, 'izq'); texto(c, b, px + w - 12, yy, '#ffffff', 1, 'der'); });
 }

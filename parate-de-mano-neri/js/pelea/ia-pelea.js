@@ -7,9 +7,11 @@ import { articulaciones } from '../sprites.js';
 // espacio = probabilidad de respetar el alcance; castiga = de castigar una recuperación; bloqEsp/reacEsp = bloqueo a especiales;
 // antiAire = por salto del rival; footsies = probabilidad de pelear desde afuera del alcance del rival cuando él tiene más.
 const PERFIL = {
-  1: { reac: 0.34, bloq: 0.22, combo: 2, esp: 0.08, ult: 0.4, anti: 0.15, tech: 0.1, agr: 0.5, salta: 0.008, cancela: 0.2, espacio: 0.2, castiga: 0.1, bloqEsp: 0.3, reacEsp: 0.3, antiAire: 0.15, footsies: 0 },
-  2: { reac: 0.2, bloq: 0.55, combo: 3, esp: 0.2, ult: 0.8, anti: 0.45, tech: 0.35, agr: 0.7, salta: 0.012, cancela: 0.6, espacio: 0.65, castiga: 0.45, bloqEsp: 0.7, reacEsp: 0.16, antiAire: 0.45, footsies: 0.3 },
-  3: { reac: 0.1, bloq: 0.86, combo: 4, esp: 0.32, ult: 1, anti: 0.8, tech: 0.65, agr: 0.85, salta: 0.014, cancela: 0.95, espacio: 1, castiga: 0.92, bloqEsp: 0.95, reacEsp: 0.07, antiAire: 0.85, footsies: 0.85 },
+  1: { zafa: 0, zona: 0, reac: 0.34, bloq: 0.22, combo: 2, esp: 0.08, ult: 0.4, anti: 0.15, tech: 0.1, agr: 0.5, salta: 0.008, cancela: 0.2, espacio: 0.2, castiga: 0.1, bloqEsp: 0.3, reacEsp: 0.3, antiAire: 0.15, footsies: 0 },
+  2: { zafa: 0.15, zona: 0.3, reac: 0.2, bloq: 0.55, combo: 3, esp: 0.2, ult: 0.8, anti: 0.45, tech: 0.35, agr: 0.7, salta: 0.012, cancela: 0.6, espacio: 0.65, castiga: 0.45, bloqEsp: 0.7, reacEsp: 0.16, antiAire: 0.45, footsies: 0.3 },
+  // 4 = INFIERNO: como el 3 pero reacciona antes, presiona más, castiga siempre y se zafa de los combos
+  4: { reac: 0.075, bloq: 0.9, combo: 4, esp: 0.36, ult: 1, anti: 0.85, tech: 0.75, agr: 0.95, salta: 0.014, cancela: 1, espacio: 1, castiga: 1, bloqEsp: 0.97, reacEsp: 0.055, antiAire: 0.9, footsies: 0.9, zafa: 0.5, zona: 0.9 },
+  3: { zafa: 0.3, zona: 0.8, reac: 0.1, bloq: 0.86, combo: 4, esp: 0.32, ult: 1, anti: 0.8, tech: 0.65, agr: 0.85, salta: 0.014, cancela: 0.95, espacio: 1, castiga: 0.92, bloqEsp: 0.95, reacEsp: 0.07, antiAire: 0.85, footsies: 0.85 },
 };
 const NORMALES = ['l', 'h', 'lc', 'hc'];
 const OFENSIVOS = new Set(['golpe', 'agarre', 'raf', 'rafaga', 'sube']);
@@ -29,7 +31,7 @@ export function rangoDe(pe, f, k) {
 }
 const rnd = Math.random;
 export class IA {
-  constructor(f, dif) { this.f = f; this.dif = Math.max(1, Math.min(3, dif | 0)); this.P = PERFIL[this.dif]; this.plan = null; this.espera = 0; this.vistoAtq = null; this.defensa = null; this.corre = false; this.dashAtras = false; this.alc = {}; this.cubreN = 0; this.tPaso = 0; this.techDecidido = null; this.opAtqVisto = null; this.opTPrev = 0; this.castigo = false; this.saltoVisto = false; this.antiOk = false; this.tEsp = 0; this.respeta = true; this.tHover = 0; }
+  constructor(f, dif) { this.f = f; this.P = PERFIL[Math.max(1, Math.min(4, dif | 0))]; this.dif = Math.max(1, Math.min(3, dif | 0)); this.plan = null; this.espera = 0; this.vistoAtq = null; this.defensa = null; this.corre = false; this.dashAtras = false; this.alc = {}; this.cubreN = 0; this.tPaso = 0; this.techDecidido = null; this.opAtqVisto = null; this.opTPrev = 0; this.castigo = false; this.saltoVisto = false; this.antiOk = false; this.tEsp = 0; this.respeta = true; this.tHover = 0; }
   // ¿llega este golpe mío ahora? (o el del rival a mí)
   llega(pe, k, margen = 0) { const f = this.f, op = f.op; const M = f.movs[k]; if (!M) return false; const adx = Math.abs(op.x - f.x); const ag = M.tipo === 'agarre' || k === 'agarre'; return rangoDe(pe, f, k) + (ag ? op.anchoC : op.anchoC * 0.9) + margen >= adx; }
   meLlega(pe, k, margen = 10) { const f = this.f, op = f.op; if (!k || !op.movs[k]) return true; return rangoDe(pe, op, k) + f.anchoC * 0.9 + margen >= Math.abs(op.x - f.x); }
@@ -62,6 +64,10 @@ export class IA {
       if (d.t <= 0 && d.ok && (f.est !== 'ataque' || f.fase() === 'rec')) { if (d.salta && f.enSuelo && f.est !== 'ataque') { I.dy = -1; I.dx = hacia * (amenaza.proy ? 1 : 0); return; } I.dx = -hacia; I.dy = d.ag ? 1 : 0; this.cubreN = 0; if (f.est === 'bloq' || f.est === 'bloqAg') { if (this.dif >= 2 && f.super >= 50 && rnd() < 0.01 * this.dif) { I.s = 1; I.dx = hacia; } } return; }
     } else this.vistoAtq = null;
     if (op.est === 'bloq' || op.est === 'bloqAg' || op.est === 'bloqP' || op.est === 'bloqAgP') this.cubreN += dt;
+    // ESCAPE (zafar) en medio de un combo: universal, cuesta 50 de súper
+    // (se decide una vez por combo, al tercer golpe: zafa = probabilidad)
+    if (f.comboN < 3) this.zafaVisto = false; else if (!this.zafaVisto && (f.est === 'dolor' || f.est === 'dolorAg')) { this.zafaVisto = true; this.zafaOk = rnd() < P.zafa; }
+    if (this.zafaOk && (f.est === 'dolor' || f.est === 'dolorAg') && f.comboN >= 3 && f.super >= 50 && !pe.ult) { this.zafaOk = false; I.s = 1; return; }
     if (f.est === 'dolor' || f.est === 'bloq' || f.est === 'bloqAg' || f.est === 'vuela' || f.est === 'piso' || f.est === 'levanta') { this.plan = null; return; }
     // ---- en combo: seguir la cadena cuando conecta
     if (f.est === 'ataque') { if (this.plan && this.plan.seq && f.conecto && this.plan.i < this.plan.seq.length) { const fs = f.fase(); if ((fs === 'act' || fs === 'rec') && rnd() < 0.5) { this.apretar(I, this.plan.seq[this.plan.i], hacia); this.plan.i++; } } return; }
@@ -85,6 +91,14 @@ export class IA {
     if (dist < 16 && this.cubreN > 0.5 && rnd() < 0.08 * this.dif) { I.g = 1; this.cubreN = 0; return; }
     // ---- a distancia: proyectil / acercarse / saltar
     const proyK = ['s1', 's2'].find((k) => f.movs[k].tipo === 'proy' || f.movs[k].tipo === 'suelo');
+    // ---- zoneo (nivel 3+): con proyectil contra un rival más lento o sin proyectil, pelear de lejos: tirar, retroceder, esperar
+    this.tZona -= dt; if (!(this.tZona > 0)) { this.tZona = 0.6; const opProy = ['s1', 's2'].some((k) => op.movs[k].tipo === 'proy' || op.movs[k].tipo === 'suelo');
+      this.zonea = !!proyK && rnd() < P.zona && (op.N.vel < f.N.vel || !opProy); }
+    if (this.zonea && op.enSuelo) { const mio = pe.proy.some((p) => p.de === f);
+      if (!mio && dist > 85 && rnd() < 0.1) { I.s = 1; I.dx = proyK === 's2' ? 0 : hacia; if (proyK === 's2') I.dy = 1; return; }
+      const L = Math.max(18, pe.cam - (pe.vw || 480) / 2 + 18) + 30, Rr = Math.min(1e4, pe.cam + (pe.vw || 480) / 2 - 18) - 30, atras = f.x - hacia * 24;
+      if (dist > 60 && dist < 150 && atras > L && atras < Rr && rnd() < 0.7) { I.dx = -hacia; return; }
+      if (dist > 150 && dist < 240 && rnd() < 0.6) return; }
     if (dist > 110 && proyK && rnd() < P.esp * 0.06 && !pe.proy.some((p) => p.de === f)) { I.s = 1; I.dx = proyK === 's2' ? -hacia : hacia; if (proyK === 's2') { I.dx = 0; I.dy = 1; } return; }
     // ---- espacio (se re-decide cada medio segundo si se respeta el alcance: el nivel 1 es desprolijo)
     this.tEsp -= dt; if (this.tEsp <= 0) { this.tEsp = 0.5; this.respeta = rnd() < P.espacio; this.footsies = rnd() < P.footsies; }

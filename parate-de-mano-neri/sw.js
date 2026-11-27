@@ -1,5 +1,5 @@
 // Service worker: red primero (para que las actualizaciones lleguen enseguida), caché como respaldo offline.
-const CACHE = 'bb-v12.1';
+const CACHE = 'bb-v12.2';
 const ARCHIVOS = ['./', 'index.html', 'estilo.css', 'manifest.webmanifest', 'fuentes/PressStart2P-Regular.ttf', 'iconos/icono-192.png', 'iconos/icono-512.png', 'iconos/icono-180.png',
   'js/main.js', 'js/juego.js', 'js/hud.js', 'js/sprites.js', 'js/props.js', 'js/escenario.js', 'js/pixel.js', 'js/fuente-datos.js', 'js/audio.js', 'js/entrada.js', 'js/datos.js', 'js/ropa.js',
   'js/niveles.js', 'js/ia.js', 'js/eventos.js', 'js/fx.js', 'js/sangre.js', 'js/grado.js', 'js/mapa.js', 'js/audio-ids.js', 'js/audio-sinte.js', 'audio/manifest.js', 'js/cinematica.js', 'js/guion.js', 'js/progreso.js', 'js/tienda.js',
