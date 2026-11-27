@@ -244,3 +244,27 @@ export function guionInicio(id) {
   if (id === 'cuadra') l.push(...INTRO); else l.push(...(NIVEL[id] || []));
   return l;
 }
+
+// v12: eventos de pelea 1 contra 1 dentro de la campaña
+export const EVENTOS_PELEA = {
+  patovica: [
+    { c: 'aparece', id: 'pato', clave: 'f_patovica', fx: 1.15, cara: -1, nombre: 'EL PATOVICA' },
+    { c: 'camina', id: 'pato', fx: 0.72, espera: true },
+    { c: 'presenta', id: 'pato', txt: 'EL PATOVICA DEL CORDÓN', sub: 'SEGURIDAD DE LA CUEVA · HOY TRABAJA DE DÍA' },
+    D('pato', 'enojo', 'ALTO AHÍ. LA FERIA ESTÁ CERRADA PARA VOS. NO ESTÁS EN LA LISTA.', { clave: 'f_patovica', nombre: 'EL PATOVICA', lado: 'der' }),
+    D('j', 'enojo', '¿QUÉ LISTA? ES UNA FERIA, LOCO. ACÁ ENTRA HASTA EL PERRO DE LA ESQUINA.'),
+    D('pato', 'grito', 'EL PERRO ESTÁ EN LA LISTA. VOS NO. ¡A LAS PIÑAS, MANO A MANO!', { clave: 'f_patovica', nombre: 'EL PATOVICA', lado: 'der' }),
+  ],
+  patovicaGana: [D('pato', 'normal', 'BUENO... PASÁ. PERO NO LE DIGAS A NADIE QUE ME GANASTE.', { clave: 'f_patovica', nombre: 'EL PATOVICA', lado: 'der' }), { c: 'sale', id: 'pato', fx: 1.2 }],
+  patovicaPierde: [D('pato', 'feliz', 'PARA LA PRÓXIMA TRAÉ DOCUMENTO. DALE, PASÁ IGUAL, QUE ME DISTE LÁSTIMA.', { clave: 'f_patovica', nombre: 'EL PATOVICA', lado: 'der' }), { c: 'sale', id: 'pato', fx: 1.2 }],
+  zombi: [
+    { c: 'temblor', t: 0.6 }, { c: 'sonido', id: 'pelea.ult.derrumbe' },
+    { c: 'aparece', id: 'zom', clave: 'f_zombi', fx: 1.15, cara: -1, nombre: 'EL ZOMBI DEL CERRO' },
+    { c: 'camina', id: 'zom', fx: 0.74, espera: true },
+    { c: 'presenta', id: 'zom', txt: 'EL ZOMBI DEL CERRO', sub: 'VIVE EN LA FORTALEZA DESDE 1811 · NO PAGA EXPENSAS' },
+    D('zom', 'enojo', 'GRRR... EL CHAPA ME DEBÍA... UN CHORIZO... AHORA ME LO DEBÉS VOS...', { clave: 'f_zombi', nombre: 'EL ZOMBI', lado: 'der' }),
+    D('j', 'grito', '¿¡ESTE TAMBIÉN QUIERE CHORIZO!? ¡EN ESTE CERRO NADIE COME VERDURA!'),
+  ],
+  zombiGana: [D('zom', 'normal', 'GRR... VOLVERÉ... CUANDO HAYA ASADO...', { clave: 'f_zombi', nombre: 'EL ZOMBI', lado: 'der' }), { c: 'sale', id: 'zom', fx: 1.2 }],
+  zombiPierde: [D('zom', 'feliz', 'GRR... SOS DURO... PERO EL CERRO ES MÍO DE NOCHE. ANDÁ, QUE ES DE DÍA.', { clave: 'f_zombi', nombre: 'EL ZOMBI', lado: 'der' }), { c: 'sale', id: 'zom', fx: 1.2 }],
+};

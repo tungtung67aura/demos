@@ -15,8 +15,11 @@ import { JUGADORES, ATQ, COMIDA, ITEMS } from './datos.js';
 import { NIVELES } from './niveles.js';
 import { abrirMapa, pasoMapa, dibujarMapa, precargarMapa } from './mapa.js';
 import { calle, cielo, ALTO, EXTRA } from './escenario.js';
+import { Arcade } from './pelea/arcade.js';
+import { DE_CAMPANA } from './pelea/luchadores.js';
+import { recordInfinito, PP } from './pelea/progreso-pelea.js';
 
-export const VERSION = 'bb-v11';
+export const VERSION = 'bb-v12';
 // sonidos de menú por ID (audio-ids.js): sin archivo, no suena (o suena el respaldo sintetizado si el ID lo tiene)
 const UI = { menu: 'ui.mover', dale: 'ui.ok', pausa: 'ui.pausa', item: 'ui.ropa', atras: 'ui.atras' };
 function sfx(k) { sonar(UI[k] || k); }
@@ -67,6 +70,19 @@ addEventListener('resize', ajustar); addEventListener('orientationchange', () =>
 // ---------- estado global ----------
 let pantalla = 'carga', juego = null, elegido = 0, tP = 0, pausaSel = 0, contador = 0, nuevaVersion = false, fondoMenu = null;
 const CLAVES = ['seba', 'pelado', 'pato'];
+// v12: motor de pelea y modos arcade (menú principal, torres, pelea libre, infinito, récords)
+const arcade = new Arcade({ W: () => W, H: () => H, campana: () => { pantalla = 'seleccion'; tP = 0; musica('mus.menu'); }, titulo: () => { pantalla = 'titulo'; tP = 0; },
+  infinito: () => empezarInfinito(), controles: (v) => mostrarControles(v), bot: () => !!window.__bb.bot });
+// v12: el jefe (o un evento) se pelea en el motor 1 contra 1 y al terminar se vuelve al nivel
+function pelearEnCampana(pp) {
+  const g = juego, clave = g.j.clave || CLAVES[elegido]; const idx = g.nivelIdx; const dif = idx < 2 ? 1 : idx < 6 ? 2 : 3;
+  const tit = pp.tipo === 'jefe' ? 'CAMPAÑA · JEFE · NIVEL ' + g.nv.num : pp.tipo === 'zombi' ? 'CAMPAÑA · EVENTO SECRETO' : 'CAMPAÑA · EVENTO';
+  pantalla = 'arcade'; tP = 0; E.buf.pausa = 0; for (const k in E.buf) E.buf[k] = 0;
+  arcade.pelearCampana({ p1: DE_CAMPANA[clave] || 'neri', ropa: ropaDe(clave), p2: pp.id, escenario: g.nv.id, bot: !!window.__bb.bot, dif, titulo: tit, musica: pp.tipo === 'jefe' ? 'mus.pelea.jefe' : 'mus.pelea' }, (r) => {
+    pantalla = 'juego'; tP = 0; acc = 0; mostrarControles(true); for (const k in E.buf) E.buf[k] = 0;
+    g.resultadoPelea(pp, r); musica(musJuego()); });
+}
+function abrirArcade() { pantalla = 'arcade'; tP = 0; arcade.abrirMenu(); }
 const med = { fps: 0, frames: 0, t0: performance.now(), dtMax: 0, pasos: 0, hist: [] };
 
 function marcarTactil() { document.body.classList.add('tactil'); }
@@ -102,7 +118,7 @@ addEventListener('keydown', (e) => { if (pantalla === 'titulo' && !e.repeat && T
 function trucoListo() { return truco.join('') === TRUCO; }
 addEventListener('touchend', () => { iniciarAudio(); }, { passive: true });
 addEventListener('keydown', () => { iniciarAudio(); musica(pantalla === 'juego' ? musJuego() : pantalla === 'titulo' ? 'mus.titulo' : 'mus.menu'); }, { once: false });
-document.addEventListener('visibilitychange', () => { if (document.hidden) { if (pantalla === 'juego') { pantalla = 'pausa'; pausaSel = 0; } suspender(true); } else suspender(false); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { if (pantalla === 'juego') { pantalla = 'pausa'; pausaSel = 0; } if (pantalla === 'arcade' && arcade.enPelea) arcade.pausa = { sel: 0 }; suspender(true); } else suspender(false); });
 
 // navegación de menú (bordes de dirección)
 let navPrev = { x: 0, y: 0 };
@@ -164,7 +180,9 @@ function bucle(ahora) {
     const tb = window.__bb.turbo || 1; acc += dt * tb; let n = 0; const t0 = performance.now();
     while (acc >= DT && n < 8 * tb) { juego.paso(DT, E); tickBuf(DT); acc -= DT; n++; }
     if (n >= 8 * tb) acc = 0; med.pasos = n; med.tLogica = performance.now() - t0;
+    if (juego.pidePelea) { pelearEnCampana(juego.pidePelea); juego.pidePelea = null; return; }
     if (E.buf.pausa > 0) { E.buf.pausa = 0; pantalla = 'pausa'; pausaSel = 0; sfx('pausa'); }
+    if (juego.estado === 'pierde' && juego.tEstado > 1.2 && juego.infinito) { finInfinito(); return; }
     if (juego.estado === 'pierde' && juego.tEstado > 1.2) { pantalla = 'continuar'; contador = 9.99; tP = 0; }
     if (juego.estado === 'gana' && juego.tEstado > 2.5 && !juego.cine) { pantalla = 'gana'; tP = 0; const p = juego.puntos; if (p > record) { record = p; localStorage.setItem('bb-record', p); sonar('evento.record'); }
       // premio: plata del nivel + objetivo + tiempo; 2 puntos de atributo (3 si no perdiste ninguna vida)
@@ -172,13 +190,17 @@ function bucle(ahora) {
         juego.premio = { enemigos: pl.enemigos, objetos: pl.objetos, objetivo: ob, tiempo: ti, total: pl.enemigos + pl.objetos + ob + ti, puntos: pts };
         PROG.plata += juego.premio.total; PROG.puntos += pts; ganarNivel(juego.nv.id); guardarProg(); }
       ganados = ganadosIdx(); nivelMax = nivelMaxIdx(); nivelSel = Math.min(NIVELES.length - 1, juego.nivelIdx + 1); }
+  } else if (pantalla === 'arcade' && arcade.enPelea) {
+    E.taps.length = 0; const tb = window.__bb.turbo || 1; acc += dt * tb; let n = 0; const t0 = performance.now();
+    while (acc >= DT && n < 8 * tb && arcade.enPelea && !window.__bb.congelar) { arcade.pasoPelea(DT, E); tickBuf(DT); acc -= DT; n++; }
+    if (n >= 8 * tb) acc = 0; med.pasos = n; med.tLogica = performance.now() - t0;
   } else { tickBuf(dt); acc = 0; menus(dt); }
   const PF = globalThis.__pf, pf0 = PF ? PF.gen + PF.grad + PF.sil + PF.set : 0, pfA = PF ? [PF.gen, PF.grad, PF.sil, PF.set, PF.nGen, PF.nGrad] : null;
   const t1 = performance.now();
   dibujar(acc / DT);
   med.tRender = performance.now() - t1; med.tGenR = PF ? PF.gen + PF.grad + PF.sil + PF.set - pf0 : 0; if (pfA && med.tGenR > 0.3) med.pfDet = [PF.gen - pfA[0], PF.grad - pfA[1], PF.sil - pfA[2], PF.set - pfA[3], PF.nGen - pfA[4], PF.nGrad - pfA[5]].map((v) => Math.round(v * 10) / 10); else med.pfDet = null;
   // cuadros de sprites pendientes, en el tiempo que sobra del cuadro (en juego poco; en menús más)
-  { const t2 = performance.now(); if (pantalla !== 'juego') { prepararMenus(); if (nivelMax > 0 && (pantalla === 'vestuario' || pantalla === 'mapa' || pantalla === 'seleccion') && performance.now() - t0b < 6) precargarMapa(W, H); else calentar(8); } else if (saltarCal > 0) saltarCal--; else if (t2 - t0b < 6) { calentar(Math.max(0, 5 - (t2 - t0b)), juego && juego.grado ? juego.postG || (juego.postG = (f) => cuadroG(f, juego.grado)) : null); const t3 = performance.now(); if (juego && t3 - t0b < 5) juego.gradarOcioso(5 - (t3 - t0b)); saltarCal = Math.ceil((performance.now() - t2) / 3); } med.tCalentar = performance.now() - t2; }
+  { const t2 = performance.now(); if (pantalla === 'arcade') { if (arcade.enPelea) { if (t2 - t0b < 6) calentar(Math.max(0.5, 5 - (t2 - t0b))); } else calentar(8); } else if (pantalla !== 'juego') { prepararMenus(); if (nivelMax > 0 && (pantalla === 'vestuario' || pantalla === 'mapa' || pantalla === 'seleccion') && performance.now() - t0b < 6) precargarMapa(W, H); else calentar(8); } else if (saltarCal > 0) saltarCal--; else if (t2 - t0b < 6) { calentar(Math.max(0, 5 - (t2 - t0b)), juego && juego.grado ? juego.postG || (juego.postG = (f) => cuadroG(f, juego.grado)) : null); const t3 = performance.now(); if (juego && t3 - t0b < 5) juego.gradarOcioso(5 - (t3 - t0b)); saltarCal = Math.ceil((performance.now() - t2) / 3); } med.tCalentar = performance.now() - t2; }
 }
 
 function menus(dt) {
@@ -187,12 +209,16 @@ function menus(dt) {
   if (pantalla === 'titulo') {
     if (E.ultimo !== 'teclado') { if (n.y) trucoDir(n.y < 0 ? 'u' : 'd'); else if (n.x) trucoDir(n.x < 0 ? 'l' : 'r'); } // teclado: va por keydown
     if (trucoListo() && (E.buf.pina > 0 || t)) { E.buf.pina = 0; E.buf.ok = 0; truco = []; const on = alternarDios(); avisoDios = { s: on ? 'MODO DIOS ACTIVADO' : 'MODO DIOS DESACTIVADO', t: 1.8 }; sonar(on ? 'evento.record' : 'ui.mover'); return; }
-    if (ok() || t) { pantalla = 'seleccion'; tP = 0; sfx('menu'); musica('mus.menu'); }
+    if (ok() || t) { sfx('menu'); abrirArcade(); }
+  } else if (pantalla === 'arcade') {
+    const atras = E.buf.atras > 0 || E.buf.pausa > 0; const esp = E.buf.especial > 0; const pz = E.buf.pausa > 0; E.buf.atras = 0; E.buf.especial = 0; if (arcade.vista !== 'pelea') E.buf.pausa = 0;
+    arcade.paso(dt, { n, ok: ok(), tap: t || null, atras, esp, pausa: pz, dt }); if (arcade.vista === 'pelea' && arcade.pausa) E.buf.pausa = 0;
+    if (!arcade.vista && pantalla === 'arcade') { pantalla = 'titulo'; }
   } else if (pantalla === 'seleccion') {
     if (n.x) { elegido = (elegido + n.x + 3) % 3; sfx('menu'); }
     if (t) { const cw = Math.min(150, (W - 40) / 3); const x0 = (W - cw * 3 - 20) / 2; for (let i = 0; i < 3; i++) { const cx = x0 + i * (cw + 10); if (t[0] > cx && t[0] < cx + cw && t[1] > 40 && t[1] < H - 40) { if (elegido === i) { sfx('dale'); abrirVestuario(); return; } elegido = i; sfx('menu'); } } if (t[1] > H - 34) { sfx('dale'); abrirVestuario(); return; } }
     if (ok()) { sfx('dale'); abrirVestuario(); }
-    if (E.buf.atras > 0 || E.buf.pausa > 0) { E.buf.atras = 0; E.buf.pausa = 0; pantalla = 'titulo'; }
+    if (E.buf.atras > 0 || E.buf.pausa > 0) { E.buf.atras = 0; E.buf.pausa = 0; abrirArcade(); }
   } else if (pantalla === 'vestuario') {
     const Z = zonasVest(); const nf = SLOTS.length + 1;
     if (n.y) { vest.fila = (vest.fila + n.y + nf) % nf; sfx('menu'); }
@@ -209,7 +235,7 @@ function menus(dt) {
     let elegir = ok() ? pausaSel : -1;
     if (t) { for (let i = 0; i < 4; i++) { const y = Math.round(H / 2 - 58) + 40 + i * 18; if (t[1] > y - 5 && t[1] < y + 13 && Math.abs(t[0] - W / 2) < 92) elegir = i; } }
     if (E.buf.pausa > 0) { E.buf.pausa = 0; elegir = 0; }
-    if (elegir === 0) { pantalla = 'juego'; } else if (elegir === 1) { cfg.musica = !cfg.musica; setMusica(cfg.musica); localStorage.setItem('bb-cfg', JSON.stringify(cfg)); } else if (elegir === 2) { cfg.sangre = GORE.nivel = (GORE.nivel + 2) % 3; localStorage.setItem('bb-cfg', JSON.stringify(cfg)); if (!GORE.nivel && juego) juego.sangre.limpiar(); else if (juego) juego.sangre.calentar(juego.grado); sfx('menu'); } else if (elegir === 3) { pantalla = 'titulo'; juego = null; mostrarControles(false); musica('mus.menu'); if (nuevaVersion) location.reload(); }
+    if (elegir === 0) { pantalla = 'juego'; } else if (elegir === 1) { cfg.musica = !cfg.musica; setMusica(cfg.musica); localStorage.setItem('bb-cfg', JSON.stringify(cfg)); } else if (elegir === 2) { cfg.sangre = GORE.nivel = (GORE.nivel + 2) % 3; localStorage.setItem('bb-cfg', JSON.stringify(cfg)); if (!GORE.nivel && juego) juego.sangre.limpiar(); else if (juego) juego.sangre.calentar(juego.grado); sfx('menu'); } else if (elegir === 3 && juego && juego.infinito) { finInfinito(); } else if (elegir === 3) { pantalla = 'titulo'; juego = null; mostrarControles(false); musica('mus.menu'); if (nuevaVersion) location.reload(); }
   } else if (pantalla === 'continuar') {
     contador -= dt; juego.paso(0, E);
     if (ok() || t) { juego.vidas = 2; juego.puntos = 0; juego.proxVida = 100000; juego.estado = 'jugando'; sonar('evento.continuar'); const j = juego.j; j.hp = j.hpMax; j.muerto = false; j.est = 'levanta'; j.t = 0; j.invul = 3; pantalla = 'juego'; }
@@ -280,7 +306,8 @@ function dibujar(alfa) {
         }
       }
     }
-  } else if (pantalla === 'titulo') dibujarTitulo();
+  } else if (pantalla === 'arcade') { arcade.dibujar(x, alfa, W, H); }
+  else if (pantalla === 'titulo') dibujarTitulo();
   else if (pantalla === 'seleccion') dibujarSeleccion();
   else if (pantalla === 'vestuario') dibujarVestuario();
   else if (pantalla === 'mapa') dibujarMapa(x, W, H, tP, spMapa);
@@ -438,7 +465,12 @@ function botControl() {
   E.tdx = dx; E.tdy = dy; E.dx = dx; E.dy = dy;
 }
 
-window.__bb = { version: VERSION, med, bot: false, prog: PROG, gore: GORE, debug: /debug/.test(location.search), get pantalla() { return pantalla; }, juego: null,
+function empezarInfinito() { // v12: oleadas sin fin en un nivel al azar de los ya jugados (o la cuadra)
+  const clave = CLAVES[elegido] || 'seba'; const max = Math.max(0, Math.min(NIVELES.length - 1, nivelMaxIdx())); const nivel = Math.floor(Math.random() * (max + 1));
+  juego = new Juego(clave, { w: W, h: H }, ropaDe(clave), nivel, null, { sinCine: true, infinito: true }); window.__bb.juego = juego; pantalla = 'juego'; tP = 0; acc = 0; mostrarControles(true); }
+function finInfinito() { const g = juego; const olas = g.infRec || 0; const nuevo = recordInfinito('ola', olas); const rec = { nuevo, mejor: PP().infinito.ola || olas }; const plata = g.plataNivel.enemigos + g.plataNivel.objetos; PROG.plata += plata; guardarProg();
+  pantalla = 'arcade'; tP = 0; mostrarControles(false); arcade.finInfinito({ olas, record: rec, ko: g.stats.ko, puntos: g.puntos, plata, combo: g.comboMax }); juego = null; window.__bb.juego = null; musica('mus.pelea.select'); }
+window.__bb = { version: VERSION, arcade, abrirArcade, med, bot: false, prog: PROG, gore: GORE, debug: /debug/.test(location.search), get pantalla() { return pantalla; }, juego: null,
   empezar: (i = 0, nivel = 0) => { elegido = i; empezar(nivel, null, window.__bb.verCine ? null : { sinCine: true }); }, siguiente: () => siguienteNivel(), NIVELES, irA: (p) => { pantalla = p; }, ajustar, D: () => D, escala: () => escala };
 
 // ---------- service worker: se actualiza solo en el menú ----------

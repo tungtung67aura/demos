@@ -1,6 +1,6 @@
 # Audio de Párate de mano ñeri — lista de IDs
 
-Generado con `node tools/audio-doc.mjs`. Total: **349 IDs**.
+Generado con `node tools/audio-doc.mjs`. Total: **394 IDs**.
 
 ## Cómo cargar los audios
 1. Guardá cada archivo en `audio/<carpeta>/` con el **nombre exacto del ID** y extensión `.ogg` (ej.: `audio/golpes/golpe.pina.ogg`).
@@ -111,7 +111,7 @@ Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga
 | `enem.chorizo` | Chorizo que rebota | — | — |
 | `enem.paraguas.abre` | Paraguas que se abre (bloquea) | — | — |
 
-## Eventos del nivel y del juego — `audio/eventos/` (27)
+## Eventos del nivel y del juego — `audio/eventos/` (28)
 
 | ID | Qué es | Respaldo | Archivo |
 |---|---|---|---|
@@ -142,6 +142,7 @@ Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga
 | `evento.perro` | Perro que ladra | perro | — |
 | `cine.capitulo` | Cartel de capítulo (golpe de orquesta corto) | capitulo | — |
 | `cine.robo` | El Rata manotea el termo | robo | — |
+| `evento.infinito.ola` | Nueva oleada en el modo infinito | dale | — |
 
 ## Loops ambientales por nivel y sonidos del entorno — `audio/ambiente/` (7)
 
@@ -155,7 +156,7 @@ Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga
 | `amb.rambla` | Loop ambiental: Rambla con tormenta (loop) | — | — |
 | `amb.lluvia` | Loop de lluvia (loop) | — | — |
 
-## Música (loops) — `audio/musica/` (15)
+## Música (loops) — `audio/musica/` (20)
 
 | ID | Qué es | Respaldo | Archivo |
 |---|---|---|---|
@@ -174,6 +175,11 @@ Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga
 | `mus.victoria` | Nivel ganado (jingle) | — | — |
 | `mus.derrota` | Game over (jingle) | — | — |
 | `mus.final` | Final del juego / créditos (loop) | — | — |
+| `mus.pelea` | Pelea 1 vs 1 (loop) | pelea | — |
+| `mus.pelea.jefe` | Pelea 1 vs 1 contra un jefe (loop) | jefe | — |
+| `mus.pelea.ult` | Durante la escena de un definitivo (loop) | ult | — |
+| `mus.pelea.select` | Selección de luchador / torres (loop) | menu | — |
+| `mus.infinito` | Modo infinito (oleadas) (loop) | nivel | — |
 
 ## Voces por personaje (gritos, dolor, KO) — `audio/voces/` (92)
 
@@ -420,4 +426,48 @@ Columna *respaldo*: el ID usa hoy el sonido sintetizado original hasta que tenga
 | `ui.punto` | Asignar un punto de atributo | punto | — |
 | `ui.conteo` | Conteo de cifras en la pantalla de resultados | letra | — |
 | `ui.bloqueado` | Elegir un nivel que todavía está cerrado | menu | — |
+
+## Motor de pelea 1 vs 1 (golpes, guardia, rondas, definitivos) — `audio/pelea/` (39)
+
+| ID | Qué es | Respaldo | Archivo |
+|---|---|---|---|
+| `pelea.golpe.leve` | Golpe leve que entra | pina | — |
+| `pelea.golpe.medio` | Golpe medio que entra | patada | — |
+| `pelea.golpe.fuerte` | Golpe fuerte / lanzador / remate | fuerte | — |
+| `pelea.aire` | Golpe leve al aire (swing) | aire | — |
+| `pelea.aire.fuerte` | Golpe fuerte al aire (swing pesado) | aire | — |
+| `pelea.bloqueo` | Golpe bloqueado (guardia) | metal | — |
+| `pelea.contragolpe` | Contragolpe (le pegaste mientras arrancaba un golpe) | fuerte | — |
+| `pelea.contra` | Contraataque (especial de contra o contra de guardia) | especial | — |
+| `pelea.especial` | Arranque de un especial | especial | — |
+| `pelea.firma` | Combo firma del luchador | especial | — |
+| `pelea.superflash` | Arranque del definitivo (superflash) | superflash | — |
+| `pelea.lanza` | Tira un proyectil / pone una trampa | aire | — |
+| `pelea.lanza.cuerpo` | Revoleo de un agarre | piso | — |
+| `pelea.agarre` | Agarre | agarra | — |
+| `pelea.salto` | Salto | aire | — |
+| `pelea.cae` | Cuerpo que cae al piso | piso | — |
+| `pelea.piso` | Onda por el piso / rebote fuerte | pisoton | — |
+| `pelea.levanta` | Se levanta del piso | — | — |
+| `pelea.dash` | Paso atrás rápido | aire | — |
+| `pelea.tele` | Desaparece y aparece atrás del rival | robo | — |
+| `pelea.buff` | Especial que cura / da súper | punto | — |
+| `pelea.ronda` | Campana: RONDA N | campana | — |
+| `pelea.ronda.final` | Campana: RONDA FINAL | campana | — |
+| `pelea.peleen` | ¡PELEEN! | dale | — |
+| `pelea.ko` | K.O. | ko | — |
+| `pelea.tiempo` | Se acabó el tiempo | campana | — |
+| `pelea.victoria` | Ganaste la ronda | dale | — |
+| `pelea.derrota` | Perdiste la ronda | nopuede | — |
+| `pelea.elegir` | Elegiste luchador | dale | — |
+| `pelea.ult.inicio` | Arranca la escena del definitivo | especial | — |
+| `pelea.ult.tambor` | Tambor de candombe (definitivo) | tambor | — |
+| `pelea.ult.choque` | Choque de vehículo (taxi, auto, ómnibus) | explosion | — |
+| `pelea.ult.fuego` | Llamarada (parrilla, flambeado) | fuego | — |
+| `pelea.ult.explosion` | Explosión del surtidor | explosion | — |
+| `pelea.ult.palmas` | Palmas flamencas | palmas | — |
+| `pelea.ult.bajo` | Bajo 808 que hace temblar todo | bajo | — |
+| `pelea.ult.martillo` | Martillo del juez | pisoton | — |
+| `pelea.ult.derrumbe` | Derrumbe de piedras | explosion | — |
+| `pelea.ult.rayo` | Rayo | rayo | — |
 

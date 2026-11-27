@@ -1,0 +1,19 @@
+<!doctype html><meta charset="utf-8"><title>plantel</title><body style="margin:0;background:#334">
+<canvas id="c"></canvas>
+<script type="module">
+import { generar, dibujarCuadro, fijarQ } from '../js/sprites.js';
+import { LUCHADORES, EXTRAS } from '../js/pelea/luchadores.js';
+import { posesDe } from '../js/pelea/poses-pelea.js';
+import { crearProps } from '../js/props.js';
+const anim = new URLSearchParams(location.search).get('a') || 'quieto', fr = +(new URLSearchParams(location.search).get('f') || 0);
+const extras = /extras/.test(location.search);
+fijarQ(2); crearProps();
+const lista = extras ? EXTRAS : LUCHADORES;
+const cv = document.getElementById('c'); const cols = 10, cw = 110, ch = 150; cv.width = cols * cw * 2; cv.height = Math.ceil(lista.length / cols) * ch * 2; const x = cv.getContext('2d'); x.imageSmoothingEnabled = false; x.scale(2, 2);
+x.fillStyle = '#5a6a7a'; x.fillRect(0, 0, cv.width, cv.height);
+const t0 = performance.now(); const err = [];
+lista.forEach((L, i) => { try { const sp = generar(L.cuerpo, 0, null, false, posesDe(L), L.id); const a = sp.anims[anim]; const f = a[Math.min(fr, a.length - 1)];
+  const cx = (i % cols) * cw + cw / 2, cy = Math.floor(i / cols) * ch + ch - 12; x.fillStyle = '#00000033'; x.fillRect(cx - 20, cy - 2, 40, 4); dibujarCuadro(x, f, cx, cy, 1, 1);
+  x.fillStyle = '#fff'; x.font = '8px monospace'; x.fillText((i + 1) + ' ' + L.id, cx - 40, cy + 10); } catch (e) { err.push(L.id + ': ' + e.message); } });
+window.__listo = { ms: performance.now() - t0, err };
+</script>

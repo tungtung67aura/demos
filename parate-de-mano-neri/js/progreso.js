@@ -35,12 +35,15 @@ export const PRODUCTOS = [
   { id: 'libreta', nombre: 'LIBRETA DE ENTRENAMIENTO', desc: '+1 PUNTO DE ATRIBUTO', precio: 400, tipo: 'punto', icono: 'libreta' },
 ];
 export const P = load();
-function base() { return { v: 9, plata: 0, puntos: 0, attr: { fuerza: 0, resistencia: 0, velocidad: 0, aguante: 0, tecnica: 0 }, perm: {}, uso: {}, arma: null, libretas: 0, ganados: [], max: 'cuadra', migrado: false }; }
+// v12: progresión del motor de pelea dentro del MISMO guardado (campo 'pelea'); un guardado v9 (bb-v11) se migra solo
+export function basePelea() { return { ganadas: 0, perdidas: 0, maxCombo: 0, ults: 0, perfectos: 0, porPj: {}, desbloq: [], ganadores: [], torres: {}, infinito: { ola: 0, superv: 0, jugadas: 0 }, dif3: false, vencidos: [], nuevos: [] }; }
+function base() { return { v: 12, plata: 0, puntos: 0, attr: { fuerza: 0, resistencia: 0, velocidad: 0, aguante: 0, tecnica: 0 }, perm: {}, uso: {}, arma: null, libretas: 0, ganados: [], max: 'cuadra', migrado: false }; }
 function load() {
   let p = null; try { p = JSON.parse(localStorage.getItem(CLAVE) || 'null'); } catch (e) { p = null; }
-  if (p && p.v === 9) { const b = base(); return Object.assign(b, p, { attr: Object.assign(b.attr, p.attr || {}) }); }
+  if (p && (p.v === 9 || p.v === 12)) { const b = base(); const r = Object.assign(b, p, { attr: Object.assign(b.attr, p.attr || {}) }); const viejo = p.v === 9;
+    r.pelea = Object.assign(basePelea(), p.pelea || {}); r.pelea.infinito = Object.assign(basePelea().infinito, r.pelea.infinito || {}); r.v = 12; if (viejo) { r.migradoV12 = true; guardar(r); } return r; }
   // migración desde el guardado viejo (por índice en la lista vieja de 6 niveles)
-  p = base(); p.migrado = true;
+  p = base(); p.migrado = true; p.pelea = basePelea();
   let max = 0, gan = []; try { max = +(localStorage.getItem('bb-nivel-max') || 0); gan = JSON.parse(localStorage.getItem('bb-ganados') || '[]'); } catch (e) { /* sin almacenamiento */ }
   p.ganados = gan.map((i) => ORDEN_VIEJO[i]).filter(Boolean);
   // abierto: el mismo nivel que tenía abierto (si pasó Barrio Sur, también queda abierto el Boliche, que es nuevo)

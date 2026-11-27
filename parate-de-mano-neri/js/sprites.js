@@ -43,6 +43,7 @@ const caminar = (arma) => { const r = []; for (let i = 0; i < 8; i++) { const th
 const respirar = (arma) => [0, 1, 2, 1].map((i) => P({ y: -0.3 - i * 0.04, enc: 0.06 + i * 0.01, bn: arma ? ARMA : { m: [0.9, -0.2 - i * 0.03] }, bf: { m: [1.3, -0.04 - i * 0.03] } })); // puños a la altura del pecho/mentón: la cara queda a la vista
 const ataque = (a, g, r1) => [a, g, r1, mezclaPose(r1, Q0, 0.55)];
 const piernaAtras = { pn: [-0.95, 0.12, -0.4] }; // talón de atrás levantado al rotar la cadera
+export { P, G0, mezclaPose, respirar, caminar, ataque as ataquePose, Q0 };
 export const POSES = {
   quieto: respirar(false),
   quietoArma: respirar(true),
@@ -131,6 +132,7 @@ export const POSES = {
 };
 // levanta: 4 cuadros (sentado, en cuatro patas, rodilla, parándose)
 // fases por cuadro de ataque: a = arranque (anticipación), g = golpe activo, r = recuperación
+const POSES_BEU = POSES;
 export const FASES = { pisoton: 'agrr', cabezazo: 'agrr', pina1: 'agrr', pina2: 'agrr', pina3: 'agrr', patada: 'agrr', golpe: 'agrr', barrida: 'aggr', tamborOnda: 'agrr', empuja: 'aggr', apunta: 'aagr' };
 // elige el cuadro de un ataque según el tiempo y las fases
 export function cuadroAtaque(anim, t, A) {
@@ -213,7 +215,7 @@ export const VARIANTES = {
 };
 
 // combina cuerpo + ropa en una definición plana para dibujar
-function armarDef(clave, variante, ropa) {
+export function armarDef(clave, variante, ropa) {
   const base = DEFS[clave], v = (VARIANTES[clave] || [])[variante] || {};
   const def = Object.assign({}, base, v);
   const r = Object.assign({}, base.ropa, v.ropa || {}, ropa || {});
@@ -317,7 +319,11 @@ function miembro(b, pts, ws, c) { for (let i = 0; i + 1 < pts.length; i++) b.seg
 // recolorea los píxeles de la capa que tengan color base según una función de (x, y)
 function recolor(b, base, fn) { if (b.x1 < 0) return; const q = b.q; for (let y = b.y0; y <= b.y1; y++) for (let x = b.x0; x <= b.x1; x++) { const i = y * b.w + x; if (b.d[i] === base) { const n = fn((x + 0.5) / q - 0.5, (y + 0.5) / q - 0.5, x, y); if (n) b.d[i] = n; } } }
 // mini fuente 3x5 para letras de pecho y números
-const MINI = { U: ['101', '101', '101', '101', '111'], R: ['110', '101', '110', '101', '101'], G: ['111', '100', '101', '101', '111'], A: ['010', '101', '111', '101', '101'], Y: ['101', '101', '010', '010', '010'],
+const MINI = { T: ['111', '010', '010', '010', '010'], X: ['101', '101', '010', '101', '101'], I: ['111', '010', '010', '010', '111'], L: ['100', '100', '100', '100', '111'],
+  K: ['101', '110', '100', '110', '101'], E: ['111', '100', '110', '100', '111'], P: ['110', '101', '110', '100', '100'], Z: ['111', '001', '010', '100', '111'], C: ['111', '100', '100', '100', '111'],
+  O: ['111', '101', '101', '101', '111'], S: ['111', '100', '111', '001', '111'], N: ['101', '111', '111', '111', '101'], D: ['110', '101', '101', '101', '110'], M: ['101', '111', '111', '101', '101'],
+  H: ['101', '101', '111', '101', '101'], B: ['110', '101', '110', '101', '110'], F: ['111', '100', '110', '100', '100'], V: ['101', '101', '101', '101', '010'], J: ['001', '001', '001', '101', '111'], '$': ['011', '110', '010', '011', '110'],
+  U: ['101', '101', '101', '101', '111'], R: ['110', '101', '110', '101', '101'], G: ['111', '100', '101', '101', '111'], A: ['010', '101', '111', '101', '101'], Y: ['101', '101', '010', '010', '010'],
   0: ['111', '101', '101', '101', '111'], 1: ['010', '110', '010', '010', '111'], 2: ['111', '001', '111', '100', '111'], 3: ['111', '001', '011', '001', '111'], 4: ['101', '101', '111', '001', '001'], 5: ['111', '100', '111', '001', '111'], 6: ['111', '100', '111', '101', '111'], 7: ['111', '001', '010', '010', '010'], 8: ['111', '101', '111', '101', '111'], 9: ['111', '101', '111', '001', '111'] };
 let TEXTOS = null; // textos del pecho/espalda del cuadro actual (para que el espejo no los invierta)
 // fp = subpíxeles por píxel de la fuente (q = letra de 1 px del juego; menos = letra más chica y fina, cabe entera en el pecho)
@@ -370,6 +376,13 @@ function pelo(b, def, H, conGorro) {
     case 'rodete': poli([[-6.5, -0.2], [-6.2, -5.0], [-3.8, -7.6], [0, -8.2], [3.8, -7.4], [6.0, -5.2], [6.2, -3.6], [4.2, -4.6], [1.6, -4.4], [-0.6, -3.6], [-1.4, 1.0], [-3.6, 2.2], [-5.6, 1.8]]);
       { const [rx, ry] = H(-4.4, -8.2); b.disco(rx, ry, 3.0 * H.k, p); const [a0, b0] = H(-6.4, -8.0), [a1, b1] = H(-2.6, -9.8); b.linea(a0, b0, a1, b1, col(tono(def.pelo, 0.7))); }
       break;
+    case 'largo': poli([[-6.6, -0.4], [-6.4, -5.0], [-3.8, -7.8], [0, -8.5], [4.0, -7.7], [6.3, -5.2], [6.0, -3.4], [4.4, -4.4], [2.4, -3.8], [0.6, -4.6], [-1.0, -2.6], [-1.4, 1.6], [-2.6, 4.2], [-3.0, 9.4], [-5.4, 10.4], [-8.2, 9.2], [-8.6, 4.0], [-7.6, 1.0]]);
+      { const [a0, b0] = H(-5.6, 1), [a1, b1] = H(-6.2, 8.6); b.linea(a0, b0, a1, b1, col(tono(def.pelo, 1.5))); const [c0, d0] = H(-2.4, -6.8), [c1, d1] = H(2.4, -7.2); b.linea(c0, d0, c1, d1, col(tono(def.pelo, 1.7))); } break;
+    case 'cresta': { const c2 = col(tono(def.pelo, 1.25)); poli([[-6.3, -0.6], [-5.8, -4.6], [-3.6, -6.9], [0, -7.5], [3.6, -6.8], [5.4, -4.8], [4.0, -4.6], [0, -4.8], [-1.6, -2.4], [-1.6, 0.8], [-5.4, 1.4]], c2); const g = Math.max(2, b.q), cp = col(tono(def.piel, 0.72)); recolor(b, c2, (x, y, fx, fy) => (fy % g === 0 && fx % g === (Math.floor(fy / g) % 2) * (g >> 1) ? 0 : cp));
+      poli([[-6.0, -3.0], [-6.4, -7.4], [-4.2, -10.6], [-1.2, -12.4], [2.0, -12.0], [4.6, -9.6], [5.2, -6.4], [3.0, -6.8], [0, -7.6], [-3.4, -6.4]]); const [a0, b0] = H(-3.4, -9.6), [a1, b1] = H(2.6, -10.4); b.linea(a0, b0, a1, b1, col(tono(def.pelo, 1.6))); break; }
+    case 'grenas': for (const [u, v, r] of [[-5.8, -2.0, 3.0], [-5.4, -5.8, 3.4], [-2.6, -8.2, 3.4], [1.0, -8.8, 3.2], [4.0, -7.6, 2.8], [5.8, -5.2, 2.2], [-6.6, 1.4, 2.8], [-7.4, -4.2, 2.4], [-3.6, 3.4, 2.2]]) { const [x, y] = H(u, v); b.disco(x, y, r * H.k, p); }
+      for (const [u, v] of [[-8.6, -6.8], [-4.6, -11.2], [1.8, -11.6], [6.6, -8.4]]) poli([[u - 1.4, v + 2.6], [u, v], [u + 1.6, v + 2.8]]); break;
+    case 'ralo': for (const [u, v, r] of [[-5.4, -2.4, 1.6], [-4.4, -5.6, 1.4], [-1.2, -7.0, 1.2], [2.6, -6.6, 1.0], [-6.0, 0.6, 1.4]]) { const [x, y] = H(u, v); b.disco(x, y, r * H.k, p); } break;
     case 'engominado': poli([[-6.6, 0.2], [-6.4, -4.6], [-4.0, -7.4], [0, -8.0], [3.6, -7.4], [5.8, -5.4], [5.6, -4.2], [3.0, -4.6], [0, -4.6], [-1.8, -2.6], [-1.6, 0.6], [-3.6, 2.0], [-5.8, 2.0]]);
       { const [a0, b0] = H(-3, -6.4), [a1, b1] = H(2.6, -6.6); b.linea(a0, b0, a1, b1, col(tono(def.pelo, 2.4))); } break;
   }
@@ -408,6 +421,26 @@ function sombrero(b, def, H) {
     recolor(b, c1, (x, y) => ((Math.floor(x) * 3 + Math.floor(y) * 5) % 7 === 0 ? c2 : 0));
   } else if (c.tipo === 'vincha') { // vincha de boxeador
     poli([[-6.7, -4.6], [6.3, -5.8], [6.6, -4.0], [-6.7, -2.8]], c1); poli([[-6.6, -4.2], [-9.6, -1.6], [-8.6, -0.8], [-6.4, -3.0]], c2);
+  } else if (c.tipo === 'chef') { // gorro de cocinero: banda y copa inflada
+    poli([[-6.4, -2.8], [-6.2, -6.4], [6.4, -6.6], [6.6, -2.8]], c1);
+    poli([[-5.8, -6.2], [-6.6, -11.4], [-2.4, -14.6], [2.6, -14.4], [6.8, -11.2], [6.0, -6.4]], c1);
+    for (const [u, v, r] of [[-4.0, -12.0, 3.4], [0.2, -13.6, 3.8], [4.2, -11.8, 3.2]]) { const [x, y] = H(u, v); b.disco(x, y, r * H.k, c1); }
+    const lc = col(tono(c.c1, 0.78)); for (const u of [-2.2, 2.0]) { const [a0, b0] = H(u, -6.8), [a1, b1] = H(u * 1.2, -11.6); b.linea(a0, b0, a1, b1, lc); }
+    poli([[-6.5, -3.4], [6.5, -3.4], [6.6, -2.6], [-6.5, -2.6]], c2);
+  } else if (c.tipo === 'casco') { // casco abierto de moto
+    poli([[-7.6, 2.4], [-7.8, -3.6], [-5.4, -8.6], [-0.4, -10.0], [4.6, -9.0], [7.2, -6.2], [7.6, -3.4], [1.0, -3.6], [-1.2, -1.0], [-1.6, 2.6]], c1);
+    poli([[-7.0, -6.6], [-1.0, -9.6], [-0.2, -8.6], [-6.4, -5.4]], c2); poli([[1.6, -4.4], [8.4, -4.0], [8.2, -2.8], [1.6, -3.2]], col('#2a3240'));
+    const [a0, b0] = H(-1.4, 2.4), [a1, b1] = H(3.6, 6.4); b.linea(a0, b0, a1, b1, col('#1b1220'));
+  } else if (c.tipo === 'boina') { // boina / gorra de tela (canillita, veterano)
+    poli([[-6.8, -3.0], [-6.2, -7.0], [-1.0, -8.8], [4.6, -8.0], [8.0, -5.4], [8.8, -3.8], [-6.6, -2.4]], c1);
+    poli([[5.0, -4.2], [10.0, -3.6], [9.6, -2.6], [5.0, -3.0]], col(tono(c.c1, 0.75)));
+    const [a0, b0] = H(-4.6, -6.6), [a1, b1] = H(4.6, -6.8); b.linea(a0, b0, a1, b1, col(tono(c.c1, 1.2)));
+  } else if (c.tipo === 'boinaMil') { // boina ladeada
+    poli([[-7.0, -3.2], [-6.6, -7.8], [-2.0, -9.8], [4.2, -9.4], [7.8, -7.6], [7.2, -5.6], [3.4, -4.8], [-6.6, -2.6]], c1);
+    poli([[-7.1, -3.4], [6.8, -5.2], [6.9, -4.4], [-7.0, -2.4]], col(tono(c.c1, 0.7)));
+  } else if (c.tipo === 'auris') { // auriculares grandes sobre el pelo
+    const [a0, b0] = H(-1.2, -1.0), [a1, b1] = H(-2.4, -8.6), [a2, b2] = H(2.6, -8.8); b.seg(a0, b0, a1, b1, 1.6 * H.k, 1.6 * H.k, c2); b.seg(a1, b1, a2, b2, 1.6 * H.k, 1.6 * H.k, c2);
+    const [ox, oy] = H(-1.0, 0.4); b.elipse(ox, oy, 2.6 * H.k, 3.2 * H.k, c1); b.px(Math.round(ox), Math.round(oy), col(tono(c.c1, 1.6)));
   } else if (c.tipo === 'capucha') {
     poli([[-7.6, 3.2], [-8.4, -2.6], [-6.4, -8.2], [-1.4, -10.2], [3.6, -9.4], [6.6, -6.6], [7.4, -4.0], [5.4, -4.6], [2.0, -6.8], [-2.0, -5.8], [-3.6, -1.0], [-3.0, 3.6], [-1.0, 6.4], [-5.2, 6.6]], c1);
     const [a0, b0] = H(5.4, -4.6), [a1, b1] = H(-2.6, -2.0); b.linea(a0, b0, a1, b1, col(tono(c.c1, 0.6)));
@@ -471,6 +504,11 @@ function rasgos(b, def, H, cara) {
   else if (cara === 'feliz') { for (let i = 0; i <= mw; i++) caja(MX + i, MY + u1 - R(Math.sin(i / mw * PI) * -1.2 * sq), 1, u1, boca); caja(MX + u1, MY, mw - u1, u1, dientes); put(MX - u1, MY - u1, labio); }
   else if (cara === 'ko') { caja(MX + u1, MY, o(3), o(3), boca); put(MX + o(2), MY + u1, lengua); }
   else { caja(MX, MY, mw, u1, labio); caja(MX + u1, MY + u1, mw - o(2), u1, labioC); if (def.ceno) put(MX - u1, MY + u1, labio); put(MX + mw, MY - u1, labio); }
+  // --- rasgos de personajes de pelea: zombi (ojeras hundidas, pupila blanca, costuras), nariz roja, cicatriz
+  if (def.zombi) { const hund = rgba32('#2a3a2a'); caja(EX - o(2), EY - o(2), ew + o(4), u1, hund); caja(EX - o(2), EY + eh, ew + o(4), o(2), hund); if (cara !== 'ko' && cara !== 'dolor' && cara !== 'feliz') { caja(EX, EY, ew, eh, rgba32('#d8e8c8')); put(EX + (ew >> 1), EY + (eh >> 1), rgba32('#6a8a5a')); }
+    const cs = rgba32('#4a1a2a'); for (let i = 0; i < o(7); i++) { const [sx, sy] = F(-0.4 + i / q * 0.9, -4.6 + i / q * 0.5); b.f(sx, sy, cs); if (i % o(2) === 0) { b.f(sx, sy - u1, cs); b.f(sx, sy + u1, cs); } } }
+  if (def.narizRoja) { const [nx, ny] = F(6.3, 1.2); caja(nx - o(2), ny - u1, o(3), o(3), rgba32('#d8505a')); put(nx - u1, ny - u1, rgba32('#f08a8a')); const [cx3, cy3] = F(3.2, 2.6); caja(cx3, cy3, o(3), o(2), rgba32('#e07a7a')); }
+  if (def.cicatriz) { const cz = rgba32(tono(def.piel, 0.55)); for (let i = 0; i < o(8); i++) { const [sx, sy] = F(1.2 + i / q * 0.55, -3.6 + i / q * 0.95); b.f(sx, sy, cz); } }
   // --- tatuaje en el cuello (el del buzo gris)
   if (def.tatuajes) { const tc = rgba32('#3a4a6a'); const [tx, ty] = F(0.4, 8.6); put(tx, ty, tc); put(tx + u1, ty + u1, tc); put(tx + o(2), ty, tc); put(tx + u1, ty + o(2), tc); put(tx - u1, ty + o(2), tc); }
 }
@@ -673,9 +711,27 @@ function torso(b, def, E) {
   const derecho = Math.abs(E.lean) < 0.7;
   if (A.letras && derecho) { const fp = Math.max(1, b.q - 1), w = ((A.letras.length * 4 - 1) * fp) / b.q; const c = E.S3(0.56, 0.28); mini(b, A.letras, c[0] - w / 2, c[1] - (2.5 * fp) / b.q, col(A.acento), true, fp); }
   if (A.numero && derecho) { const fp = b.q, w = ((A.numero.length * 4 - 1) * fp) / b.q; const c = E.S3(0.62, 0.3); mini(b, A.numero, c[0] - w / 2, c[1] - 2.5, col(A.numCol || '#fff'), true, fp); } // centrado en el pecho, nunca fuera de la tela
+  if (A.patron === 'lunares' && A.c2) { const c2 = col(A.c2); recolor(b, base, (x, y) => { const [tt, s] = lc(x, y); const u = Math.floor((s + 200) / 3.4), v = Math.floor(tt * E.Ls / 3.4); return (u + v) % 2 === 0 && Math.abs(((s + 200) % 3.4) - 1.7) < 0.8 && Math.abs(((tt * E.Ls) % 3.4) - 1.7) < 0.8 ? c2 : 0; }); }
+  if (A.rota) { const pl = col(def.piel), bo = col(tono(A.c1, 0.5)); recolor(b, base, (x, y) => { const [tt, s] = lc(x, y); const h = Math.sin(s * 1.7 + tt * 9.1) + Math.sin(s * 0.6 - tt * 13.3); return h > 1.45 ? pl : h > 1.25 ? bo : 0; }); }
+  if (A.manchas) { const mc = col(A.manchas), mo = col(tono(A.manchas, 0.8)); recolor(b, base, (x, y) => { const [tt, s] = lc(x, y); const h = Math.sin(s * 0.9 + tt * 7.3) * Math.cos(s * 0.45 - tt * 11.7); return h > 0.62 ? mc : h > 0.55 ? mo : 0; }); }
+  if (A.cruzado) { const bt = col(A.boton || '#c8c8d0'); for (let k = 0; k < 3; k++) for (const lf of [0.34, -0.2]) { const p0 = E.S3(0.42 + k * 0.17, lf); b.px(Math.round(p0[0]), Math.round(p0[1]), bt); } ln(b, E.S3(1.02, 0.4), E.S3(0.3, 0.5), d(0.72)); }
+  if (A.tirantes) { const tc = col(A.tirantes); for (const lf of [0.42, -0.36]) { const p0 = E.S3(hem + 0.02, lf), p1 = E.S3(1.04, lf * 0.9); b.seg(p0[0], p0[1], p1[0], p1[1], 1.9 * e, 1.9 * e, tc); } }
+  if (A.corbata) { const cc = col(A.corbata); const p0 = E.S3(1.0, 0.05), p1 = E.S3(0.42, 0.07); b.seg(p0[0], p0[1], p1[0], p1[1], 1.2 * e, 2.0 * e, cc); b.disco(p0[0], p0[1], 1.3 * e, col(tono(A.corbata, 0.8))); }
+  if (A.placa) { const p0 = E.S3(0.8, 0.5); b.rect(Math.round(p0[0]) - 1, Math.round(p0[1]) - 1, 3, 3, col('#e8c840')); b.px(Math.round(p0[0]), Math.round(p0[1]), col('#fff4b0')); }
   if (def.cadena) { const c0 = E.S3(1.03, 0.55), c1 = E.S3(0.8, 0.04), c2 = E.S3(1.03, -0.5); ln(b, c0, c1, col('#f0c840')); ln(b, c1, c2, col('#f0c840')); }
 }
 
+// cosas colgadas a la espalda (detrás de todo): mochila térmica del repartidor, guitarra criolla
+function espalda(b, def, E) {
+  const e = E.cm.e, bk = (t) => E.sec(t).bk;
+  if (def.espalda === 'mochila') { const c = col(def.mochilaC || '#e8a020'), o = col(tono(def.mochilaC || '#e8a020', 0.7));
+    b.poli([E.T(0.4, bk(0.4) + 1), E.T(1.02, bk(1.02) + 1), E.T(1.02, bk(1.02) - 10 * e), E.T(0.4, bk(0.4) - 10 * e)], c);
+    b.linea(...E.T(0.72, bk(0.72) - 1), ...E.T(0.72, bk(0.72) - 9 * e), o); b.linea(...E.T(0.98, bk(0.98) - 2), ...E.T(0.98, bk(0.98) - 9 * e), col(tono(def.mochilaC || '#e8a020', 1.25))); }
+  else if (def.espalda === 'guitarra') { const m = col('#a0622a'), mo = col('#5a3216'), cu = col('#2a1a10');
+    const c0 = E.T(0.28, bk(0.28) - 2 * e), c1 = E.T(1.25, bk(0.98) - 1 * e);
+    b.seg(c0[0], c0[1], c1[0], c1[1], 2.0 * e, 1.6 * e, mo); b.elipse(c0[0], c0[1], 6.2 * e, 5.0 * e, m); const c2 = E.T(0.5, bk(0.5) - 2 * e); b.elipse(c2[0], c2[1], 4.4 * e, 3.6 * e, m);
+    b.disco(c2[0], c2[1] + 1, 1.4 * e, cu); b.seg(c1[0], c1[1], c1[0] + 1.5 * e, c1[1] - 3.5 * e, 2.2 * e, 2.0 * e, mo); }
+}
 // ---------- COMPOSICIÓN ----------
 const tmp = new Map();
 function bufTmp(w, h, q) { const k = w + 'x' + h + 'x' + q; let b = tmp.get(k); if (!b) { b = new Buf(w, h, q); tmp.set(k, b); } b.limpiar(); return b; }
@@ -705,6 +761,7 @@ export function dibujarPose(def, pose, w, h, caraDef) {
   const jf = E.brazo(pose.bf, -cm.shJ), jn = E.brazo(pose.bn, cm.shJ), lf = E.pierna(pose.pf, -cm.hipJ), lnr = E.pierna(pose.pn, cm.hipJ);
   // orden de profundidad (3/4): brazo lejano, pierna lejana (+zapa), pelvis + pierna cercana (una sola pieza: sin línea en la ingle),
   // zapa cercana, tronco + cuello, cabeza, brazo cercano
+  if (def.espalda) capa(fr, (b) => espalda(b, def, E));
   out.manoB = capa(fr, (b) => brazo(b, def, jf, cm, false, mano));
   capa(fr, (b) => pierna(b, def, lf, cm, false));
   capa(fr, (b) => calzado(b, def, lf.A[0], lf.A[1], lf.ang, false)); detalleCalzado(fr, def, lf.A[0], lf.A[1], lf.ang);
@@ -716,7 +773,7 @@ export function dibujarPose(def, pose, w, h, caraDef) {
   const la = E.incl * (Math.abs(E.lean) > 1 ? 0.95 : 0.6) + (pose.head || 0), k = cm.k;
   const u0 = -1.4, v0 = 4.6; const ccx = E.NT[0] - (C(la) * u0 - S(la) * v0) * k, ccy = E.NT[1] - (S(la) * u0 + C(la) * v0) * k;
   const H = marcoCabeza(ccx, ccy, la, k); H.k = k; H.la = la;
-  const gorro = def.cab && def.cab.tipo !== 'nada' && def.cab.tipo !== 'visera';
+  const gorro = def.cab && def.cab.tipo !== 'nada' && def.cab.tipo !== 'visera' && def.cab.tipo !== 'auris';
   if (def.peinado === 'cola' && def.cab.tipo !== 'capucha') { capa(fr, (b) => colaDeCaballo(b, def, H)); }
   if (def.cab.tipo === 'capucha') capa(fr, (b) => sombrero(b, def, H)); // la capucha va detrás de la cara
   capa(fr, (b) => craneo(b, def, H), 'c');
@@ -780,6 +837,8 @@ export function dibujarCuadro(ctx, f, x, y, cara = 1, esc = 1) {
   if (f.parche) { const p = f.parche; ctx.drawImage(p.c, izq + p.x * s, top + p.y * s, p.c.width * s, p.c.height * s); }
 }
 // silueta blanca (destello del golpe), creada la primera vez que se necesita
+// Copia oscurecida (público de fondo en las peleas): se arma una vez por cuadro
+export function sombreado(f, c = 'rgba(26,14,44,0.5)') { if (f.somb) return f.somb; const [cv, x] = lienzo(f.d.width, f.d.height); x.drawImage(f.d, 0, 0); x.globalCompositeOperation = 'source-atop'; x.fillStyle = c; x.fillRect(0, 0, cv.width, cv.height); f.somb = Object.assign({}, f, { d: cv, blanca: null, somb: null }); return f.somb; }
 export function siluetaBlanca(f) { if (f.blanca) return f.blanca; const [cv, x] = lienzo(f.d.width, f.d.height); x.drawImage(f.d, 0, 0); x.globalCompositeOperation = 'source-atop'; x.fillStyle = '#fff6e0'; x.fillRect(0, 0, cv.width, cv.height); f.blanca = { d: cv, q: f.q, pies: f.pies, parche: null }; return f.blanca; }
 
 // Retrato para el HUD: el mismo personaje (con la ropa elegida) dibujado en primer plano, cabeza y hombros
@@ -792,6 +851,16 @@ export function retrato(def, T = 30, cara = null) {
 // depuración (tools/anatomia.html): un cuadro sin recortar + las articulaciones del esqueleto
 export function depurarPose(clave, anim, i = 0, variante = 0) { const def = armarDef(clave, variante, null); const { w, h } = tamCuadro(def);
   const r = dibujarPose(def, POSES[anim][Math.min(i, POSES[anim].length - 1)], w, h, def.ceno ? 'enojo' : 'normal'); return { lienzo: r.buf.aCanvas(false), q: r.buf.q, huesos: r.huesos, pies: r.pies, w, h }; }
+// articulaciones de una pose SIN dibujarla (para hitboxes/hurtboxes exactos): offsets en px del juego desde los pies,
+// mirando a la derecha (x adelante, y hacia abajo). Barato: sólo el esqueleto.
+export function articulaciones(def, pose, w, h) {
+  const E = esqueleto(def, pose, w, h), cm = E.cm;
+  const jf = E.brazo(pose.bf, -cm.shJ), jn = E.brazo(pose.bn, cm.shJ), lf = E.pierna(pose.pf, -cm.hipJ), lnr = E.pierna(pose.pn, cm.hipJ);
+  const la = E.incl * (Math.abs(E.lean) > 1 ? 0.95 : 0.6) + (pose.head || 0), k = cm.k, u0 = -1.4, v0 = 4.6;
+  const cab = [E.NT[0] - (C(la) * u0 - S(la) * v0) * k, E.NT[1] - (S(la) * u0 + C(la) * v0) * k];
+  const o = (p) => [p[0] - E.FX, p[1] - E.FY];
+  return { cab: o(cab), rc: 7.5 * k, cuello: o(E.NT), cadera: o(lnr.H), mN: o(jn.W), mF: o(jf.W), cN: o(jn.E), cF: o(jf.E), hN: o(jn.S), hF: o(jf.S), rN: o(lnr.K), rF: o(lf.K), pN: o(lnr.A), pF: o(lf.A), esc: def.escala };
+}
 // si cambió la densidad (rotar el teléfono), devuelve el set regenerado a la densidad nueva
 export function vigente(sp) { return !sp || sp.q === Q ? sp : generar(...sp.args); }
 
@@ -816,15 +885,17 @@ const pedidos = new Set();
 // cuadro i de una animación SIN dibujarla en caliente (en el cuadro de pantalla): si todavía no está, devuelve el cuadro
 // listo más cercano (o el de reposo) y la pide al calentador, que la dibuja en el tiempo libre (sin tirones).
 export function cuadroListo(sp, nombre, i) {
-  const p = sp.parciales[nombre];
+  const p = sp.parciales[nombre], POSES = sp.poses;
   if (!p) { const d = Object.getOwnPropertyDescriptor(sp.anims, nombre); const a = d && d.value; if (a) return a[Math.min(i, a.length - 1)]; const q = sp.anims.quieto; return q[i % q.length]; }
   const n = POSES[nombre].length; i = Math.min(i, n - 1); if (p.length > i) return p[i];
   pedidos.add(sp); (sp.pedidos || (sp.pedidos = new Set())).add(nombre);
   if (p.length) return p[p.length - 1]; const q = sp.anims.quieto; return q[i % q.length];
 }
 export function claveRopa(r) { return r ? [r.cabeza, r.arriba, r.abajo, r.calzado].join('|') : ''; }
-export function generar(clave, variante = 0, ropa = null, soloQuieto = false) {
-  const k = Q + ':' + clave + ':' + variante + ':' + claveRopa(ropa) + (soloQuieto ? ':q' : ''); if (cacheSp.has(k)) return cacheSp.get(k);
+// poses: diccionario propio (luchadores del motor de pelea: cada uno con su guardia y sus golpes); por defecto las del beat 'em up
+export function generar(clave, variante = 0, ropa = null, soloQuieto = false, poses = null, tagPoses = '') {
+  const POSES = poses || POSES_BEU;
+  const k = Q + ':' + clave + ':' + variante + ':' + claveRopa(ropa) + (soloQuieto ? ':q' : '') + (poses ? ':P' + tagPoses : ''); if (cacheSp.has(k)) return cacheSp.get(k);
   const tS = performance.now(); const def = armarDef(clave, variante, ropa);
   const { w, h } = tamCuadro(def);
   const caraBase = def.ceno ? 'enojo' : 'normal';
@@ -838,18 +909,18 @@ export function generar(clave, variante = 0, ropa = null, soloQuieto = false) {
       Object.defineProperty(anims, nombre, { value: p, enumerable: true, configurable: true, writable: true }); delete parciales[nombre]; return p; } });
   }
   void anims.quieto; // la de reposo siempre (menús, vestuario)
-  const rt = retrato(def, 30); const res = { def, anims, parciales, cuadro, w, h, q: Q, k, args: [clave, variante, ropa, soloQuieto], retrato: rt, retratoChico: soloQuieto ? null : retrato(def, 13) };
+  const rt = retrato(def, 30); const res = { def, anims, parciales, cuadro, w, h, q: Q, k, args: [clave, variante, ropa, soloQuieto, poses, tagPoses], retrato: rt, retratoChico: soloQuieto ? null : retrato(def, 13), poses: POSES, todo: !!poses };
   if (cacheSp.size > 40) for (const kk of cacheSp.keys()) { if (kk.endsWith(':q')) { cacheSp.delete(kk); break; } }
   cacheSp.set(k, res); PF.set += performance.now() - tS; return res;
 }
 // la partida declara qué sets usa: se liberan los demás (memoria) y se calientan éstos en segundo plano
 const JUGADORES_K = ['seba', 'pelado', 'pato'];
-export function partida(sets) { const keep = new Set(sets.map((s) => s.k)); for (const [kk, v] of cacheSp) if (!keep.has(kk) && !kk.endsWith(':q') && !JUGADORES_K.includes(v.args[0])) cacheSp.delete(kk); activos.clear(); for (const s of sets) activos.add(s); }
+export function partida(sets) { const keep = new Set(sets.map((s) => s.k)); for (const [kk, v] of cacheSp) if (!keep.has(kk) && !kk.endsWith(':q') && !(JUGADORES_K.includes(v.args[0]) && !v.todo)) cacheSp.delete(kk); activos.clear(); for (const s of sets) activos.add(s); }
 // dibuja cuadros pendientes de los sets activos hasta gastar ~ms milisegundos (como mínimo uno, si hay)
 export function calentar(ms, post = null) {
   if (!activos.size && !pedidos.size) return 0; const t0 = performance.now(); let n = 0;
   for (const sp of [...pedidos, ...activos]) {
-    const jugador = JUGADORES_K.includes(sp.args[0]);
+    const jugador = JUGADORES_K.includes(sp.args[0]) || sp.todo, POSES = sp.poses;
     const orden = [...(sp.pedidos || []), ...(jugador ? Object.keys(sp.parciales) : (USA_ENEMIGO[sp.args[0]] || BASE_E))];
     for (const nombre of orden) { const p = sp.parciales[nombre]; if (!p) continue;
       while (p.length < POSES[nombre].length) { const f = sp.cuadro(nombre, p.length); if (post) post(f); p.push(f); n++; if (performance.now() - t0 > ms) return n; }

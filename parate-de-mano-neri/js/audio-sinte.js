@@ -50,6 +50,13 @@ export function sinteSfx(n, fuerza = 1) {
     case 'nopuede': tonoS(t, 0.12, 220, 180, 0.2, 'square'); tonoS(t + 0.13, 0.16, 180, 140, 0.2, 'square'); break;
     case 'punto': [660, 880, 1320].forEach((f, i) => tonoS(t + i * 0.045, 0.07, f, f, 0.15, 'square')); break;
     case 'pisoton': tonoS(t, 0.18, 110, 32, 0.85 * fuerza); ruido(t, 0.14, 500, 0.7, 0.5, 'lowpass', sfxGain, 150); ruido(t, 0.05, 2600, 0.8, 0.2, 'bandpass'); break;
+    case 'superflash': tonoS(t, 0.5, 300, 1800, 0.3, 'sawtooth'); ruido(t, 0.5, 2000, 1, 0.4, 'bandpass', sfxGain, 8000); tonoS(t + 0.15, 0.4, 1200, 1200, 0.12, 'square'); break;
+    case 'campana': for (const f of [880, 1320, 1760]) tonoS(t, 0.9, f, f * 0.99, 0.12, 'triangle'); tonoS(t, 0.05, 2400, 2000, 0.2, 'square'); break;
+    case 'tambor': tonoS(t, 0.16, 160, 70, 0.8); ruido(t, 0.05, 1800, 1.5, 0.3, 'bandpass'); break;
+    case 'fuego': ruido(t, 0.5, 700, 0.5, 0.5, 'lowpass', sfxGain, 2400); ruido(t, 0.3, 3000, 1, 0.15, 'highpass'); break;
+    case 'palmas': ruido(t, 0.04, 2200, 1.2, 0.5, 'bandpass'); ruido(t + 0.06, 0.04, 2600, 1.2, 0.4, 'bandpass'); break;
+    case 'bajo': tonoS(t, 0.9, 70, 40, 1.0); tonoS(t, 0.9, 140, 80, 0.3, 'triangle'); break;
+    case 'rayo': ruido(t, 0.8, 3000, 0.5, 0.9, 'lowpass', sfxGain, 100); tonoS(t, 0.6, 80, 30, 0.8); break;
     case 'pausa': tonoS(t, 0.1, 600, 300, 0.15, 'square'); break;
   }
 }
@@ -73,11 +80,11 @@ function tic() {
       if (CHICO[i]) ruido(t, 0.05, 2600, 3, 0.18 * CHICO[i], 'bandpass', musGain);
       if (MADERA[i]) tonoS(t, 0.04, 1600, 1500, 0.08, 'square', musGain);
       if (PIANO[i]) { tonoS(t, 0.25, 95, 55, 0.6, 'sine', musGain); }
-      if (REPI[i] && (bar % 2 === 1 || modo === 'jefe')) { tonoS(t, 0.1, 260, 160, 0.35, 'triangle', musGain); ruido(t, 0.06, 1800, 2, 0.15, 'bandpass', musGain); }
+      if (REPI[i] && (bar % 2 === 1 || modo === 'jefe' || modo === 'ult')) { tonoS(t, 0.1, 260, 160, 0.35, 'triangle', musGain); ruido(t, 0.06, 1800, 2, 0.15, 'bandpass', musGain); }
       if (BAJO[k]) { const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = mtof(BAJO[k] - 12 + (modo === 'jefe' ? -2 : 0)); const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 500; const g = ctx.createGain(); g.gain.setValueAtTime(0.14, t); g.gain.exponentialRampToValueAtTime(0.001, t + SEMI * 2.5); o.connect(f); f.connect(g); g.connect(musGain); o.start(t); o.stop(t + SEMI * 3); }
-      if (RIFF[k] && bar % 4 >= 2 && modo !== 'menu') { const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = mtof(RIFF[k] + (modo === 'jefe' ? -2 : 0)); const g = ctx.createGain(); g.gain.setValueAtTime(0.045, t); g.gain.exponentialRampToValueAtTime(0.001, t + SEMI * 1.8); o.connect(g); g.connect(musGain); o.start(t); o.stop(t + SEMI * 2); }
+      if (RIFF[k] && (bar % 4 >= 2 || modo === 'pelea') && modo !== 'menu' && modo !== 'ult') { const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = mtof(RIFF[k] + (modo === 'jefe' ? -2 : 0)); const g = ctx.createGain(); g.gain.setValueAtTime(0.045, t); g.gain.exponentialRampToValueAtTime(0.001, t + SEMI * 1.8); o.connect(g); g.connect(musGain); o.start(t); o.stop(t + SEMI * 2); }
     }
-    prox += SEMI; paso++;
+    prox += SEMI * (modo === 'pelea' || modo === 'ult' ? 0.86 : 1); paso++;
   }
 }
 export function sinteMusica(m) {

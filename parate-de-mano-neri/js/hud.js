@@ -40,6 +40,7 @@ export function dibujarHUD(x, g, W, H, tactil, oculto = false) {
   const cx = Math.max(220, Math.round(W * 0.42));
   texto(x, 'VIDAS', cx, 4, '#e8e8f0', 1, 'centro'); x.drawImage(sp.retratoChico, cx - 19, 14, 13, 13); texto(x, '×' + g.vidas, cx + 8, 17, '#ffffff', 1, 'centro');
   const tx = cx + 70; const t = Math.max(0, Math.ceil(g.tiempo)); const mm = String(Math.floor(t / 60)).padStart(2, '0'), ss = String(t % 60).padStart(2, '0');
+  if (g.infinito) { const s2 = 'OLEADA ' + (g.ola + 1); x.fillStyle = 'rgba(14,8,26,0.7)'; x.fillRect(Math.round(tx - s2.length * 4 - 4), 32, s2.length * 8 + 8, 11); texto(x, s2, tx, 34, (g.ola + 1) % 5 === 0 ? '#ff5a3a' : '#ffd23a', 1, 'centro'); }
   texto(x, 'TIEMPO', tx, 4, '#e8e8f0', 1, 'centro'); texto(x, mm + ':' + ss, tx, 14, t < 30 && Math.floor(g.t * 3) % 2 ? '#ff5a5a' : '#ffffff', 2, 'centro');
   // combo
   if (g.combo >= 2) {
@@ -67,7 +68,7 @@ export function dibujarHUD(x, g, W, H, tactil, oculto = false) {
   if (tc < 4.2 && g.estado === 'jugando') { // cartel de nivel (arranca cuando termina la cinemática) + objetivo
     const a = tc < 0.3 ? tc / 0.3 : tc > 3.8 ? (4.2 - tc) / 0.4 : 1; const yy = Math.round(H * 0.34), bw = Math.round(W * a);
     x.fillStyle = CONTORNO; x.fillRect(Math.round((W - bw) / 2), yy - 4, bw, 52); x.fillStyle = '#c8202a'; x.fillRect(Math.round((W - bw) / 2), yy - 2, bw, 2); x.fillRect(Math.round((W - bw) / 2), yy + 44, bw, 2);
-    if (a > 0.9) { const e2 = g.nv.nombre.length * 16 > W - 16 ? 1 : 2; texto(x, 'NIVEL ' + g.nv.num, Math.round(W / 2), yy + 1, '#ffffff', 1, 'centro'); texto(x, g.nv.nombre, Math.round(W / 2), yy + 13 + (e2 === 1 ? 4 : 0), '#ffd23a', e2, 'centro', CONTORNO, '#8a5a10'); texto(x, g.nv.lugar, Math.round(W / 2), yy + 33, '#9ad4ff', 1, 'centro'); if (g.nv.objetivo) { const ow = g.nv.objetivo.length * 8 + 12; x.fillStyle = CONTORNO; x.fillRect(Math.round((W - ow) / 2), yy + 52, ow, 14); texto(x, g.nv.objetivo, Math.round(W / 2), yy + 55, '#7aff7a', 1, 'centro'); }
+    if (a > 0.9) { const e2 = g.nv.nombre.length * 16 > W - 16 ? 1 : 2; texto(x, g.infinito ? 'MODO INFINITO' : 'NIVEL ' + g.nv.num, Math.round(W / 2), yy + 1, '#ffffff', 1, 'centro'); texto(x, g.nv.nombre, Math.round(W / 2), yy + 13 + (e2 === 1 ? 4 : 0), '#ffd23a', e2, 'centro', CONTORNO, '#8a5a10'); texto(x, g.nv.lugar, Math.round(W / 2), yy + 33, '#9ad4ff', 1, 'centro'); if (g.nv.objetivo) { const ow = g.nv.objetivo.length * 8 + 12; x.fillStyle = CONTORNO; x.fillRect(Math.round((W - ow) / 2), yy + 52, ow, 14); texto(x, g.nv.objetivo, Math.round(W / 2), yy + 55, '#7aff7a', 1, 'centro'); }
       const tw = g.nv.nombre.length * 8 * e2, ic = iconoNivel(g.nv.id); if (W / 2 + tw / 2 + 40 < W) { x.drawImage(ic, Math.round(W / 2 - tw / 2 - 36), yy + 9); x.drawImage(ic, Math.round(W / 2 + tw / 2 + 10), yy + 9); } }
   }
   if (g.mensaje) { const m = g.mensaje; if (Math.floor(m.t * 5) % 2 === 0) texto(x, m.txt, Math.round(W / 2), Math.round(H * 0.3), '#ffd23a', m.txt.length * 16 > W - 16 ? 1 : 2, 'centro', CONTORNO, '#8a3a10'); }

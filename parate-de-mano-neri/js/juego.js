@@ -13,7 +13,7 @@ import { director, pensar, seguirCombo } from './ia.js';
 import { Eventos } from './eventos.js';
 import { gradoSuave, cuadroG, spriteG, silueta, purgarGrado } from './grado.js';
 import { Cinematica, retratoCara } from './cinematica.js';
-import { guionInicio, JEFE, FIN } from './guion.js';
+import { guionInicio, JEFE, FIN, EVENTOS_PELEA } from './guion.js';
 import { efectos, DIOS } from './progreso.js';
 
 const GRAV = 920;
@@ -58,7 +58,8 @@ const FRENTE = { cuadra: ['carton', 'cajon', 'garrafa', 'cajaBiz', 'carton', 'bo
 export class Juego {
   // nivel: índice en NIVELES; previo: {puntos, vidas, comboMax} que vienen del nivel anterior
   constructor(claveJugador, vista, ropa = null, nivel = 0, previo = null, opciones = null) {
-    this.ropa = ropa; this.vista = vista; this.nivelIdx = nivel; const nv = this.nv = NIVELES[nivel];
+    this.ropa = ropa; this.vista = vista; this.nivelIdx = nivel; this.infinito = !!(opciones && opciones.infinito);
+    const nv = this.nv = this.infinito ? Object.assign({}, NIVELES[nivel], { nombre: NIVELES[nivel].nombre, oleadas: [{ cam: 0, enemigos: [['buzo', 0]] }] }) : NIVELES[nivel];
     this.capaCalle = calle(nv).canvas;
     this.capaLejos = lejos(1600, nv.lejos, nv.hora); this.capaMedio = medio(2400, nv.medio, nv.hora); this.sol = sol(nv.hora);
     this.grado = gradoSuave(nv.hora); this.dif = nv.dif || 1; this.hpMul = 1 + (nv.num - 1) * 0.06;
@@ -94,6 +95,24 @@ export class Juego {
       this.sinCine = !!(opciones && opciones.sinCine);
       if (gi.length && !this.sinCine) this.iniciarCine(gi, () => { this.t0 = this.t; }); }
     musica(nv.musica); ambiente(nv.ambiente); sonar('evento.nivel.inicio'); this.dale = 3; this.cartel = 3.2;
+    if (this.infinito) { this.prepararInfinito(); musica('mus.infinito'); }
+  }
+  // ------------------------------------------------------------- v12: modo infinito (oleadas sin fin, jefe cada 5, nombres de barrio)
+  prepararInfinito() {
+    this.sinPelea = true; this.sinCine = true; this.olas = []; this.ola = 0; this.vidas = 3; this.tiempo = 120;
+    const normales = ['buzo', 'mati', 'cacho', 'chorro', 'guri', 'faca', 'cuida', 'dona', 'mozo', 'mamado', 'pescador', 'patova', 'tambor'];
+    const jefes = ['tano', 'chola', 'guarda', 'bocha', 'gallego', 'chapa', 'parrillero', 'capo'];
+    this.infPool = normales.filter((k) => ENEMIGOS[k]); this.infJefes = jefes.filter((k) => ENEMIGOS[k]);
+    const sets = [this.j.sp]; for (const k of this.infPool) for (let v = 0; v < 2; v++) sets.push(generar(k, v)); for (const k of this.infJefes) sets.push(generar(k, 0)); partida(sets);
+    this.infKO = 0; this.infRec = 0;
+  }
+  olaInfinita(n) {
+    const w = this.vista.w, finCam = this.nv.L - w; const cam = Math.min(finCam, 260 + n * 420); const jefe = (n + 1) % 5 === 0;
+    const r = (a) => a[Math.floor(Math.random() * a.length)]; const en = [];
+    const cant = Math.min(9, 3 + Math.floor(n * 0.6)); const pool = this.infPool.slice(0, Math.min(this.infPool.length, 4 + n));
+    if (jefe) { const k = this.infJefes[Math.floor(n / 5) % this.infJefes.length]; for (let i = 0; i < Math.min(4, 1 + Math.floor(n / 5)); i++) en.push([r(pool), i % 2]); en.push([k, 0]); }
+    else { for (let i = 0; i < cant; i++) en.push([r(pool), Math.floor(Math.random() * 2)]); if (n >= 2 && n % 3 === 2) en[en.length - 1] = [r(['cacho', 'patova', 'faca'].filter((k) => ENEMIGOS[k])), 0, { mini: true, nombre: nombreBarrio(true), hp: 2.2 + n * 0.05 }]; }
+    return { cam, enemigos: en, max: Math.min(6, 3 + Math.floor(n / 4)), infJefe: jefe };
   }
   // ------------------------------------------------------------- cinemáticas
   iniciarCine(guion, alTerminar) {
@@ -124,6 +143,7 @@ export class Juego {
     const st = ENEMIGOS[clave]; const sp = generar(clave, variante);
     const e = this.nuevoLuchador(sp, x, y); const hp = Math.round(st.hp * this.hpMul * (mini ? mini.hp || 1.8 : 1));
     Object.assign(e, { equipo: 'e', clave, st, hp, hpMax: hp, nombre: pick(st.nombres), ia: { rol: 'rodear', retro: 0, cd: 0.6 + Math.random(), react: 0, ang: Math.random() * 6.28, tiro: 2 + Math.random() * 3, frase: 2 + Math.random() * 6, tCerca: 0, hits: 0, seguidos: 0, bloqueos: 0, dd: 0 } });
+    if (this.infinito && !st.jefe && !mini) e.nombre = nombreBarrio(false, clave === 'dona');
     if (st.jefe) { e.nombre = st.nombres[0]; this.jefe = e;
       const gj = JEFE[clave]; if (gj && !this._jefeCine && !this.sinCine) { this._jefeCine = true; this.iniciarCine(gj, () => { this.jefeIntro = 2.2; this.jefeIntroMax = 2.2; sonar('evento.jefe.aparece'); }); } }
     if (mini) { e.mini = true; e.nombre = mini.nombre; this.miniActual = e; this.mensaje = { txt: '¡' + mini.nombre + '!', t: 0, dur: 2 }; sonar('evento.mini.aparece'); this.globo(e, pick(FRASES.mini), 1.6); }
@@ -580,6 +600,22 @@ export class Juego {
     if (j._st !== undefined && st < j._st && !j.muerto && j.hp > 0) { if (GORE.nivel) this.sangre.limpieza(j, this.fx); j.sangra = 0; if (st < 2) j.herC = 0; if (st < 3) j.herT = 0; }
     j._st = st;
   }
+  // v12: vuelta de una pelea 1 contra 1 (r = { gana, clasico })
+  resultadoPelea(pp, r) {
+    const j = this.j; if (j) { j.invul = Math.max(j.invul || 0, 1.2); j.est = 'quieto'; j.t = 0; j.atq = null; }
+    if (pp.tipo === 'jefe') {
+      const b = this.jefe;
+      if (r.gana && b) { b.hp = 0; this.koEnemigo(b); b.est = 'piso'; b.t = 0; b.z = 0; b.vz = 0; b.vx = 0; b.muerto = true; this.colaSpawn.length = 0;
+        if (this.nv.id === 'cerro' && !this.sinCine) { this._esperaZombi = true; this.iniciarCine(EVENTOS_PELEA.zombi, () => { this.pidePelea = { tipo: 'zombi', id: 'zombi' }; }); } }
+      else { this.sinPelea = true; if (b) { b.invul = 1; b.cara = b.x < j.x ? 1 : -1; } this.mensaje = { txt: '¡A LA ANTIGUA!', t: 0, dur: 1.6 }; }
+      return;
+    }
+    const fin = EVENTOS_PELEA[pp.tipo + (r.gana ? 'Gana' : 'Pierde')];
+    if (!r.gana && j) j.hp = Math.max(1, Math.round(j.hp * 0.75));
+    if (r.gana) { this.puntos += pp.tipo === 'zombi' ? 30000 : 15000; this.soltarPlata(j.x + 30, j.y, pp.tipo === 'zombi' ? 60 : 40); }
+    if (fin && !this.sinCine) this.iniciarCine(fin, () => { this._esperaZombi = false; this.dale = 3.2; });
+    else { this._esperaZombi = false; this.dale = 3.2; }
+  }
   koEnemigo(o) {
     if (o.ko) return; o.ko = true; this.stats.ko++; this.puntos += o.st.puntos * (o.mini ? 2 : 1); voz(o.clave, 'ko', this.pan(o.x));
     if (o.st.jefe) { this.lento = 1.4; this.temblor = 0.5; sonar('evento.jefe.ko'); this.globo(o, FRASES[o.clave].ko, 2); }
@@ -705,9 +741,10 @@ export class Juego {
   encolar(l) { for (const c of l) this.colaSpawn.push(c); }
   oleadas(dt) {
     const w = this.vista.w;
+    if (this.infinito && !this.olas[this.ola] && !this.lock) { this.olas[this.ola] = this.olaInfinita(this.ola); this.hpMul = 1 + this.ola * 0.07; if (this.ola > 0) { this.mensaje = { txt: this.olas[this.ola].infJefe ? '¡OLEADA ' + (this.ola + 1) + ': JEFE!' : 'OLEADA ' + (this.ola + 1), t: 0, dur: 1.8 }; sonar('evento.infinito.ola'); } }
     const o = this.olas[this.ola];
     if (!this.lock && o && this.cam >= o.cam - 0.5) {
-      this.lock = o; this.encolar(o.enemigos); this.tSpawn = 0.3; this.tLock = 0; this.ev.programar(o.eventos);
+      this.lock = o; this.encolar(o.enemigos); this.tSpawn = 0.3; this.tLock = 0; this.ev.programar(o.eventos); if (o.infJefe) musica('mus.jefe');
       if (o.jefe) { if (this.sinCine || !JEFE[this.jefeClave && this.jefeClave[0]]) { this.jefeIntro = 2.2; this.jefeIntroMax = 2.2; } this.tiempo = Math.max(this.tiempo, this.nv.id === 'rambla' ? 180 : 150); /* piso de reloj para el jefe */ musica(this.nv.id === 'rambla' ? 'mus.jefe.final' : 'mus.jefe'); if (this.jefeIntro > 0) sonar('evento.jefe.aparece'); }
       for (const p of this.perros) if (p.est === 'quieto') p.t = 0;
     }
@@ -715,6 +752,10 @@ export class Juego {
       this.tLock += dt;
       if (this.jefeIntro > 0) { this.jefeIntro -= dt; if (this.jefeIntro <= 0 && this.jefe) { if (!this._jefeCine) this.globo(this.jefe, FRASES[this.jefe.clave].intro, 2); voz(this.jefe.clave, 'risa'); } }
       this.tSpawn -= dt;
+      // v12: con los demás ya caídos y el jefe presentado, la pelea pasa al motor 1 contra 1
+      if (this.lock.jefe && this.jefe && !this.jefe.muerto && !this.jefe.ko && this.jefe.hp > 0 && !this.cine && !(this.jefeIntro > 0) && !this._peleaJefe && !this.sinPelea && !this.pidePelea && !(this.jefe.entrando > 0) && this.estado === 'jugando'
+        && !this.colaSpawn.some(([k]) => !ENEMIGOS[k].jefe) && !this.ents.some((e) => e.equipo === 'e' && !e.muerto && e !== this.jefe) && this.j && !this.j.muerto && this.j.hp > 0) {
+        this._peleaJefe = true; this.pidePelea = { tipo: 'jefe', id: this.jefe.clave }; }
       let enPantalla = 0; for (const e of this.ents) if (e.equipo === 'e' && !e.muerto) enPantalla++;
       // red de seguridad: un enemigo que se quedó afuera de la pantalla (huyendo, trabado contra un decorado) más de 5 s vuelve a entrar por el borde
       for (const e of this.ents) { if (e.equipo !== 'e' || e.muerto || e.entrando > 0) continue; const fuera = e.x < this.cam - 6 || e.x > this.cam + w + 6;
@@ -727,9 +768,12 @@ export class Juego {
       }
       if (!this.colaSpawn.length && enPantalla === 0 && this.tLock > 1) {
         this.ev.limpiarCola();
-        if (this.lock.jefe) { this.estado = 'gana'; this.tEstado = 0; this.ola++; this.j.est = 'festeja'; this.j.t = 0; this.bonus = Math.ceil(this.tiempo) * 10; this.puntos += this.bonus; sonar('evento.nivel.fin'); musica('mus.victoria'); voz(this.j.clave, 'festeja'); this.lock = null; return; }
-        this.lock = null; this.ola++; this.dale = 3.2; sonar('evento.dale'); this.tiempo = Math.max(this.tiempo, 90);
-        if (Math.random() < 0.6) this.globo(this.j, pick(FRASES.jugador), 1.2);
+        if (this.infinito) { if (this.lock.infJefe) musica('mus.infinito'); this.infRec = this.ola + 1; this.jefe = null; this.lock = null; this.ola++; this.dale = 2.4; sonar('evento.dale'); this.tiempo = Math.max(this.tiempo, 90); this.puntos += 1000 * this.ola; this.plataNivel.objetos += 10 + this.ola * 4; if (this.ola % 5 === 0 && this.j) { this.j.hp = this.j.hpMax; this.fx.flotante(this.j.x, this.j.y, 80, '¡VIDA LLENA!', '#7aff7a'); } return; }
+        if (this.lock.jefe && (this._esperaZombi || this.pidePelea || this.cine)) { /* evento 1 contra 1 pendiente */ }
+        else if (this.lock.jefe) { this.estado = 'gana'; this.tEstado = 0; this.ola++; this.j.est = 'festeja'; this.j.t = 0; this.bonus = Math.ceil(this.tiempo) * 10; this.puntos += this.bonus; sonar('evento.nivel.fin'); musica('mus.victoria'); voz(this.j.clave, 'festeja'); this.lock = null; return; }
+        else { this.lock = null; this.ola++; this.dale = 3.2; sonar('evento.dale');
+        if (this.nv.id === 'feria' && this.ola === 2 && !this._evPato && !this.sinPelea && !this.sinCine) { this._evPato = true; this.dale = 0; this.iniciarCine(EVENTOS_PELEA.patovica, () => { this.pidePelea = { tipo: 'patovica', id: 'patovica' }; }); } this.tiempo = Math.max(this.tiempo, 90);
+        if (Math.random() < 0.6) this.globo(this.j, pick(FRASES.jugador), 1.2); }
       }
     }
     if (this.puntos >= this.proxVida) { this.proxVida += 200000; this.vidas++; sonar('evento.vida'); this.fx.flotante(this.j.x, this.j.y, 80, '¡VIDA EXTRA!', '#7aff7a'); }
@@ -778,12 +822,17 @@ export class Juego {
     this.ev.encima(x, W, H, Y, C);
     if (GORE.nivel) this.sangre.pantalla(x, W, H, this.grado);
     // nombres y barras de enemigos comunes
+    const rot = this._rot || (this._rot = []); rot.length = 0;
     for (const e of this.ents) if (e.equipo === 'e' && !e.muerto && !e.st.jefe && !e.mini && e.x > C && e.x < C + W) {
       const ex = Math.round(this.lerp(e.px, e.x) - C), ey = Math.round(this.lerp(e.py, e.y) - this.lerp(e.pz, e.z) + Y - e.sp.h + 8);
-      texto(x, e.nombre, ex, ey - 12, e.buff > 0 ? '#ffd040' : '#ffffff', 1, 'centro');
+      // el nombre se corre hacia arriba si se pisa con otro (grupos apretados); si no entra, no se dibuja
+      const nw = e.nombre.length * 8 + 4; let ny = 0, ok = false;
+      for (const d of DESP_NOMBRE) { ny = Math.max(66, ey - 12) + d; if (ny < 66 || ny > ey - 4) continue; if (!rot.some((r) => Math.abs(r[0] - ex) * 2 < r[2] + nw && Math.abs(r[1] - ny) < 10)) { ok = true; break; } }
+      if (ok) rot.push([ex, ny, nw, e]);
       x.fillStyle = '#1b1220'; x.fillRect(ex - 19, ey - 2, 38, 6); x.fillStyle = '#5a1018'; x.fillRect(ex - 18, ey - 1, 36, 4);
       const k = Math.round(36 * Math.max(0, e.hp) / e.hpMax); x.fillStyle = '#e8303a'; x.fillRect(ex - 18, ey - 1, k, 4); x.fillStyle = '#ff8a8a'; x.fillRect(ex - 18, ey - 1, k, 1);
     }
+    for (const r of rot) texto(x, r[3].nombre, r[0], r[1], r[3].buff > 0 ? '#ffd040' : '#ffffff', 1, 'centro'); // nombres encima de las barras
     // globos de diálogo
     for (const g of this.globos) {
       const e = g.e; const gx = Math.round(this.lerp(e.px, e.x) - C), gy = Math.round(this.lerp(e.py, e.y) - this.lerp(e.pz, e.z) + Y - e.sp.h - (e.equipo === 'e' && !e.st.jefe && !e.mini ? 18 : 2));
@@ -875,3 +924,14 @@ function oscurecer(s) {
   const [cv, x] = lienzo(s.w, s.h); x.drawImage(s.d, 0, 0); x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(40,16,48,0.38)'; x.fillRect(0, 0, s.w, s.h);
   cacheOsc.set(s, cv); return cv;
 }
+
+// v12: nombres procedurales uruguayos para el modo infinito
+const APODOS = ['EL TATA', 'EL NEGRO', 'EL FLACO', 'EL GORDO', 'EL RUSO', 'EL PELADO', 'EL TURCO', 'EL CHINO', 'EL VASCO', 'EL MONO', 'EL TOTO', 'EL PITU', 'EL CHOLO', 'EL NANO', 'EL CANARIO', 'EL BETO', 'EL CHUECO', 'EL PATO', 'EL TITO', 'EL LOCO', 'EL MANCO', 'EL PURO', 'EL RULO', 'EL CUERVO', 'EL GRINGO', 'EL TANITO', 'EL PELUSA', 'EL CHIQUI', 'EL OSO', 'EL TERO'];
+const NOMBRES = ['WASHINGTON', 'NELSON', 'RICHARD', 'MAICOL', 'BRAIAN', 'JONATHAN', 'WILSON', 'DARWIN', 'NAHUEL', 'ALVARITO', 'CHARLY', 'FREDDY', 'OBDULIO', 'ROBERT', 'JHONNY', 'ELBIO', 'MILTON', 'HEBER'];
+const BARRIOS = ['DEL CERRO', 'DE LA TEJA', 'DE MALVÍN', 'DE PIEDRAS BLANCAS', 'DEL CORDÓN', 'DE LA UNIÓN', 'DE CASAVALLE', 'DEL PRADO', 'DE MAROÑAS', 'DE LA AGUADA', 'DEL BUCEO', 'DE POCITOS', 'DE COLÓN', 'DE SAYAGO', 'DE PUNTA CARRETAS', 'DE CAPURRO', 'DEL PASO MOLINO', 'DE LAS ACACIAS', 'DE PEÑAROL', 'DEL BORRO'];
+const OFICIOS = ['DE LA FERIA', 'DEL BONDI', 'DE LA CANCHITA', 'DEL BOLICHE', 'DE LA PARADA', 'DEL TALLER', 'DE LA CANTINA'];
+const DONAS = ['DOÑA NELLY', 'DOÑA ROSA', 'DOÑA BETTY', 'DOÑA GLADYS', 'DOÑA MIRTA', 'DOÑA BLANCA', 'DOÑA ELSA', 'DOÑA TERESA', 'DOÑA OLGA', 'DOÑA NORMA'];
+const DESP_NOMBRE = [0, -10, -20, 8];
+export function nombreBarrio(mini = false, dona = false) { const r = (a) => a[Math.floor(Math.random() * a.length)]; if (dona) return r(DONAS) + ' ' + r(Math.random() < 0.6 ? BARRIOS : OFICIOS);
+  if (mini) return r(['EL GRAN ', 'EL TERRIBLE ', 'EL CAPO ']) + r(APODOS).replace('EL ', '') + ' ' + r(BARRIOS);
+  const k = Math.random(); return k < 0.5 ? r(APODOS) + ' ' + r(BARRIOS) : k < 0.8 ? r(NOMBRES) + ' ' + r(OFICIOS) : r(APODOS) + ' ' + r(OFICIOS); }

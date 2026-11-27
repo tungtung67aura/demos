@@ -1,8 +1,8 @@
 // Entrada unificada: teclado, joystick (Gamepad API) y controles táctiles (D-pad de 8 direcciones + botones).
 // Doble toque izquierda/derecha (≤ 280 ms) = correr mientras se mantiene (E.corre = -1/1); vale para cruceta, teclado y pad.
-export const E = { dx: 0, dy: 0, corre: 0, buf: { pina: 0, patada: 0, salto: 0, especial: 0, pausa: 0, ok: 0, atras: 0 }, mant: { pina: false, patada: false, salto: false, especial: false }, tactil: false, ultimo: 'teclado', taps: [] };
+export const E = { dx: 0, dy: 0, corre: 0, buf: { pina: 0, patada: 0, salto: 0, especial: 0, super: 0, pausa: 0, ok: 0, atras: 0 }, mant: { pina: false, patada: false, salto: false, especial: false, super: false }, tactil: false, ultimo: 'teclado', taps: [] };
 const teclas = new Set();
-const MAPA = { KeyJ: 'pina', KeyZ: 'pina', KeyK: 'patada', KeyX: 'patada', KeyL: 'salto', Space: 'salto', KeyC: 'salto', KeyI: 'especial', KeyU: 'especial', KeyV: 'especial', Escape: 'pausa', KeyP: 'pausa', Enter: 'ok' };
+const MAPA = { KeyJ: 'pina', KeyZ: 'pina', KeyK: 'patada', KeyX: 'patada', KeyL: 'salto', Space: 'salto', KeyC: 'salto', KeyI: 'especial', KeyU: 'especial', KeyV: 'especial', KeyO: 'super', KeyH: 'super', Escape: 'pausa', KeyP: 'pausa', Enter: 'ok' };
 const BUF = 0.16;
 function apretar(b) { E.buf[b] = BUF; if (b in E.mant) E.mant[b] = true; if (b === 'pina' || b === 'salto') E.buf.ok = BUF; }
 function soltar(b) { if (b in E.mant) E.mant[b] = false; }
@@ -31,11 +31,12 @@ export function initEntrada(raiz) {
   zona.addEventListener('touchend', fin); zona.addEventListener('touchcancel', fin);
   E.dpad = dpad;
   raiz.querySelectorAll('[data-b]').forEach((el) => {
-    const b = el.dataset.b;
-    el.addEventListener('touchstart', (e) => { e.preventDefault(); E.tactil = true; E.ultimo = 'tactil'; apretar(b); el.classList.add('on'); if (navigator.vibrate && b !== 'pausa') navigator.vibrate(8); }, { passive: false });
+    // el botón se lee al tocar (en la pelea cambian de función: SALTO pasa a ser SÚPER)
+    let b = el.dataset.b;
+    el.addEventListener('touchstart', (e) => { e.preventDefault(); E.tactil = true; E.ultimo = 'tactil'; b = el.dataset.b; apretar(b); el.classList.add('on'); if (navigator.vibrate && b !== 'pausa') navigator.vibrate(8); }, { passive: false });
     const up = (e) => { e.preventDefault(); soltar(b); el.classList.remove('on'); };
     el.addEventListener('touchend', up); el.addEventListener('touchcancel', up);
-    el.addEventListener('mousedown', (e) => { e.preventDefault(); apretar(b); }); el.addEventListener('mouseup', () => soltar(b));
+    el.addEventListener('mousedown', (e) => { e.preventDefault(); b = el.dataset.b; apretar(b); }); el.addEventListener('mouseup', () => soltar(b));
   });
 }
 // toques/clicks sobre el canvas (menús) en coordenadas internas
@@ -53,7 +54,7 @@ export function leerEntrada() {
     if (Math.hypot(ax, ay) > 0.3) { dx = ax; dy = ay; E.ultimo = 'pad'; }
     const bt = (i) => p.buttons[i] && p.buttons[i].pressed;
     if (bt(14)) dx = -1; if (bt(15)) dx = 1; if (bt(12)) dy = -1; if (bt(13)) dy = 1;
-    const m = { 2: 'pina', 3: 'patada', 0: 'salto', 1: 'especial', 5: 'especial', 9: 'pausa' };
+    const m = { 2: 'pina', 3: 'patada', 0: 'salto', 1: 'especial', 5: 'especial', 4: 'super', 7: 'super', 9: 'pausa' };
     for (const i in m) { const v = bt(+i); const prev = padPrev[p.index * 20 + +i]; if (v && !prev) { apretar(m[i]); E.ultimo = 'pad'; } if (!v && prev) soltar(m[i]); padPrev[p.index * 20 + +i] = v; }
   }
   E.dx = Math.max(-1, Math.min(1, dx)); E.dy = Math.max(-1, Math.min(1, dy));
@@ -65,3 +66,9 @@ export function leerEntrada() {
 let hPrev = 0, hUlt = 0, tUlt = -1e9;
 export function consumir(b) { if (E.buf[b] > 0) { E.buf[b] = 0; return true; } return false; }
 export function tickBuf(dt) { for (const k in E.buf) if (E.buf[k] > 0) E.buf[k] = Math.max(0, E.buf[k] - dt); }
+// controles táctiles en modo pelea: PIÑA = LEVE, PATADA = FUERTE, ESP = ESPECIAL, SALTO → SÚPER (se salta con la cruceta arriba)
+const ROT = { pina: ['PIÑA', 'LEVE'], patada: ['PATADA', 'FUERTE'], especial: ['ESP', 'ESP'], salto: ['SALTO', 'SÚPER'] };
+export function modoPelea(on) {
+  document.body.classList.toggle('en-pelea', on);
+  document.querySelectorAll('#botones [data-b], #botones [data-orig]').forEach((el) => { const o = el.dataset.orig || el.dataset.b; el.dataset.orig = o; const r = ROT[o]; if (!r) return; el.textContent = r[on ? 1 : 0]; el.dataset.b = on && o === 'salto' ? 'super' : o; });
+}

@@ -3,7 +3,7 @@ import { writeFileSync } from 'node:fs'; import { join, dirname } from 'node:pat
 const raiz = join(dirname(fileURLToPath(import.meta.url)), '..');
 const { CATALOGO, CATEGORIAS } = await import('../js/audio-ids.js');
 const { ARCHIVOS } = await import('../audio/manifest.js');
-const carpeta = { golpes: 'golpes', impactos: 'impactos', armas: 'armas', items: 'items', mov: 'mov', enemigos: 'enemigos', eventos: 'eventos', ambiente: 'ambiente', musica: 'musica', voces: 'voces', frases: 'frases', ui: 'ui' };
+const carpeta = { golpes: 'golpes', impactos: 'impactos', armas: 'armas', items: 'items', mov: 'mov', enemigos: 'enemigos', eventos: 'eventos', ambiente: 'ambiente', musica: 'musica', voces: 'voces', frases: 'frases', ui: 'ui', pelea: 'pelea' };
 let md = `# Audio de Párate de mano ñeri — lista de IDs\n\nGenerado con \`node tools/audio-doc.mjs\`. Total: **${Object.keys(CATALOGO).length} IDs**.\n\n`;
 md += `## Cómo cargar los audios\n1. Guardá cada archivo en \`audio/<carpeta>/\` con el **nombre exacto del ID** y extensión \`.ogg\` (ej.: \`audio/golpes/golpe.pina.ogg\`).\n`;
 md += `2. Variantes al azar: \`golpe.pina-1.ogg\`, \`golpe.pina-2.ogg\`… Música y ambientes se repiten en loop solos.\n`;
