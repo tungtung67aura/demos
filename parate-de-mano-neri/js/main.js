@@ -6,7 +6,7 @@ import { generar, DEFS, dibujarCuadro, fijarQ, calentar, partida, vigente } from
 import { SLOTS, opciones } from './ropa.js';
 import { Juego } from './juego.js';
 import { dibujarHUD } from './hud.js';
-import { E, initEntrada, leerEntrada, tickBuf, registrarTap } from './entrada.js';
+import { E, initEntrada, leerEntrada, tickBuf, registrarTap, nomBoton, usaPad, CTRL, ESQUEMAS, NOM_ESQ, guardarCtrl, abrirEditor } from './entrada.js';
 import { DIOS, alternarDios, P as PROG, nivelMaxIdx, ganadosIdx, ganarNivel, guardar as guardarProg, gastarUso } from './progreso.js';
 import { abrirTienda, pasoTienda, dibujarTienda } from './tienda.js';
 import { iniciarAudio, sonar, musica, setMusica, suspender } from './audio.js';
@@ -19,7 +19,7 @@ import { Arcade } from './pelea/arcade.js';
 import { DE_CAMPANA } from './pelea/luchadores.js';
 import { recordInfinito, PP } from './pelea/progreso-pelea.js';
 
-export const VERSION = 'bb-v12';
+export const VERSION = 'bb-v12.1';
 // sonidos de menú por ID (audio-ids.js): sin archivo, no suena (o suena el respaldo sintetizado si el ID lo tiene)
 const UI = { menu: 'ui.mover', dale: 'ui.ok', pausa: 'ui.pausa', item: 'ui.ropa', atras: 'ui.atras' };
 function sfx(k) { sonar(UI[k] || k); }
@@ -30,7 +30,7 @@ const DT = 1 / 120;
 const cv = document.getElementById('juego'); const x = cv.getContext('2d', { alpha: false });
 let W = 480, H = 270, escala = 2, D = 2; // D: densidad del lienzo (subpíxeles por píxel del juego; los luchadores se dibujan con el doble de detalle)
 const raiz = document.getElementById('raiz');
-const cfg = Object.assign({ musica: true, sangre: 2 }, JSON.parse(localStorage.getItem('bb-cfg') || '{}'));
+const cfg = Object.assign({ musica: true, sangre: 2 }, JSON.parse(localStorage.getItem('bb-cfg') || '{}')); cfg.ctrl = CTRL; // los controles táctiles viven en la misma partida
 GORE.nivel = [0, 1, 2].includes(cfg.sangre) ? cfg.sangre : 2;
 let record = +(localStorage.getItem('bb-record') || 0);
 
@@ -72,7 +72,7 @@ let pantalla = 'carga', juego = null, elegido = 0, tP = 0, pausaSel = 0, contado
 const CLAVES = ['seba', 'pelado', 'pato'];
 // v12: motor de pelea y modos arcade (menú principal, torres, pelea libre, infinito, récords)
 const arcade = new Arcade({ W: () => W, H: () => H, campana: () => { pantalla = 'seleccion'; tP = 0; musica('mus.menu'); }, titulo: () => { pantalla = 'titulo'; tP = 0; },
-  infinito: () => empezarInfinito(), controles: (v) => mostrarControles(v), bot: () => !!window.__bb.bot });
+  infinito: () => empezarInfinito(), controles: (v) => mostrarControles(v), dibujarControles: (c, w, h) => dibujarControles(c, w, h, true), pasoControles: (I) => pasoControles(I.n, I.ok, I.tap, I.atras || I.pausa), bot: () => !!window.__bb.bot });
 // v12: el jefe (o un evento) se pelea en el motor 1 contra 1 y al terminar se vuelve al nivel
 function pelearEnCampana(pp) {
   const g = juego, clave = g.j.clave || CLAVES[elegido]; const idx = g.nivelIdx; const dif = idx < 2 ? 1 : idx < 6 ? 2 : 3;
@@ -118,6 +118,7 @@ addEventListener('keydown', (e) => { if (pantalla === 'titulo' && !e.repeat && T
 function trucoListo() { return truco.join('') === TRUCO; }
 addEventListener('touchend', () => { iniciarAudio(); }, { passive: true });
 addEventListener('keydown', () => { iniciarAudio(); musica(pantalla === 'juego' ? musJuego() : pantalla === 'titulo' ? 'mus.titulo' : 'mus.menu'); }, { once: false });
+const alDesconectar = () => { if (pantalla === 'juego') { pantalla = 'pausa'; pausaSel = 0; } if (pantalla === 'arcade' && arcade.enPelea) arcade.pausa = { sel: 0 }; };
 document.addEventListener('visibilitychange', () => { if (document.hidden) { if (pantalla === 'juego') { pantalla = 'pausa'; pausaSel = 0; } if (pantalla === 'arcade' && arcade.enPelea) arcade.pausa = { sel: 0 }; suspender(true); } else suspender(false); });
 
 // navegación de menú (bordes de dirección)
@@ -169,7 +170,7 @@ function bucle(ahora) {
   let dt = (ahora - ultimo) / 1000; ultimo = ahora; if (dt > 0.1) dt = 0.1; if (dt < 0) dt = 0;
   med.frames++; med.dtMax = Math.max(med.dtMax, dt); med.hist.push(dt * 1000); if (med.hist.length > 240) med.hist.shift();
   if (ahora - med.t0 > 1000) { med.fps = Math.round(med.frames * 1000 / (ahora - med.t0)); med.frames = 0; med.t0 = ahora; }
-  const t0b = performance.now(); leerEntrada();
+  const t0b = performance.now(); E.menu = !(pantalla === 'juego' || (pantalla === 'arcade' && arcade.enPelea)); E.correMant = pantalla === 'juego'; leerEntrada();
   if (window.__bb.bot && juego && pantalla === 'juego') { if (juego.cine && !window.__bb.verCine) juego.cine.saltar(); botControl(); botControl.activo = true; }
   else if (botControl.activo) { botControl.activo = false; E.tdx = 0; E.tdy = 0; E.dx = 0; E.dy = 0; } // el bot suelta el stick simulado al apagarse
   if (window.__bb.bot && pantalla === 'continuar') { E.buf.ok = 0.1; }
@@ -204,6 +205,7 @@ function bucle(ahora) {
 }
 
 function menus(dt) {
+  if (E.editando) { E.taps.length = 0; return; }
   const n = nav(); const t = tap();
   if (avisoDios) { avisoDios.t -= dt; if (avisoDios.t <= 0) avisoDios = null; }
   if (pantalla === 'titulo') {
@@ -231,11 +233,13 @@ function menus(dt) {
     if (ok()) { if (vest.fila < SLOTS.length) { vest.fila = SLOTS.length; sfx('menu'); } else { sfx('dale'); aLaCancha(); return; } }
     if (E.buf.atras > 0 || E.buf.pausa > 0) { E.buf.atras = 0; E.buf.pausa = 0; pantalla = 'seleccion'; tP = 0; }
   } else if (pantalla === 'pausa') {
-    if (n.y) { pausaSel = (pausaSel + n.y + 4) % 4; sfx('menu'); }
+    if (verCtrl) { const at = E.buf.atras > 0 || E.buf.pausa > 0; E.buf.atras = 0; E.buf.pausa = 0; if (pasoControles(n, ok(), t, at)) { verCtrl = false; sfx('menu'); } return; }
+    if (E.buf.atras > 0) { E.buf.atras = 0; pantalla = 'juego'; return; }
+    if (n.y) { pausaSel = (pausaSel + n.y + 5) % 5; sfx('menu'); }
     let elegir = ok() ? pausaSel : -1;
-    if (t) { for (let i = 0; i < 4; i++) { const y = Math.round(H / 2 - 58) + 40 + i * 18; if (t[1] > y - 5 && t[1] < y + 13 && Math.abs(t[0] - W / 2) < 92) elegir = i; } }
+    if (t) { for (let i = 0; i < 5; i++) { const y = Math.round(H / 2 - 67) + 40 + i * 18; if (t[1] > y - 5 && t[1] < y + 13 && Math.abs(t[0] - W / 2) < 92) elegir = i; } }
     if (E.buf.pausa > 0) { E.buf.pausa = 0; elegir = 0; }
-    if (elegir === 0) { pantalla = 'juego'; } else if (elegir === 1) { cfg.musica = !cfg.musica; setMusica(cfg.musica); localStorage.setItem('bb-cfg', JSON.stringify(cfg)); } else if (elegir === 2) { cfg.sangre = GORE.nivel = (GORE.nivel + 2) % 3; localStorage.setItem('bb-cfg', JSON.stringify(cfg)); if (!GORE.nivel && juego) juego.sangre.limpiar(); else if (juego) juego.sangre.calentar(juego.grado); sfx('menu'); } else if (elegir === 3 && juego && juego.infinito) { finInfinito(); } else if (elegir === 3) { pantalla = 'titulo'; juego = null; mostrarControles(false); musica('mus.menu'); if (nuevaVersion) location.reload(); }
+    if (elegir === 0) { pantalla = 'juego'; } else if (elegir === 1) { cfg.musica = !cfg.musica; setMusica(cfg.musica); localStorage.setItem('bb-cfg', JSON.stringify(cfg)); } else if (elegir === 2) { cfg.sangre = GORE.nivel = (GORE.nivel + 2) % 3; localStorage.setItem('bb-cfg', JSON.stringify(cfg)); if (!GORE.nivel && juego) juego.sangre.limpiar(); else if (juego) juego.sangre.calentar(juego.grado); sfx('menu'); } else if (elegir === 3) { verCtrl = true; sfx('menu'); } else if (elegir === 4 && juego && juego.infinito) { finInfinito(); } else if (elegir === 4) { pantalla = 'titulo'; juego = null; mostrarControles(false); musica('mus.menu'); if (nuevaVersion) location.reload(); }
   } else if (pantalla === 'continuar') {
     contador -= dt; juego.paso(0, E);
     if (ok() || t) { juego.vidas = 2; juego.puntos = 0; juego.proxVida = 100000; juego.estado = 'jugando'; sonar('evento.continuar'); const j = juego.j; j.hp = j.hpMax; j.muerto = false; j.est = 'levanta'; j.t = 0; j.invul = 3; pantalla = 'juego'; }
@@ -256,6 +260,34 @@ function menus(dt) {
   }
 }
 
+// pantalla CONTROLES (pausa del juego y de la pelea): el mapeo del mando en su estilo (PS o Xbox), o el del teclado
+let verCtrl = false;
+const ctrlUI = { sel: 0 };
+function opsCtrl() { return ['ESQUEMA: ' + NOM_ESQ[CTRL.esquema], 'CRUCETA: ' + (CTRL.cruceta === 'flotante' ? 'FLOTANTE' : 'FIJA'), 'EDITAR BOTONES', 'VOLVER']; }
+function zCtrl(i) { const w = 300, h = 196, px = Math.round(W / 2 - w / 2), py = Math.round(H / 2 - h / 2); return [px + 10, py + 22 + i * 13, w - 20, 12]; }
+// devuelve true cuando se cierra la pantalla
+function pasoControles(n, okP, t, atras) {
+  if (n.y) { ctrlUI.sel = (ctrlUI.sel + n.y + 4) % 4; sfx('menu'); }
+  let el = okP ? ctrlUI.sel : -1; if (t) for (let i = 0; i < 4; i++) if (dentro(t, zCtrl(i))) { el = i; ctrlUI.sel = i; }
+  if (n.x && ctrlUI.sel < 2) el = ctrlUI.sel;
+  if (atras) return true;
+  if (el === 0) { const d = n.x || 1; CTRL.esquema = ESQUEMAS[(ESQUEMAS.indexOf(CTRL.esquema) + d + 3) % 3]; guardarCtrl(); sfx('menu'); }
+  else if (el === 1) { CTRL.cruceta = CTRL.cruceta === 'flotante' ? 'fija' : 'flotante'; guardarCtrl(); sfx('menu'); }
+  else if (el === 2) { abrirEditor(); sfx('menu'); }
+  else if (el === 3) return true;
+  return false; }
+const DESC_ESQ = { simple: 'ESP + DIRECCIÓN · CORRÉS MANTENIENDO · AYUDA A APUNTAR', clasico: 'ESP + DIRECCIÓN · CORRÉS MANTENIENDO · POCA AYUDA', pro: 'ADEMÁS ↓→ / ↓← + GOLPE · CORRER: 2 TOQUES · SIN AYUDA' };
+function dibujarControles(c, W, H, pelea) {
+  const pad = usaPad(); const N = nomBoton; velo(0.72); const w = 300, h = 196, px = Math.round(W / 2 - w / 2), py = Math.round(H / 2 - h / 2); panel(px, py, w, h);
+  texto(c, 'CONTROLES' + (pad ? ' · MANDO ' + (E.pad.estilo === 'ps' ? 'PLAYSTATION' : 'XBOX/MFI') : esTactil() ? ' · TÁCTIL' : ' · TECLADO'), W / 2, py + 8, '#ffd23a', 1, 'centro');
+  opsCtrl().forEach((s, i) => { const z = zCtrl(i), sel = ctrlUI.sel === i; if (sel) { c.fillStyle = 'rgba(255,210,58,0.16)'; c.fillRect(z[0], z[1] - 2, z[2], z[3]); c.fillStyle = '#ffd23a'; c.fillRect(z[0], z[1] - 2, 2, z[3]); }
+    texto(c, (i < 2 ? '< ' : '') + s + (i < 2 ? ' >' : ''), W / 2, z[1], sel ? '#ffffff' : '#9a8aa8', 1, 'centro'); });
+  texto(c, DESC_ESQ[CTRL.esquema], W / 2, py + 76, '#7aff7a', 1, 'centro');
+  const mover = pad ? 'STICK / CRUCETA' : esTactil() ? 'CRUCETA' : 'FLECHAS / WASD';
+  const filas = pelea ? [['MOVER · SALTO ARRIBA', mover], ['LEVE · FUERTE', N('pina') + ' · ' + N('patada')], ['ESPECIAL (+ ATRÁS/ABAJO = 2)', N('especial') + (pad ? ' / ' + N('esp2') : '')], ['SÚPER (BARRA LLENA)', N('super')], ['AGARRE', N('agarre')], ['BLOQUEAR', 'MANTENER ATRÁS'], ['CORRER / DASH', pad ? N('correr') + ' O 2 TOQUES' : '2 TOQUES'], ['PAUSA', N('pausa')]]
+    : [['MOVER', mover], ['PIÑA · LEVANTAR', N('pina')], ['PATADA · TIRAR', N('patada')], ['SALTO', N('salto')], ['ESPECIAL · SÚPER', N('especial') + ' · ' + N('super')], ['AGARRE', 'CAMINAR CONTRA ÉL'], ['CORRER', pad ? N('correr') + ' O 2 TOQUES' : 'MANTENER O 2 TOQUES'], ['MENÚS', pad ? N('ok') + ' ACEPTA · ' + N('atras') + ' VUELVE' : 'PIÑA · ESC']];
+  filas.forEach(([a, b], i) => { const yy = py + 90 + i * 12; texto(c, a, px + 12, yy, '#c8b8d8', 1, 'izq'); texto(c, b, px + w - 12, yy, '#ffffff', 1, 'der'); });
+}
 // ---------- dibujo ----------
 function dibujar(alfa) {
   if (pantalla === 'juego' || pantalla === 'pausa' || pantalla === 'continuar' || (pantalla === 'gana' && juego)) {
@@ -263,12 +295,13 @@ function dibujar(alfa) {
     if (juego.cine) juego.cine.dibujar(x, W, H, esTactil()); else dibujarHUD(x, juego, W, H, E.tactil || matchMedia('(pointer:coarse)').matches, pantalla !== 'juego');
     if (E.tactil && (med.frames & 7) === 0) revisarTapado();
     if (pantalla === 'pausa') {
-      velo(0.55); const py = Math.round(H / 2 - 58); panel(W / 2 - 92, py, 184, 132);
+      velo(0.55); const py = Math.round(H / 2 - 67); panel(W / 2 - 92, py, 184, 150);
       texto(x, 'PAUSA', W / 2, py + 9, '#ffd23a', 2, 'centro', CONTORNO, '#8a5a10');
-      ['SEGUIR', 'MÚSICA: ' + (cfg.musica ? 'SÍ' : 'NO'), 'SANGRE: ' + textoGore(), 'SALIR AL MENÚ'].forEach((s, i) => { const yy = py + 40 + i * 18; const sel = pausaSel === i;
+      ['SEGUIR', 'MÚSICA: ' + (cfg.musica ? 'SÍ' : 'NO'), 'SANGRE: ' + textoGore(), 'CONTROLES', 'SALIR AL MENÚ'].forEach((s, i) => { const yy = py + 40 + i * 18; const sel = pausaSel === i;
         if (sel) { x.fillStyle = 'rgba(255,210,58,0.16)'; x.fillRect(Math.round(W / 2 - 80), yy - 4, 160, 15); x.fillStyle = '#ffd23a'; x.fillRect(Math.round(W / 2 - 80), yy - 4, 2, 15); }
         texto(x, s, W / 2, yy, sel ? '#ffffff' : '#9a8aa8', 1, 'centro'); if (sel && Math.floor(tP * 3) % 2 === 0) texto(x, '>', W / 2 - 72, yy, '#ffd23a', 1); });
-      texto(x, esTactil() ? 'TOCÁ UNA OPCIÓN' : 'ARRIBA/ABAJO · PIÑA', W / 2, py + 116, '#7a6a8a', 1, 'centro');
+      texto(x, esTactil() ? 'TOCÁ UNA OPCIÓN' : usaPad() ? 'CRUCETA · ' + nomBoton('ok') + ': ELEGIR · ' + nomBoton('atras') + ': VOLVER' : 'ARRIBA/ABAJO · PIÑA', W / 2, py + 134, '#7a6a8a', 1, 'centro');
+      if (verCtrl) dibujarControles(x, W, H, false);
     }
     if (pantalla === 'continuar') { velo(0.62); const py = Math.round(H / 2 - 66); panel(W / 2 - 104, py, 208, 132, '#ff5a4a');
       texto(x, '¿SEGUÍS?', W / 2, py + 9, '#ff5a4a', 2, 'centro', CONTORNO, '#5a0a0a');
@@ -276,7 +309,7 @@ function dibujar(alfa) {
       const cx = Math.round(W / 2), cy = py + 62, n = Math.max(0, Math.ceil(contador)), fr = contador - Math.floor(contador);
       for (let q = 0; q < 20; q++) { const a = -Math.PI / 2 + q / 20 * Math.PI * 2; const X = Math.round(cx + Math.cos(a) * 25) - 2, Y = Math.round(cy + Math.sin(a) * 25) - 2; x.fillStyle = CONTORNO; x.fillRect(X - 1, Y - 1, 6, 6); x.fillStyle = q / 20 < fr ? '#ffd23a' : '#3a2a4a'; x.fillRect(X, Y, 4, 4); }
       texto(x, String(n), cx, cy - 12, '#ffffff', 3, 'centro', CONTORNO);
-      if (Math.floor(tP * 2.5) % 2 === 0) texto(x, esTactil() ? 'TOCÁ PARA SEGUIR' : 'APRETÁ PIÑA', W / 2, py + 98, '#ffd23a', 1, 'centro');
+      if (Math.floor(tP * 2.5) % 2 === 0) texto(x, esTactil() ? 'TOCÁ PARA SEGUIR' : 'APRETÁ ' + (usaPad() ? nomBoton('ok') : 'PIÑA'), W / 2, py + 98, '#ffd23a', 1, 'centro');
       texto(x, 'LOS PUNTOS VUELVEN A CERO', W / 2, py + 113, '#9a8aa8', 1, 'centro'); }
     if (pantalla === 'gana' || (juego && juego.estado === 'gana' && !juego.cine)) {
       if (juego.tEstado > 0.8) {
@@ -302,7 +335,7 @@ function dibujar(alfa) {
             texto(x, 'TOTAL              ' + cP(pr.total), W / 2, 168, '#7aff7a', 1, 'centro', CONTORNO, '#1a5a1a');
             if (k2 >= 1) { texto(x, 'EN EL BOLSILLO: $U ' + PROG.plata, W / 2, 181, '#ffffff', 1, 'centro'); texto(x, '+' + pr.puntos + ' PUNTOS DE ATRIBUTO' + (pr.puntos > 2 ? ' (SIN MORIR: +1)' : ''), W / 2, 193, '#ffd23a', 1, 'centro'); } }
           const sig = NIVELES[juego.nivelIdx + 1]; if (sig) texto(x, 'SIGUIENTE: ' + sig.nombre, W / 2, 210, '#7cc4ee', 1, 'centro'); else texto(x, '¡TERMINASTE EL JUEGO!', W / 2, 210, '#7aff7a', 1, 'centro');
-          if (tP > 1.5 && Math.floor(tP * 2) % 2) texto(x, sig ? (esTactil() ? 'TOCÁ PARA IR AL ALMACÉN' : 'PIÑA: AL ALMACÉN DE DON TITO') : 'TOCÁ PARA SEGUIR', W / 2, 228, '#ffffff', 1, 'centro');
+          if (tP > 1.5 && Math.floor(tP * 2) % 2) texto(x, sig ? (esTactil() ? 'TOCÁ PARA IR AL ALMACÉN' : (usaPad() ? nomBoton('ok') : 'PIÑA') + ': AL ALMACÉN DE DON TITO') : 'TOCÁ PARA SEGUIR', W / 2, 228, '#ffffff', 1, 'centro');
         }
       }
     }
@@ -332,7 +365,7 @@ function panel(px, py, pw, ph, acento = '#ffd23a') {
   x.fillStyle = acento; x.fillRect(px, py, pw, 2); x.fillRect(px, py + ph - 2, pw, 2);
   for (const [a, b] of [[px + 3, py + 5], [px + pw - 6, py + 5], [px + 3, py + ph - 8], [px + pw - 6, py + ph - 8]]) { x.fillStyle = CONTORNO; x.fillRect(a - 1, b - 1, 5, 5); x.fillStyle = acento; x.fillRect(a, b, 3, 3); }
 }
-const gruesa = matchMedia('(pointer:coarse)'); const esTactil = () => E.tactil || gruesa.matches;
+const gruesa = matchMedia('(pointer:coarse)'); const esTactil = () => !usaPad() && (E.tactil || gruesa.matches);
 function velo(a) { x.fillStyle = `rgba(20,10,30,${a})`; x.fillRect(0, 0, W, H); }
 let cieloMenu = null, cieloMenuK = '';
 function fondo(desp) {
@@ -354,7 +387,7 @@ function dibujarTitulo0() {
   texto(x, 'PIÑAS, BIZCOCHOS Y CANDOMBE', W / 2, cy + 76, '#ffffff', 1, 'centro');
   // personajes
   CLAVES.forEach((k, i) => { const s = generar(k, 0, ropaDe(k)); const f = s.anims.quieto[Math.floor(tP * 4 + i) % 4]; dibujarCuadro(x, f, Math.round(W / 2 - 100 + i * 70), H - 14, 1); });
-  if (Math.floor(tP * 2) % 2 === 0) texto(x, esTactil() ? 'TOCÁ PARA ARRANCAR' : 'APRETÁ PIÑA PARA ARRANCAR', W / 2, cy + 94, '#ffd23a', 1, 'centro', CONTORNO, '#5a3a10');
+  if (Math.floor(tP * 2) % 2 === 0) texto(x, esTactil() ? 'TOCÁ PARA ARRANCAR' : (usaPad() ? 'APRETÁ ' + nomBoton('ok') + ' PARA ARRANCAR' : 'APRETÁ PIÑA PARA ARRANCAR'), W / 2, cy + 94, '#ffd23a', 1, 'centro', CONTORNO, '#5a3a10');
   if (record) texto(x, 'RÉCORD ' + record, 6, H - 12, '#ffffff', 1);
   texto(x, nuevaVersion ? 'VERSIÓN NUEVA LISTA' : VERSION, W - 6, H - 12, nuevaVersion ? '#7aff7a' : '#9a8aa8', 1, 'der');
 }
@@ -470,7 +503,7 @@ function empezarInfinito() { // v12: oleadas sin fin en un nivel al azar de los 
   juego = new Juego(clave, { w: W, h: H }, ropaDe(clave), nivel, null, { sinCine: true, infinito: true }); window.__bb.juego = juego; pantalla = 'juego'; tP = 0; acc = 0; mostrarControles(true); }
 function finInfinito() { const g = juego; const olas = g.infRec || 0; const nuevo = recordInfinito('ola', olas); const rec = { nuevo, mejor: PP().infinito.ola || olas }; const plata = g.plataNivel.enemigos + g.plataNivel.objetos; PROG.plata += plata; guardarProg();
   pantalla = 'arcade'; tP = 0; mostrarControles(false); arcade.finInfinito({ olas, record: rec, ko: g.stats.ko, puntos: g.puntos, plata, combo: g.comboMax }); juego = null; window.__bb.juego = null; musica('mus.pelea.select'); }
-window.__bb = { version: VERSION, arcade, abrirArcade, med, bot: false, prog: PROG, gore: GORE, debug: /debug/.test(location.search), get pantalla() { return pantalla; }, juego: null,
+window.__bb = { version: VERSION, arcade, abrirArcade, alDesconectar, med, bot: false, prog: PROG, gore: GORE, debug: /debug/.test(location.search), get pantalla() { return pantalla; }, juego: null,
   empezar: (i = 0, nivel = 0) => { elegido = i; empezar(nivel, null, window.__bb.verCine ? null : { sinCine: true }); }, siguiente: () => siguienteNivel(), NIVELES, irA: (p) => { pantalla = p; }, ajustar, D: () => D, escala: () => escala };
 
 // ---------- service worker: se actualiza solo en el menú ----------

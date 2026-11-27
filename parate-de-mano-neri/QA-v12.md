@@ -65,3 +65,15 @@ Setup: player bot = Ñeri at CPU level 3 with no help, against each rival at dif
 - [x] Regressions after these changes: attacks 39/39 rivals, 0 failures; flujo12 24/24; ults 32 scenes, 0 errors; campaign level 1 won; perf fight p99 0.7 ms, wave p99 2.1 ms
 
 All checks passed.
+
+## v12.1 (IA de pelea, mando, controles táctiles)
+- [x] IA: espaciado por alcance real (rangoDe), castigo a la recuperación, bloqueo a reacción de especiales, anti-aire; escala por nivel (1 torpe, 2 medio, 3/Infierno completo). golpe más castigable (ini .17, rec .42).
+- [x] Torre Barrio, bot CPU 3 sin boost: completa (19/19 peleas).
+- [ ] Torre Caos sin boost
+- [ ] Torre Infierno sin boost
+- [x] Mando (Gamepad API estándar): tools-bb/v12/mando12.py 33/33, 0 errores (truco con cruceta+X, menús, select, especial/especial2/súper/agarre, pausa→CONTROLES, desconexión pausa + aviso, beat 'em up con mando PS: mover, correr L1, piña, salto, patada, especial, pausa).
+- [x] Táctil (tools-bb/v12/tactil12.py 23/23, 0 errores, iPhone 852x393): cruceta flotante (aparece bajo el pulgar, sigue al dedo, zona muerta 9 px, diagonales ~48°) y fija; mantener 250 ms = correr (y 2 toques); botones en arco 56–78 px con zona de toque +12 px; editor (mover/tamaño/opacidad, guardado en bb-cfg.ctrl, juego congelado); PAUSA → CONTROLES con ESQUEMA SIMPLE/CLÁSICO/PRO y CRUCETA; movimientos ↓↘→ solo en PRO; ESP + atrás = especial 2; SÚPER titila y sale con un botón; imán al enemigo de adelante.
+- [x] Latencia (tools-bb/v12/lat12.py, cuadros a 60 Hz desde touchstart hasta el primer cuadro activo): beat 'em up 4.0 → 3.0 (61 → 47 ms); PLENA MORTAL 4.9 → 4.0 (76 → 65 ms). Búfer 160 → 140 ms. Recuperación de leves: piña1 .11→.09, piña2 .13→.11, jab .13→.11, jabAg .14→.12; arranque piña1 .05→.035, jab .065→.05.
+- [x] Mando sigue 33/33 tras la pasada táctil.
+- [x] Re-chequeos v12.1: ataques 39×11 sin fallas ni errores; flujo12 24/24 (la prueba ahora baja una opción más: PAUSA tiene CONTROLES); campaña nivel 3 (guarda) ganado con el jefe en PLENA MORTAL, 0 errores; perf: pelea total p99 1.1 ms, oleada p99 3.5 ms, 0 errores.
+- [x] VERSION y caché del sw: bb-v12.1.

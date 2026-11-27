@@ -8,7 +8,7 @@ import { LUCHADORES, POR_ID } from './luchadores.js';
 import { Pelea, setLuchador } from './motor.js';
 import { Escenario, ESCENARIOS, IDS_ESC } from './escenarios.js';
 import { desbloqueado, torreAbierta, registrarPelea, registrarTorre, sumarPlataPelea, recordInfinito, PP , registrarVencido } from './progreso-pelea.js';
-import { modoPelea } from '../entrada.js';
+import { modoPelea, usaPad, nomBoton } from '../entrada.js';
 
 export const TORRES = [
   { id: 'barrio', nombre: 'TORRE DEL BARRIO', dif: 'NORMAL', c: '#4aa03a', pisos: 7, medio: { piso: 4, id: 'patovica', hp: 1.3, esc: 'boliche' }, jefe: { id: 'parrillero', hp: 1.5, esc: 'ciudadvieja' }, cpu: (i) => (i < 3 ? 1 : 2), premio: 120, final: 1500,
@@ -44,7 +44,7 @@ export class Arcade {
   lanzar(cfg) { cfg.dios = DIOS.on; if (cfg.p1.cpu === undefined) cfg.p1.cpu = false; this.cfgPelea = cfg; this.pelea = new Pelea(cfg); this.pausa = null; this.ir('pelea'); modoPelea(true); this.api.controles(true); window.__bb && (window.__bb.pelea = this.pelea); }
   // ------------------------------------------------------------------ paso fijo de la pelea (lo llama main a 120 Hz)
   pasoPelea(dt, E) { const p = this.pelea; if (!p) return; if (this.api.bot() && !p.F[0].cpu) { p.F[0].cpu = true; p.F[0].ia = new (p.F[1].ia.constructor)(p.F[0], 3); }
-    p.paso(dt, E); if (E.buf.pausa > 0 && p.estado !== 'fin') { E.buf.pausa = 0; this.pausa = { sel: 0 }; sonar('ui.pausa'); }
+    p.paso(dt, E); const sl = !p.F[0].cpu && p.F[0].super >= 100; if (sl !== this._sl) { this._sl = sl; document.body.classList.toggle('super-lleno', sl); } if (E.buf.pausa > 0 && p.estado !== 'fin') { E.buf.pausa = 0; this.pausa = { sel: 0 }; sonar('ui.pausa'); }
     if (p.estado === 'fin' && p.tE > 1.6) this.finPelea(p.resultado); }
   finPelea(r) { const cfg = this.cfgPelea; modoPelea(false); this.api.controles(false); const gane = r.gana === 1;
     if (cfg.modo === 'campana') { const nuevos = [...(gane ? registrarVencido(cfg.p2.id) || [] : []), ...(registrarPelea(r, cfg) || [])]; this.ir('campanaFin', { res: r, nuevos }); return; }
@@ -124,9 +124,12 @@ export class Arcade {
     if (I.ok && this.sel === 2 || (I.ok && this.sel < 2 && (this.sel = 2) && false)) { sonar('ui.ok'); const esc = c.esc === 0 ? pick(IDS_ESC) : IDS_ESC[c.esc - 1];
       this.lanzar({ p1: { id: this.p1 }, p2: { id: this.p2, cpu: true, dif: c.dif + 1 }, escenario: esc, modo: 'libre', titulo: 'LIBRE · ' + DIFS[c.dif] }); } else if (I.ok) { this.sel = 2; } }
   // ------------------------------------------------------------------ pausa dentro de la pelea
-  pasoPausa(I) { const ops = ['SEGUIR', 'REINICIAR PELEA', this.cfgPelea.modo === 'campana' ? 'PELEAR A LA ANTIGUA' : 'SALIR']; const n = I.n, t = I.tap; if (n.y) { this.pausa.sel = (this.pausa.sel + n.y + 3) % 3; sonar('ui.mover'); }
-    let el = I.ok ? this.pausa.sel : -1; if (t) ops.forEach((o, i) => { if (dentro(t, this.zLista(i, 3))) el = i; }); if (I.pausa) el = 0;
-    if (el === 0) { this.pausa = null; } else if (el === 1) { this.lanzar(this.cfgPelea); } else if (el === 2) { this.pausa = null; modoPelea(false); this.api.controles(false);
+  opsPausa() { return ['SEGUIR', 'REINICIAR PELEA', 'CONTROLES', this.cfgPelea.modo === 'campana' ? 'PELEAR A LA ANTIGUA' : 'SALIR']; }
+  pasoPausa(I) { const ops = this.opsPausa(); const n = I.n, t = I.tap;
+    if (this.pausa.ctrl) { if (this.api.pasoControles(I)) { this.pausa.ctrl = false; sonar('ui.mover'); } return; }
+    if (n.y) { this.pausa.sel = (this.pausa.sel + n.y + 4) % 4; sonar('ui.mover'); }
+    let el = I.ok ? this.pausa.sel : -1; if (t) ops.forEach((o, i) => { if (dentro(t, this.zLista(i, 4))) el = i; }); if (I.pausa || I.atras) el = 0;
+    if (el === 0) { this.pausa = null; } else if (el === 1) { this.lanzar(this.cfgPelea); } else if (el === 2) { this.pausa.ctrl = true; sonar('ui.mover'); } else if (el === 3) { this.pausa = null; modoPelea(false); this.api.controles(false);
       if (this.cfgPelea.modo === 'campana') { const c = this.campana; this.campana = null; this.vista = null; c.fin({ gana: false, clasico: true }); } else this.salirModo(); } }
   salirModo() { const m = this.cfgPelea && this.cfgPelea.modo; this.pelea = null; if (m === 'torre') this.ir('torres', { sel: this.torreSel }); else if (m === 'superv') this.ir('infinito', { sel: 1 }); else this.abrirMenu(); }
   // ------------------------------------------------------------------ resultados
@@ -205,7 +208,7 @@ export class Arcade {
       if (act) { x.fillStyle = T.def.c; x.fillRect(x0, y, 3, rh - 2); }
       texto(x, String(i + 1).padStart(2, '0'), x0 + 8, y + (rh - 10) / 2, '#8a7a9a', 1); const s = rh - 4; const ver = i <= T.piso || !p.jefe; if (ver) x.drawImage(retratoDe(p.id, 30), x0 + 32, y + 1, s, s); else { x.fillStyle = '#120a1c'; x.fillRect(x0 + 32, y + 1, s, s); texto(x, '?', x0 + 32 + s / 2, y + 3, '#ff5a3a', 1, 'centro'); }
       texto(x, ver ? L.nombre.replace(/^(EL|LA) /, '') : '???', x0 + 38 + s, y + (rh - 10) / 2, hecho ? '#7aff7a' : '#ffffff', 1); const tag = p.tipo || (p.mod ? p.mod.t : DIFS[p.dif - 1]); texto(x, hecho ? 'OK' : tag, x0 + 294, y + (rh - 10) / 2, p.jefe ? '#ff5a3a' : p.mod ? '#e8a020' : '#8a7a9a', 1, 'der'); }
-    texto(x, '$U GANADOS: ' + T.plata, W - 8, H - 26, '#7aff7a', 1, 'der'); if ((this.t * 2 | 0) % 2) texto(x, E_TACTIL() ? 'TOCÁ PARA PELEAR' : 'PIÑA: A PELEAR', W / 2, H - 14, '#ffd23a', 1, 'centro'); this.boton(x, this.zVolver(), 'VOLVER', false);
+    texto(x, '$U GANADOS: ' + T.plata, W - 8, H - 26, '#7aff7a', 1, 'der'); if ((this.t * 2 | 0) % 2) texto(x, E_TACTIL() ? 'TOCÁ PARA PELEAR' : OK_TXT() + ': A PELEAR', W / 2, H - 14, '#ffd23a', 1, 'centro'); this.boton(x, this.zVolver(), 'VOLVER', false);
     // el jugador al pie de la torre
     const sp = setLuchador(POR_ID[this.p1]); dibujarCuadro(x, cuadroListo(sp, 'quieto', Math.floor(this.t * 5) % 4), Math.round(x0 - 44), H - 30, 1); }
   dibujarCfg(x, W, H) { this.titulo(x, 'PLENA MORTAL · LIBRE', W, 10); const c = this.cfgL; const ops = ['DIFICULTAD: < ' + DIFS[c.dif] + ' >', 'ESCENARIO: < ' + (c.esc === 0 ? 'AL AZAR' : ESCENARIOS[IDS_ESC[c.esc - 1]].nombre) + ' >', '¡A PELEAR!'];
@@ -234,14 +237,16 @@ export class Arcade {
     const sp = setLuchador(POR_ID[this.p1]); dibujarCuadro(x, cuadroListo(sp, 'gana', Math.floor(this.t * 3) % 2), W / 2, 176, 1);
     texto(x, 'PREMIO: $U ' + T.def.final + ' + $U ' + T.plata + ' DE LOS PISOS', W / 2, 186, '#7aff7a', 1, 'centro'); texto(x, 'TIEMPO: ' + Math.floor(this.tiempoT / 60) + ':' + String(Math.floor(this.tiempoT % 60)).padStart(2, '0'), W / 2, 198, '#ffffff', 1, 'centro');
     if (this.nuevosT && this.nuevosT.length) texto(x, '¡DESBLOQUEADO: ' + this.nuevosT.map((n) => n.nombre).join(', ') + '!', W / 2, 212, (this.t * 4 | 0) % 2 ? '#ffd23a' : '#ffffff', 1, 'centro');
-    if (this.t > 1.2 && (this.t * 2 | 0) % 2) texto(x, E_TACTIL() ? 'TOCÁ PARA SEGUIR' : 'PIÑA PARA SEGUIR', W / 2, H - 34, '#ffd23a', 1, 'centro'); }
-  dibujarPausa(x, W, H) { x.fillStyle = 'rgba(14,8,26,0.6)'; x.fillRect(0, 0, W, H); this.titulo(x, 'PAUSA', W, Math.round(H / 2 - 64)); const ops = ['SEGUIR', 'REINICIAR PELEA', this.cfgPelea.modo === 'campana' ? 'PELEAR A LA ANTIGUA' : 'SALIR'];
-    ops.forEach((s, i) => this.boton(x, this.zLista(i, 3), s, this.pausa.sel === i));
-    texto(x, 'LEVE · FUERTE · ESP (→/← + ESP) · SÚPER (O)', W / 2, Math.round(H / 2 + 50), '#9a8aa8', 1, 'centro'); texto(x, 'AGARRE: LEVE+FUERTE · ↓→ / ↓← + GOLPE', W / 2, Math.round(H / 2 + 62), '#9a8aa8', 1, 'centro'); }
+    if (this.t > 1.2 && (this.t * 2 | 0) % 2) texto(x, E_TACTIL() ? 'TOCÁ PARA SEGUIR' : OK_TXT() + ' PARA SEGUIR', W / 2, H - 34, '#ffd23a', 1, 'centro'); }
+  dibujarPausa(x, W, H) { x.fillStyle = 'rgba(14,8,26,0.6)'; x.fillRect(0, 0, W, H); this.titulo(x, 'PAUSA', W, Math.round(H / 2 - 80)); const ops = this.opsPausa();
+    ops.forEach((s, i) => this.boton(x, this.zLista(i, 4), s, this.pausa.sel === i));
+    texto(x, 'LEVE · FUERTE · ESP (→/← + ESP) · SÚPER (O)', W / 2, Math.round(H / 2 + 50), '#9a8aa8', 1, 'centro'); texto(x, 'AGARRE: LEVE+FUERTE · ↓→ / ↓← + GOLPE', W / 2, Math.round(H / 2 + 62), '#9a8aa8', 1, 'centro');
+    if (this.pausa.ctrl && this.api.dibujarControles) this.api.dibujarControles(x, W, H); }
 }
 // la torre completa vuelve a la lista de torres con un toque
 Arcade.prototype.pasoTorreFin = function (I) { if (this.t > 1.2 && (I.ok || I.tap)) { sonar('ui.ok'); this.ir('torres', { sel: this.torreSel }); musica('mus.menu'); } };
 const _paso = Arcade.prototype.paso; Arcade.prototype.paso = function (dt, I) { if (this.vista === 'torreFin') { this.t += dt; return this.pasoTorreFin(I); } if (this.vista === 'infFin') { this.t += dt; if (this.fondo) this.fondo.paso(dt); return this.pasoInfFin(I); } return _paso.call(this, dt, I); };
-function E_TACTIL() { return document.body.classList.contains('tactil'); }
+function E_TACTIL() { return !usaPad() && document.body.classList.contains('tactil'); }
+const OK_TXT = () => usaPad() ? nomBoton('ok') : 'PIÑA';
 const negras = new WeakMap(); function siluetaNegra(f) { let r = negras.get(f); if (r) return r; const [cv, x] = lienzo(f.d.width, f.d.height); x.drawImage(f.d, 0, 0); x.globalCompositeOperation = 'source-atop'; x.fillStyle = '#0e0818'; x.fillRect(0, 0, cv.width, cv.height); r = { d: cv, q: f.q, pies: f.pies, parche: null }; negras.set(f, r); return r; }
 void generar; void DT;

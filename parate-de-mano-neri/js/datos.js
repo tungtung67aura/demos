@@ -36,8 +36,8 @@ export const ENEMIGOS = {
 // ini: arranque, act: activo, rec: recuperación (segundos). x: alcance [desde, hasta] hacia adelante
 // son: ID de audio del impacto (audio-ids.js). aviso: muestra "!" antes de pegar.
 export const ATQ = {
-  pina1: { anim: 'pina1', ini: 0.05, act: 0.06, rec: 0.11, dmg: 5, x: [6, 34], kb: 26, stun: 0.3, son: 'golpe.pina', hs: 0.045 },
-  pina2: { anim: 'pina2', ini: 0.05, act: 0.06, rec: 0.13, dmg: 6, x: [6, 36], kb: 30, stun: 0.32, son: 'golpe.pina', hs: 0.05 },
+  pina1: { anim: 'pina1', ini: 0.035, act: 0.06, rec: 0.09, dmg: 5, x: [6, 34], kb: 26, stun: 0.3, son: 'golpe.pina', hs: 0.045 },
+  pina2: { anim: 'pina2', ini: 0.05, act: 0.06, rec: 0.11, dmg: 6, x: [6, 36], kb: 30, stun: 0.32, son: 'golpe.pina', hs: 0.05 },
   pina3: { anim: 'pina3', ini: 0.08, act: 0.08, rec: 0.26, dmg: 10, x: [4, 34], kb: 150, tumba: true, vz: 170, son: 'golpe.gancho', hs: 0.1, remate: true },
   patada: { anim: 'patada', ini: 0.11, act: 0.09, rec: 0.22, dmg: 9, x: [10, 46], kb: 110, stun: 0.45, son: 'golpe.patada', hs: 0.08, tumbaSiAturdido: true, vz: 140, empuja: true },
   voladora: { anim: 'voladora', ini: 0.06, act: 9, rec: 0.0, dmg: 11, x: [4, 42], kb: 140, tumba: true, vz: 130, son: 'golpe.voladora', hs: 0.08, aire: true, empuja: true },

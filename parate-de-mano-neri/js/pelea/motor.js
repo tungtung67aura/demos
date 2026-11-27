@@ -1,6 +1,7 @@
 // MOTOR DE PELEA 1 vs 1 (vista lateral): rondas al mejor de 3, reloj, barras, súper, combos con cancelaciones y juggles,
 // escalado de daño, bloqueo alto/bajo, contragolpes, agarres, especiales, firma, definitivos con escena propia, hitstop,
 // temblor/zoom de cámara. Hitboxes y hurtboxes salen del MISMO esqueleto que dibuja el sprite (articulaciones()), cuadro a cuadro.
+import { vibrar, CTRL } from '../entrada.js';
 import { generar, dibujarCuadro, cuadroListo, siluetaBlanca, articulaciones, partida, DEFS } from '../sprites.js';
 import { FX } from '../fx.js';
 import { GORE } from '../sangre.js';
@@ -171,8 +172,8 @@ export class Pelea {
     const I = f.inp; const haciaOp = Math.sign(f.op.x - f.x) || f.cara; const aire = !f.enSuelo || f.est === 'salto';
     if (I.u && f.super >= 100 && !aire) return 'ult';
     if (I.s && !aire) { const d = this.dirNum(f); return d === 4 || d === 1 || d === 2 ? 's2' : 's1'; }
-    if ((I.l || I.h) && !aire && this.movimiento(f, [2, 3, 6])) return 's1';
-    if ((I.l || I.h) && !aire && this.movimiento(f, [2, 1, 4])) return 's2';
+    if ((I.l || I.h) && !aire && (f.cpu || CTRL.esquema === 'pro') && this.movimiento(f, [2, 3, 6])) return 's1'; // movimientos: solo esquema PRO
+    if ((I.l || I.h) && !aire && (f.cpu || CTRL.esquema === 'pro') && this.movimiento(f, [2, 1, 4])) return 's2';
     const dist = Math.abs(f.op.x - f.x) - f.anchoC - f.op.anchoC;
     if (!aire && (I.g || (I.h && I.dx * haciaOp > 0.5 && dist < 16))) return 'agarre';
     if (aire) { if (f.aereo) return null; return I.l ? 'la' : I.h ? 'ha' : null; }
@@ -240,7 +241,7 @@ export class Pelea {
       const L = f.L.ult, dist = Math.abs(op.x - f.x); const bloquea = this.bloquea(op, f, { alto: false, bajo: false }) && L.alcance < 900; const alc = (L.alcance || 100) * f.esc + op.anchoC;
       if (op.invul > 0 && op.est !== 'quieto' || dist > alc && L.alcance < 900 || op.ko) { f.est = 'ataque'; f.atq = f.movs.ult; f.t = 0; f.whiff = 0.3; f.invul = 0; sonar('pelea.aire.fuerte'); return; }
       if (bloquea) { f.est = 'ataque'; f.atq = f.movs.ult; f.t = 0; f.invul = 0; this.impacto(f, op, { dmg: L.dmg * 0.12, kb: 160, bs: 0.5, especial: true, chip: 1 }, op.x, 60); return; }
-      this.ult = crearUlt(L.escena, this, f, op); f.est = 'ultAct'; op.est = 'dolor'; op.stun = 99; op.vx = 0; op.atq = null; musica('mus.pelea.ult'); } }; this.temblor = 0.3; }
+      this.ult = crearUlt(L.escena, this, f, op); if (!f.cpu || !op.cpu) vibrar(1, 400); f.est = 'ultAct'; op.est = 'dolor'; op.stun = 99; op.vx = 0; op.atq = null; musica('mus.pelea.ult'); } }; this.temblor = 0.3; }
   golpeUlt(f, op, frac, o = {}) { // golpe programado por la escena del definitivo
     const dmg = f.L.ult.dmg * frac * f.dmgMul * (this.mods.dobleDanio ? 1.5 : 1); this.danar(op, dmg, f); op.blink = 0.08; this.hitstop = o.hitstop ?? 0.06; this.temblor = Math.max(this.temblor, o.temblor ?? 0.2);
     this.fx.chispa(o.x ?? op.x, SUELO, o.z ?? 60 * op.esc, true); if (GORE.nivel) this.fx.vidrios(op.x, SUELO, 60, '#a8141a'); sonar(o.sfx || 'pelea.golpe.fuerte'); op.comboN++; f.comboVis = op.comboN; f.comboT = 1.5; this.esc.alentar(1); }
@@ -296,6 +297,7 @@ export class Pelea {
     const haciaA = Math.sign(atk.x - v.x) || v.cara; const atras = v.inp.dx * haciaA < -0.5; if (!atras) return false; const ag = v.inp.dy > 0.5; if (a.bajo && !ag) return false; if (a.alto && ag) return false; return true; }
   danar(v, dmg, por) { if (this.dios && !v.cpu) dmg = 0; v.hp = Math.max(0, v.hp - dmg); if (por === this.F[0]) this.stats.danio += dmg; }
   impacto(atk, v, a, X, Z) {
+    if (!v.cpu) vibrar(a.especial ? 0.8 : 0.5, a.especial ? 140 : 80); else if (!atk.cpu && (a.especial || (a.dmg || 0) >= 14)) vibrar(0.3, 50);
     const dir = a.dir || Math.sign(v.x - atk.x) || atk.cara; const mul = atk.dmgMul * (this.mods.dobleDanio ? 1.5 : 1) * (atk.buffT > 0 && atk.L.id === 'borracho' ? 1.15 : 1);
     if (this.bloquea(v, atk, a)) { // ---- bloqueado
       const ag = v.inp.dy > 0.5; v.est = ag ? 'bloqAg' : 'bloq'; v.t = 0; v.stun = a.bs || 0.14; v.vx = dir * (a.kb || 90) * 0.9 / v.N.peso; if (Math.abs(v.x - (dir > 0 ? ANCHO : 0)) < 40) atk.vx = -dir * 120;

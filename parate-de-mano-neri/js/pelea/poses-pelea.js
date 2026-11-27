@@ -49,11 +49,11 @@ const dolorAg = () => [P({ y: -1.0, lean: -0.1, head: -0.3, bn: { fk: [-0.3, 1.2
 // cada plantilla: { poses: [a, g, g2, r] | n cuadros, limb: miembro que pega, r: radio del hitbox, y frame data por defecto }
 const pr = (o) => P(Object.assign({ cara: 'grito' }, o));
 export const TPL = {
-  jab: { limb: 'mF', r: 8, ini: 0.065, act: 0.06, rec: 0.13, dmg: 4, poses: (E) => B.pina1 },
+  jab: { limb: 'mF', r: 8, ini: 0.05, act: 0.06, rec: 0.11, dmg: 4, poses: (E) => B.pina1 },
   directo: { limb: 'mN', r: 9, ini: 0.09, act: 0.07, rec: 0.18, dmg: 7, poses: () => B.pina2 },
   gancho: { limb: 'mN', r: 11, dash: 110, arco: true, ext: 6, ini: 0.12, act: 0.08, rec: 0.24, dmg: 10, lanza: 330, poses: () => B.pina3 },
   patada: { limb: 'pN', r: 10, ini: 0.12, act: 0.08, rec: 0.24, dmg: 9, poses: () => B.patada },
-  golpe: { limb: 'mN', r: 11, ext: 7, ini: 0.15, act: 0.09, rec: 0.32, dmg: 11, poses: () => B.golpe },
+  golpe: { limb: 'mN', r: 11, ext: 7, ini: 0.17, act: 0.09, rec: 0.42, dmg: 11, poses: () => B.golpe },
   cabezazo: { limb: 'cab', r: 9, ini: 0.12, act: 0.07, rec: 0.22, dmg: 10, poses: () => B.cabezazo },
   pisoton: { limb: 'pN', r: 11, ini: 0.16, act: 0.08, rec: 0.24, dmg: 10, bajo: true, poses: () => B.pisoton },
   martillo: { limb: 'mN', r: 12, ini: 0.18, act: 0.09, rec: 0.28, dmg: 13, alto: true, poses: () => B.tamborOnda },
@@ -66,7 +66,7 @@ export const TPL = {
     pr({ y: -0.32, lean: 0.1, pn: { fk: [0.7, -1.2, -0.3] }, pf: [0.3, 0, 0], bn: { m: [0.85, 0.1] }, bf: { m: [1.1, 0.15] }, cara: 'enojo' }),
     pr({ y: -0.4, x: -0.06, lean: 0.16, g: 0.4, pn: { fk: [1.2, -0.05, -0.25] }, pf: [0.1, 0, 0], bn: { m: [0.8, 0.2] }, bf: { m: [1.05, 0.24] } }),
     pr({ y: -0.34, lean: 0.1, pn: [-0.4, 0, 0], pf: [0.6, 0, 0], bn: { m: [0.85, 0.05] }, bf: { m: [1.2, 0.1] }, cara: 'enojo' })) },
-  jabAg: { limb: 'mF', r: 8, ini: 0.07, act: 0.06, rec: 0.14, dmg: 4, bajo: true, poses: () => at(
+  jabAg: { limb: 'mF', r: 8, ini: 0.07, act: 0.06, rec: 0.12, dmg: 4, bajo: true, poses: () => at(
     pr({ y: -1.08, lean: 0.36, bn: { m: [0.85, 0.05] }, bf: { m: [0.9, 0.0] }, pn: [-0.62, 0, 0], pf: [0.92, 0, 0], cara: 'enojo' }),
     pr({ y: -1.08, x: 0.1, lean: 0.42, g: 0.6, bn: { m: [0.85, 0.05] }, bf: { m: [2.1, -0.3] }, pn: [-0.62, 0, 0], pf: [0.92, 0, 0] }),
     pr({ y: -1.08, lean: 0.36, bn: { m: [0.85, 0.05] }, bf: { m: [1.15, 0.15] }, pn: [-0.62, 0, 0], pf: [0.92, 0, 0], cara: 'enojo' })) },

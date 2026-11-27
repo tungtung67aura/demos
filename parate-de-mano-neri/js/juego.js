@@ -1,5 +1,6 @@
 // Núcleo del juego: luchadores, combate, armas, rompibles, oleadas y render del mundo.
 // La IA vive en ia.js, los eventos y peligros del escenario en eventos.js, las partículas en fx.js.
+import { vibrar, iman } from './entrada.js';
 import { generar, cuadroAtaque, dibujarCuadro, siluetaBlanca, vigente, partida, lista as listaAnim, cuadroListo, Q } from './sprites.js';
 import { SP, sombra } from './props.js';
 import { PISO, ALTO, EXTRA, calle, lejos, medio, cielo, sol } from './escenario.js';
@@ -268,12 +269,21 @@ export class Juego {
     if (!aire) { e.vx = 0; e.vy = 0; }
     if (a.corta && e.equipo === 'e') { const q = this.fx.nueva('bloqueo', e.x + e.cara * 16, e.y, (e.sp ? e.sp.h : 44) * 0.55, 0.2); void q; sonar('arma.tiro', this.pan(e.x)); } // brillo de la hoja: aviso legible del tajo
     if (e.intent && Math.abs(e.intent.mx) > 0.3 && !aire && e.equipo === 'j') e.cara = Math.sign(e.intent.mx);
+    if (e === this.j && !aire && a.dmg && !a.proy) this.iman(e, a);
     if (a.aviso) { this.fx.aviso(e, a.ini); sonar('enem.aviso', this.pan(e.x)); }
     else if (!a.proy && a.dmg) sonar('mov.aire', this.pan(e.x));
     if (Math.random() < (e.equipo === 'j' ? 0.25 : 0.3)) voz(e.clave, 'ataque', this.pan(e.x));
   }
   itemCerca(e) { let m = null, md = 1e9; for (const it of this.items) { const d0 = ITEMS[it.t]; if (it.est === 'piso' && d0 && !d0.pelota && !d0.npc && !d0.proy && !d0.auto) { const d = Math.abs(it.x - e.x) + Math.abs(it.y - e.y) * 2; if (Math.abs(it.x - e.x) < 18 && Math.abs(it.y - e.y) < 10 && d < md) { m = it; md = d; } } } return m; }
   caidoCerca(e) { for (const o of this.ents) if (o.equipo === 'e' && !o.muerto && o.est === 'piso' && o.t > 0.12 && (o.pisados || 0) < 2 && Math.abs(o.x - e.x) < 40 && Math.abs(o.y - e.y) < 10) return o; return null; }
+  // imán suave (esquemas SIMPLE/CLÁSICO): al pegar, el jugador se alinea con el enemigo más cercano hacia donde mira; si no hay nadie
+  // adelante pero sí muy cerca atrás (y no está empujando la dirección), se da vuelta solo
+  iman(j, a) { const k = iman(); if (!k) return; let mejor = null, md = 1e9, atras = null, ma = 1e9; const alc = (a.x ? a.x[1] : 34) + 18;
+    for (const o of this.ents) { if (o.equipo === j.equipo || o.muerto || o.est === 'piso' || o.agarradoPor) continue; const dx = (o.x - j.x) * j.cara, dy = Math.abs(o.y - j.y); if (dy > 18) continue;
+      if (dx > 0 && dx < alc + 14 && dx + dy * 2 < md) { md = dx + dy * 2; mejor = o; } else if (dx <= 0 && dx > -40 && -dx + dy * 2 < ma) { ma = -dx + dy * 2; atras = o; } }
+    if (!mejor && atras && !(j.intent && Math.abs(j.intent.mx) > 0.3)) { j.cara = -j.cara; mejor = atras; }
+    if (!mejor) return; const dy = mejor.y - j.y; j.y += Math.sign(dy) * Math.min(Math.abs(dy), 6 * k);
+    const dx = Math.abs(mejor.x - j.x), quiero = (a.x ? a.x[1] : 34) - 8; if (dx > quiero) j.x += Math.sign(mejor.x - j.x) * Math.min(dx - quiero, 8 * k); }
   enemigoCerca(e, r) { for (const o of this.ents) if (o.equipo !== e.equipo && !o.muerto && Math.abs(o.x - e.x) < r && Math.abs(o.y - e.y) < 12 && o.est !== 'piso') return o; return null; }
   juntar(j, it) {
     const d = ITEMS[it.t]; j.est = 'junta'; j.t = 0; j.anim = 'junta'; j.vx = 0; j.vy = 0;
@@ -498,6 +508,7 @@ export class Juego {
     return false;
   }
   impacto(e, o, a, hx, hy, hz) {
+    if (o === this.j && e !== o) vibrar(0.6, 90); else if (e === this.j && (a.dmg || 0) >= 14) vibrar(0.35, 50);
     const conArma = a.arma && e.arma; const dArma = conArma ? ITEMS[e.arma.t] : null;
     if (e !== o && this.bloquea(o, e, a)) { // ¡bloqueado!
       this.fx.bloqueo(hx, hy, hz); sonar('impacto.bloqueo', this.pan(hx)); this.hitstop = Math.max(this.hitstop, 0.05);
