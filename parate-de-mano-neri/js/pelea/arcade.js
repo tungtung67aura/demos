@@ -9,6 +9,8 @@ import { Pelea, setLuchador } from './motor.js';
 import { Escenario, ESCENARIOS, IDS_ESC } from './escenarios.js';
 import { desbloqueado, torreAbierta, registrarPelea, registrarTorre, sumarPlataPelea, recordInfinito, PP , registrarVencido } from './progreso-pelea.js';
 import { modoPelea, usaPad, nomBoton } from '../entrada.js';
+import { instalarTienda } from './tienda-ui.js';
+import { MODOS_PM, equipoP1, premioPelea, premioTorre, premioInfinito, trajeActual, opcionesTraje, ciclarTraje, nombreTraje, fichas, TP } from './tienda-pm.js';
 
 export const TORRES = [
   { id: 'barrio', nombre: 'TORRE DEL BARRIO', dif: 'NORMAL', c: '#4aa03a', pisos: 7, medio: { piso: 4, id: 'patovica', hp: 1.3, esc: 'boliche' }, jefe: { id: 'parrillero', hp: 1.5, esc: 'ciudadvieja' }, cpu: (i) => (i < 3 ? 1 : 2), premio: 120, final: 1500,
@@ -41,7 +43,7 @@ export class Arcade {
   abrirSeleccion(modo, etapa = 'p1') { this.ir('select', { modo, etapa }); this.cur = this.cur ?? 0; this.info = false; this.confirma = null; musica('mus.pelea.select'); }
   // pelea de jefe de la campaña: el beat 'em up pasa al motor de pelea y vuelve
   pelearCampana(o, fin) { this.campana = { o, fin }; this.lanzar({ p1: { id: o.p1, ropa: o.ropa, cpu: !!o.bot, dif: 3 }, p2: { id: o.p2, cpu: true, dif: o.dif || 2, hpMul: o.hpMul || 1, dmgMul: o.dmgMul || 1, jefe: true }, escenario: o.escenario, modo: 'campana', titulo: o.titulo, rondas: o.rondas || 2, musica: o.musica }); }
-  lanzar(cfg) { cfg.dios = DIOS.on; if (cfg.p1.cpu === undefined) cfg.p1.cpu = false; this.cfgPelea = cfg; this.pelea = new Pelea(cfg); this.pausa = null; this.ir('pelea'); modoPelea(true); this.api.controles(true); window.__bb && (window.__bb.pelea = this.pelea); }
+  lanzar(cfg) { cfg.dios = DIOS.on; if (MODOS_PM.has(cfg.modo)) { for (const k of ['traje', 'titulo', 'festejo', 'relator', 'mej']) delete cfg.p1[k]; Object.assign(cfg.p1, equipoP1(cfg.p1.id, cfg.modo)); } if (cfg.p1.cpu === undefined) cfg.p1.cpu = false; this.cfgPelea = cfg; this.pelea = new Pelea(cfg); this.pausa = null; this.ir('pelea'); modoPelea(true); this.api.controles(true); window.__bb && (window.__bb.pelea = this.pelea); }
   // ------------------------------------------------------------------ paso fijo de la pelea (lo llama main a 120 Hz)
   pasoPelea(dt, E) { const p = this.pelea; if (!p) return; if (this.api.bot() && !p.F[0].cpu) { p.F[0].cpu = true; p.F[0].ia = new (p.F[1].ia.constructor)(p.F[0], 3); }
     p.paso(dt, E); const sl = !p.F[0].cpu && p.F[0].super >= 100; if (sl !== this._sl) { this._sl = sl; document.body.classList.toggle('super-lleno', sl); } if (E.buf.pausa > 0 && p.estado !== 'fin') { E.buf.pausa = 0; this.pausa = { sel: 0 }; sonar('ui.pausa'); }
@@ -51,8 +53,9 @@ export class Arcade {
     const nuevos = registrarPelea(r, cfg); let plata = 0;
     if (cfg.modo === 'torre') { const T = this.torre; if (gane) { plata = T.def.premio + (r.stats.perfectos ? 50 : 0); T.plata += plata; sumarPlataPelea(plata); } }
     else if (cfg.modo === 'libre') { if (gane) { plata = 40 * (cfg.p2.dif || 2); sumarPlataPelea(plata); } }
-    else if (cfg.modo === 'superv') { const S = this.superv; if (gane) { S.ganadas++; S.hp = Math.min(this.pelea.F[0].hpMax, this.pelea.F[0].hp + this.pelea.F[0].hpMax * 0.25); plata = 30 + S.ganadas * 10; sumarPlataPelea(plata); } else { S.record = recordInfinito('superv', S.ganadas); } }
-    this.ir('resultado', { res: r, nuevos, plata }); }
+    else if (cfg.modo === 'superv') { const S = this.superv; if (gane) { S.ganadas++; S.hp = Math.min(this.pelea.F[0].hpMax, this.pelea.F[0].hp + this.pelea.F[0].hpMax * (cfg.p1.mej ? cfg.p1.mej.superv : 0.25)); plata = 30 + S.ganadas * 10; sumarPlataPelea(plata); } else { S.record = recordInfinito('superv', S.ganadas); } }
+    const pT = cfg.modo === 'torre' && this.torre ? this.torre.pisos[this.torre.piso] : null; const fichasR = premioPelea(r, cfg, { torre: this.torre && this.torre.def.id, jefe: !!(pT && pT.jefe), superv: this.superv && this.superv.ganadas });
+    this.ir('resultado', { res: r, nuevos, plata, fichasR }); }
   // ------------------------------------------------------------------ menús (paso de pantalla)
   paso(dt, I) {
     this.t += dt; if (this.fondo) this.fondo.paso(dt); const n = I.n, t = I.tap; const v = this.vista;
@@ -77,6 +80,7 @@ export class Arcade {
     { s: 'MODO INFINITO', d: 'OLEADAS SIN FIN O SUPERVIVENCIA DE PLENA MORTAL', f: () => this.ir('infinito') },
     { s: 'PLENA MORTAL: LIBRE', d: 'MANO A MANO CONTRA LA CPU: ELEGÍ RIVAL Y ESCENARIO', f: () => this.abrirSeleccion('libre') },
     { s: 'RÉCORDS', d: 'TUS NÚMEROS, LUCHADORES Y DESBLOQUEOS', f: () => this.ir('records') },
+    { s: 'TIENDA PLENA MORTAL', d: 'TRAJES EXCLUSIVOS, MEJORAS, FESTEJOS Y TÍTULOS: SE PAGA CON FICHAS', f: () => this.abrirTienda() },
   ]; }
   zMenu(i) { const W = this.api.W(), H = this.api.H(); return [Math.round(W / 2 - 100), Math.round(H * 0.36) + i * 22 - 5, 200, 19]; }
   zLista(i, n) { const W = this.api.W(), H = this.api.H(); return [Math.round(W / 2 - 110), Math.round(H / 2 - n * 12) + i * 24 - 5, 220, 20]; }
@@ -90,6 +94,7 @@ export class Arcade {
     if (n.x) { this.cur = (this.cur + n.x + N) % N; sonar('ui.mover'); } if (n.y) { this.cur = (this.cur + n.y * 10 + N) % N; sonar('ui.mover'); }
     let el = I.ok; if (t) { for (let i = 0; i < N; i++) if (dentro(t, this.zCelda(i))) { if (this.cur === i) el = true; else { this.cur = i; sonar('ui.mover'); } } if (dentro(t, this.zVolver())) { I.atras = true; } if (dentro(t, this.zElegir())) el = true; if (dentro(t, this.zInfo())) { this.info = !this.info; sonar('ui.mover'); } }
     if (I.esp) { this.info = !this.info; sonar('ui.mover'); }
+    if (this.pasoChipTraje(I)) return;
     if (I.atras) { sonar('ui.atras'); if (this.etapa === 'p2') { this.etapa = 'p1'; this.cur = LUCHADORES.findIndex((l) => l.id === this.p1); } else if (this.modo === 'torre') this.ir('torres', { sel: this.torreSel }); else this.abrirMenu(); return; }
     if (el) { const L = LUCHADORES[this.cur]; if (!desbloqueado(L.id)) { sonar('ui.atras'); this.msg = { s: 'BLOQUEADO: ' + L.desbloq.txt, t: 1.8 }; return; } sonar('ui.ok'); sonar('pelea.elegir'); this.confirma = { id: L.id, t: 0 }; } }
   zElegir() { const G = this.geo(); return [G.W - 84, G.H - 26, 76, 20]; }
@@ -140,15 +145,15 @@ export class Arcade {
   pasoRes(I) { if (this.t < 0.8) return; const ops = this.opsRes(); const n = I.n, t = I.tap; if (n.y) { this.sel = (this.sel + n.y + ops.length) % ops.length; sonar('ui.mover'); }
     let el = I.ok ? this.sel : -1; if (t) ops.forEach((o, i) => { if (dentro(t, this.zRes(i))) el = i; }); if (el >= 0) { sonar('ui.ok'); ops[el][1](); } }
   zRes(i) { const W = this.api.W(), H = this.api.H(); return [Math.round(W / 2 - 90), H - 70 + i * 20, 180, 18]; }
-  completarTorre() { const T = this.torre; const s = (performance.now() - T.t0) / 1000; const nuevos = registrarTorre(T.def.id, this.p1, s, T.def.final); this.ir('torreFin', { nuevosT: nuevos, tiempoT: s }); musica('mus.final'); sonar('evento.final'); }
+  completarTorre() { const T = this.torre; const s = (performance.now() - T.t0) / 1000; const nuevos = registrarTorre(T.def.id, this.p1, s, T.def.final); const fichasT = premioTorre(T.def.id); this.ir('torreFin', { nuevosT: nuevos, tiempoT: s, fichasT }); musica('mus.final'); sonar('evento.final'); }
   pasoCampFin(I) { if (this.t < 1.0) return; const g = this.res.gana === 1; const ops = g ? [['SEGUIR', () => this.volverCampana(true)]] : [['REVANCHA', () => this.lanzar(this.cfgPelea)], ['PELEAR A LA ANTIGUA', () => this.volverCampana(false, true)]];
     const n = I.n, t = I.tap; if (n.y) { this.sel = (this.sel + n.y + ops.length) % ops.length; sonar('ui.mover'); } let el = I.ok ? this.sel : -1; if (t) ops.forEach((o, i) => { if (dentro(t, this.zRes(i))) el = i; }); if (this.api.bot()) el = !g && (this.campana._rev = (this.campana._rev || 0) + 1) > 1 ? 1 : 0;
     if (el >= 0) { sonar('ui.ok'); ops[el][1](); } }
-  finInfinito(r) { modoPelea(false); this.ir('infFin', { infRes: r, sel: 0 }); sonar(r.record.nuevo ? 'evento.record' : 'pelea.derrota'); }
+  finInfinito(r) { modoPelea(false); r.fichas = premioInfinito(r.olas); this.ir('infFin', { infRes: r, sel: 0 }); sonar(r.record.nuevo ? 'evento.record' : 'pelea.derrota'); }
   pasoInfFin(I) { if (this.t < 0.8) return; const ops = [['OTRA VEZ', () => this.api.infinito()], ['MENÚ', () => this.ir('infinito')]]; const n = I.n, t = I.tap;
     if (n.y) { this.sel = (this.sel + n.y + 2) % 2; sonar('ui.mover'); } let el = I.ok ? this.sel : -1; if (t) ops.forEach((o, i) => { if (dentro(t, this.zRes(i))) el = i; }); if (I.atras) el = 1; if (el >= 0) { sonar('ui.ok'); ops[el][1](); } }
   dibujarInfFin(x, W, H) { const r = this.infRes; this.panel(x, W / 2 - 160, 16, 320, H - 32, '#ff5a3a'); this.titulo(x, 'FIN DEL MODO INFINITO', W, 26, '#ff5a3a');
-    const fil = [['OLEADAS SUPERADAS', r.olas], ['MEJOR MARCA', r.record.mejor], ['ENEMIGOS AL PISO', r.ko], ['COMBO MÁXIMO', r.combo], ['PUNTOS', r.puntos], ['PLATA GANADA', '$U ' + r.plata]];
+    const fil = [['OLEADAS SUPERADAS', r.olas], ['MEJOR MARCA', r.record.mejor], ['ENEMIGOS AL PISO', r.ko], ['COMBO MÁXIMO', r.combo], ['PUNTOS', r.puntos], ['PLATA GANADA', '$U ' + r.plata], ['FICHAS', r.fichas && r.fichas.dios ? 'MODO DIOS: 0' : '+' + ((r.fichas && r.fichas.total) || 0)]];
     fil.forEach(([a, b], i) => { const y = 62 + i * 16; texto(x, a, W / 2 - 130, y, '#b8a8c8', 1); texto(x, String(b), W / 2 + 130, y, '#ffffff', 1, 'der'); });
     if (r.record.nuevo && (this.t * 4 | 0) % 2) texto(x, '¡RÉCORD NUEVO!', W / 2, 62 + fil.length * 16 + 6, '#ffd23a', 2, 'centro', CONTORNO);
     ['OTRA VEZ', 'MENÚ'].forEach((s, i) => this.boton(x, this.zRes(i), s, this.sel === i)); }
@@ -169,7 +174,7 @@ export class Arcade {
   titulo(x, s, W, y = 10, c = '#ffd23a') { texto(x, s, W / 2, y, c, 2, 'centro', CONTORNO, '#5a3a10'); }
   dibujarMenu(x, W, H) { texto(x, 'PÁRATE DE MANO', W / 2, Math.round(H * 0.1), '#ffd23a', 3, 'centro', CONTORNO, '#8a3a10'); texto(x, 'ÑERI', W / 2, Math.round(H * 0.1) + 30, '#ff5a3a', 2, 'centro', CONTORNO, '#5a0a0a');
     const ops = this.opsMenu(); ops.forEach((o, i) => this.boton(x, this.zMenu(i), o.s, this.sel === i)); const o = ops[this.sel]; texto(x, o.d, W / 2, Math.round(H * 0.36) + ops.length * 22 + 6, '#c8b8d8', 1, 'centro');
-    texto(x, '$U ' + PROG.plata + ' · ' + PP().ganadas + ' PELEAS GANADAS', W / 2, H - 14, '#8a7a9a', 1, 'centro'); if (DIOS.on) texto(x, 'MODO DIOS', W - 8, 6, '#ff5a3a', 1, 'der'); }
+    texto(x, '$U ' + PROG.plata + ' · ' + fichas() + ' FICHAS · ' + PP().ganadas + ' PELEAS GANADAS', W / 2, H - 14, '#8a7a9a', 1, 'centro'); if (DIOS.on) texto(x, 'MODO DIOS', W - 8, 6, '#ff5a3a', 1, 'der'); }
   dibujarSel(x, W, H) { const G = this.geo(); const N = LUCHADORES.length;
     this.titulo(x, this.etapa === 'p2' ? 'ELEGÍ AL RIVAL' : 'ELEGÍ TU LUCHADOR', W, 6, this.etapa === 'p2' ? '#ff5a3a' : '#ffd23a');
     const t = this.t;
@@ -180,11 +185,11 @@ export class Arcade {
     texto(x, this.etapa === 'p2' ? '2P' : '1P', rc[0] + 1, rc[1] - 12, col, 1);
     // vista grande
     const L = LUCHADORES[this.cur], ab = desbloqueado(L.id); const fy = G.y0 - 12;
-    const dib = (Lx, px, cara, conf) => { const sp = setLuchador(Lx); const an = conf ? 'intro' : 'quieto'; const fr = cuadroListo(sp, an, Math.floor(t * (conf ? 2.5 : 5)) % (conf ? 2 : 4)); x.fillStyle = 'rgba(0,0,0,0.35)'; x.fillRect(px - 24, fy - 2, 48, 4);
+    const dib = (Lx, px, cara, conf, esP1) => { const sp = setLuchador(Lx, null, this.trajeSel(Lx.id, esP1)); const an = conf ? 'intro' : 'quieto'; const fr = cuadroListo(sp, an, Math.floor(t * (conf ? 2.5 : 5)) % (conf ? 2 : 4)); x.fillStyle = 'rgba(0,0,0,0.35)'; x.fillRect(px - 24, fy - 2, 48, 4);
       if (conf && this.confirma.t < 0.12) dibujarCuadro(x, siluetaBlanca(fr), px, fy, cara); else dibujarCuadro(x, fr, px, fy, cara); };
     const conf = !!this.confirma;
-    if (this.etapa === 'p2' && this.p1) dib(POR_ID[this.p1], Math.round(W * 0.15), 1, false);
-    if (ab) dib(L, Math.round(this.etapa === 'p2' ? W * 0.85 : W * 0.17), this.etapa === 'p2' ? -1 : 1, conf); else { const sp = setLuchador(L); const fr = cuadroListo(sp, 'quieto', 0); const px = Math.round(this.etapa === 'p2' ? W * 0.85 : W * 0.17); x.globalAlpha = 0.9; dibujarCuadro(x, siluetaNegra(fr), px, fy, 1); x.globalAlpha = 1; }
+    if (this.etapa === 'p2' && this.p1) dib(POR_ID[this.p1], Math.round(W * 0.15), 1, false, true);
+    if (ab) dib(L, Math.round(this.etapa === 'p2' ? W * 0.85 : W * 0.17), this.etapa === 'p2' ? -1 : 1, conf, this.etapa === 'p1'); else { const sp = setLuchador(L); const fr = cuadroListo(sp, 'quieto', 0); const px = Math.round(this.etapa === 'p2' ? W * 0.85 : W * 0.17); x.globalAlpha = 0.9; dibujarCuadro(x, siluetaNegra(fr), px, fy, 1); x.globalAlpha = 1; }
     // ficha
     const ix = Math.round(W / 2), iy = 32; texto(x, ab ? L.nombre : (L.id === 'monstruo' ? '???' : L.nombre), ix, iy, ab ? (L.color === '#24242c' ? '#c8c8d8' : '#ffffff') : '#8a7a9a', 1, 'centro');
     texto(x, ab ? L.apodo : 'BLOQUEADO', ix, iy + 12, '#ffd23a', 1, 'centro');
@@ -194,6 +199,7 @@ export class Arcade {
       nom.forEach((s, i) => { const yy = iy + 40 + i * 11; texto(x, s, bx, yy, '#b8a8c8', 1); for (let k = 0; k < 5; k++) { x.fillStyle = CONTORNO; x.fillRect(bx + 82 + k * 9 - 1, yy - 1, 8, 8); x.fillStyle = k < L.stats[i] ? ['#e8303a', '#2f8ad0', '#3a9a4a', '#a05ad0'][i] : '#2a2034'; x.fillRect(bx + 82 + k * 9, yy, 6, 6); } });
       texto(x, 'ESP: ' + L.s1.nombre, ix, iy + 86, '#ffffff', 1, 'centro'); texto(x, 'SÚPER: ' + L.ult.nombre, ix, iy + 97, '#5ad8ff', 1, 'centro');
       if (conf) texto(x, '"' + L.frases[0] + '"', ix, iy + 110, '#ffd23a', 1, 'centro'); }
+    this.dibujarChipTraje(x, L, ab);
     this.boton(x, this.zVolver(), 'VOLVER', false); this.boton(x, this.zElegir(), 'ELEGIR', true); texto(x, E_TACTIL() ? 'TOCÁ LA FICHA: BIO' : 'ESP: VER BIO', W / 2, H - 14, '#7a6a8a', 1, 'centro'); }
   dibujarTorres(x, W, H) { this.titulo(x, 'PLENA MORTAL · TORRES', W, 8);
     TORRES.forEach((T, i) => { const r = this.zTorre(i), ab = torreAbierta(i), sel = this.sel === i; this.panel(x, r[0], r[1], r[2], r[3], ab ? T.c : '#4a3a5a'); const cx = r[0] + r[2] / 2;
@@ -210,7 +216,7 @@ export class Arcade {
       texto(x, ver ? L.nombre.replace(/^(EL|LA) /, '') : '???', x0 + 38 + s, y + (rh - 10) / 2, hecho ? '#7aff7a' : '#ffffff', 1); const tag = p.tipo || (p.mod ? p.mod.t : DIFS[p.dif - 1]); texto(x, hecho ? 'OK' : tag, x0 + 294, y + (rh - 10) / 2, p.jefe ? '#ff5a3a' : p.mod ? '#e8a020' : '#8a7a9a', 1, 'der'); }
     texto(x, '$U GANADOS: ' + T.plata, W - 8, H - 26, '#7aff7a', 1, 'der'); if ((this.t * 2 | 0) % 2) texto(x, E_TACTIL() ? 'TOCÁ PARA PELEAR' : OK_TXT() + ': A PELEAR', W / 2, H - 14, '#ffd23a', 1, 'centro'); this.boton(x, this.zVolver(), 'VOLVER', false);
     // el jugador al pie de la torre
-    const sp = setLuchador(POR_ID[this.p1]); dibujarCuadro(x, cuadroListo(sp, 'quieto', Math.floor(this.t * 5) % 4), Math.round(x0 - 44), H - 30, 1); }
+    const sp = setLuchador(POR_ID[this.p1], null, trajeActual(this.p1)); dibujarCuadro(x, cuadroListo(sp, 'quieto', Math.floor(this.t * 5) % 4), Math.round(x0 - 44), H - 30, 1); }
   dibujarCfg(x, W, H) { this.titulo(x, 'PLENA MORTAL · LIBRE', W, 10); const c = this.cfgL; const ops = ['DIFICULTAD: < ' + DIFS[c.dif] + ' >', 'ESCENARIO: < ' + (c.esc === 0 ? 'AL AZAR' : ESCENARIOS[IDS_ESC[c.esc - 1]].nombre) + ' >', '¡A PELEAR!'];
     ops.forEach((s, i) => this.boton(x, this.zLista(i, 3), s, this.sel === i)); const a = POR_ID[this.p1], b = POR_ID[this.p2]; texto(x, a.nombre + '  VS  ' + b.nombre, W / 2, 34, '#ffffff', 1, 'centro'); this.boton(x, this.zVolver(), 'VOLVER', false); }
   dibujarInfinito(x, W, H) { this.titulo(x, 'MODO INFINITO', W, 10); const ops = ['OLEADAS (BEAT \'EM UP)', 'SUPERVIVENCIA PLENA MORTAL', 'VOLVER']; ops.forEach((s, i) => this.boton(x, this.zLista(i, 3), s, this.sel === i)); const r = PP().infinito;
@@ -225,17 +231,17 @@ export class Arcade {
   dibujarRes(x, W, H) { const r = this.res, g = r.gana === 1; this.panel(x, W / 2 - 160, 16, 320, H - 32, g ? '#7aff7a' : '#ff5a3a');
     texto(x, g ? '¡GANASTE!' : 'PERDISTE', W / 2, 26, g ? '#7aff7a' : '#ff5a3a', 3, 'centro', CONTORNO, g ? '#1a5a1a' : '#5a0a0a');
     const a = this.pelea.F[0], b = this.pelea.F[1]; const gw = g ? a : b; dibujarCuadro(x, cuadroListo(gw.sp, 'gana', Math.floor(this.t * 3) % 2), Math.round(W / 2 - 110), 142, 1);
-    const st = r.stats; const l = [['RONDAS', r.rondas[0] + ' - ' + r.rondas[1]], ['COMBO MÁXIMO', st.maxCombo], ['GOLPES', st.golpes], ['DEFINITIVOS', st.ults], ['IMPECABLES', st.perfectos], ['$U', '+' + (this.plata || 0)]];
+    const st = r.stats; const l = [['RONDAS', r.rondas[0] + ' - ' + r.rondas[1]], ['COMBO MÁXIMO', st.maxCombo], ['GOLPES', st.golpes], ['DEFINITIVOS', st.ults], ['IMPECABLES', st.perfectos], ['$U', '+' + (this.plata || 0)]]; if (MODOS_PM.has(this.cfgPelea.modo)) l.push(['FICHAS', this.fichasR && this.fichasR.dios ? 'MODO DIOS: 0' : '+' + ((this.fichasR && this.fichasR.total) || 0)]);
     l.forEach(([k, v], i) => { texto(x, k, W / 2 - 50, 60 + i * 12, '#c8b8d8', 1); texto(x, String(v), W / 2 + 140, 60 + i * 12, '#ffffff', 1, 'der'); });
-    if (this.cfgPelea.modo === 'superv') texto(x, 'RIVALES VENCIDOS: ' + this.superv.ganadas, W / 2 + 40, 136, '#ffd23a', 1, 'centro');
-    if (this.nuevos && this.nuevos.length) texto(x, '¡NUEVO LUCHADOR: ' + this.nuevos.map((n) => n.nombre).join(', ') + '!', W / 2, 150, (this.t * 4 | 0) % 2 ? '#ffd23a' : '#ffffff', 1, 'centro');
+    if (this.cfgPelea.modo === 'superv') texto(x, 'RIVALES VENCIDOS: ' + this.superv.ganadas, W / 2 + 40, 146, '#ffd23a', 1, 'centro');
+    if (this.nuevos && this.nuevos.length) texto(x, '¡NUEVO LUCHADOR: ' + this.nuevos.map((n) => n.nombre).join(', ') + '!', W / 2, 160, (this.t * 4 | 0) % 2 ? '#ffd23a' : '#ffffff', 1, 'centro');
     if (this.t > 0.8) this.opsRes().forEach((o, i) => this.boton(x, this.zRes(i), o[0], this.sel === i)); }
   dibujarCampFin(x, W, H) { const g = this.res.gana === 1; this.pelea.dibujar(x, 1, W, H); x.fillStyle = 'rgba(14,8,26,0.5)'; x.fillRect(0, 0, W, H);
     texto(x, g ? '¡JEFE DERROTADO!' : '¡TE DIERON VUELTA!', W / 2, 40, g ? '#7aff7a' : '#ff5a3a', 2, 'centro', CONTORNO);
     if (!g) texto(x, 'PODÉS PEDIR REVANCHA O PELEARLO A LA ANTIGUA', W / 2, 64, '#ffffff', 1, 'centro'); if (this.t > 1) (g ? [['SEGUIR']] : [['REVANCHA'], ['PELEAR A LA ANTIGUA']]).forEach((o, i) => this.boton(x, this.zRes(i), o[0], this.sel === i)); }
   dibujarTorreFin(x, W, H) { const T = this.torre; this.panel(x, W / 2 - 170, 20, 340, H - 40, T.def.c); texto(x, '¡' + T.def.nombre + ' COMPLETA!', W / 2, 30, '#ffd23a', 1, 'centro'); texto(x, '¡CAMPEÓN!', W / 2, 46, '#ffffff', 3, 'centro', CONTORNO, '#8a3a10');
-    const sp = setLuchador(POR_ID[this.p1]); dibujarCuadro(x, cuadroListo(sp, 'gana', Math.floor(this.t * 3) % 2), W / 2, 176, 1);
-    texto(x, 'PREMIO: $U ' + T.def.final + ' + $U ' + T.plata + ' DE LOS PISOS', W / 2, 186, '#7aff7a', 1, 'centro'); texto(x, 'TIEMPO: ' + Math.floor(this.tiempoT / 60) + ':' + String(Math.floor(this.tiempoT % 60)).padStart(2, '0'), W / 2, 198, '#ffffff', 1, 'centro');
+    const sp = setLuchador(POR_ID[this.p1], null, trajeActual(this.p1), festejoEq()); dibujarCuadro(x, cuadroListo(sp, 'gana', Math.floor(this.t * 3) % 2), W / 2, 176, 1);
+    texto(x, 'PREMIO: $U ' + T.def.final + ' + $U ' + T.plata + ' DE LOS PISOS' + (this.fichasT && this.fichasT.total ? ' · +' + this.fichasT.total + ' FICHAS' : ''), W / 2, 186, '#7aff7a', 1, 'centro'); texto(x, 'TIEMPO: ' + Math.floor(this.tiempoT / 60) + ':' + String(Math.floor(this.tiempoT % 60)).padStart(2, '0'), W / 2, 198, '#ffffff', 1, 'centro');
     if (this.nuevosT && this.nuevosT.length) texto(x, '¡DESBLOQUEADO: ' + this.nuevosT.map((n) => n.nombre).join(', ') + '!', W / 2, 212, (this.t * 4 | 0) % 2 ? '#ffd23a' : '#ffffff', 1, 'centro');
     if (this.t > 1.2 && (this.t * 2 | 0) % 2) texto(x, E_TACTIL() ? 'TOCÁ PARA SEGUIR' : OK_TXT() + ' PARA SEGUIR', W / 2, H - 34, '#ffd23a', 1, 'centro'); }
   dibujarPausa(x, W, H) { x.fillStyle = 'rgba(14,8,26,0.6)'; x.fillRect(0, 0, W, H); this.titulo(x, 'PAUSA', W, Math.round(H / 2 - 80)); const ops = this.opsPausa();
@@ -249,4 +255,14 @@ const _paso = Arcade.prototype.paso; Arcade.prototype.paso = function (dt, I) { 
 function E_TACTIL() { return !usaPad() && document.body.classList.contains('tactil'); }
 const OK_TXT = () => usaPad() ? nomBoton('ok') : 'PIÑA';
 const negras = new WeakMap(); function siluetaNegra(f) { let r = negras.get(f); if (r) return r; const [cv, x] = lienzo(f.d.width, f.d.height); x.drawImage(f.d, 0, 0); x.globalCompositeOperation = 'source-atop'; x.fillStyle = '#0e0818'; x.fillRect(0, 0, cv.width, cv.height); r = { d: cv, q: f.q, pies: f.pies, parche: null }; negras.set(f, r); return r; }
+// v13: selector de traje en la selección (sólo P1; cambia con SÚPER/PATADA o tocando el chip) y festejo equipado
+function festejoEq() { const t = TP(); return t.festejo && t.compras[t.festejo] ? t.festejo.slice(2) : null; }
+Arcade.prototype.trajeSel = function (id, esP1) { return esP1 ? trajeActual(id) : null; };
+Arcade.prototype.zChip = function () { const W = this.api.W(); const px = Math.round(this.etapa === 'p2' ? W * 0.85 : W * 0.17); return [Math.max(4, px - 70), 24, 140, 24]; };
+Arcade.prototype.pasoChipTraje = function (I) { if (this.etapa !== 'p1' || this.confirma) return false; const L = LUCHADORES[this.cur]; if (!desbloqueado(L.id) || opcionesTraje(L.id).length < 2) return false;
+  if (I.alt || dentro(I.tap, this.zChip())) { ciclarTraje(L.id, 1); sonar('ui.ropa'); return !!I.tap; } return false; };
+Arcade.prototype.dibujarChipTraje = function (x, L, ab) { if (this.etapa !== 'p1' || !ab) return; const ops = opcionesTraje(L.id); if (ops.length < 2) return; const r = this.zChip(); const s = trajeActual(L.id);
+  x.fillStyle = CONTORNO; x.fillRect(r[0] - 1, r[1] - 1, r[2] + 2, r[3] + 2); x.fillStyle = s ? 'rgba(255,90,58,0.3)' : 'rgba(40,24,56,0.9)'; x.fillRect(r[0], r[1], r[2], r[3]);
+  const k = usaPad() ? nomBoton('super') : E_TACTIL() ? 'TOCÁ' : 'O / K'; texto(x, '< TRAJE (' + k + ') >', r[0] + r[2] / 2, r[1] + 3, '#ffd23a', 1, 'centro'); const nm = nombreTraje(L.id, s); texto(x, nm.length > 17 ? nm.slice(0, 16) + '.' : nm, r[0] + r[2] / 2, r[1] + 13, '#ffffff', 1, 'centro'); };
+instalarTienda(Arcade);
 void generar; void DT;

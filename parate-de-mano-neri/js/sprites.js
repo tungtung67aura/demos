@@ -698,6 +698,9 @@ function torso(b, def, E) {
     recolor(b, base, (x, y) => { const [tt, s] = lc(x, y);
       if (A.chaleco && tt > 0.2 && tt < 0.96 && !(s > E.sAt(tt, 0.26 * Math.min(1, (tt - 0.2) / 0.5)) && s < E.sAt(tt, -0.22 * Math.min(1, (tt - 0.2) / 0.5)))) return col(A.chaleco);
       if (A.patron === 'cuadros' && c2) { const u = Math.floor((s + 200) / (ancho * 2)) % 2, v = Math.floor(tt * E.Ls / (ancho * 2)) % 2; if (u && v) return c2; if (u || v) return d(0.78); }
+      if (A.patron === 'flores' && c2) { // v13: camisa floreada: flores de cuatro pétalos en grilla alternada, con centro de color
+        const cs = 5.2 * e, fv = tt * E.Ls / cs, fi = Math.floor(fv), fu = (s + 200) / cs + (fi % 2) * 0.5, du = fu - Math.floor(fu) - 0.5, dv = fv - fi - 0.5, r = Math.abs(du) + Math.abs(dv);
+        if (r < 0.13) return col(A.acento || '#f2b020'); if (r < 0.34 && (Math.abs(du) < 0.1 || Math.abs(dv) < 0.1)) return c2; }
       return 0; });
     const tap = A.chaleco ? 0.02 : 0.04; ln(b, E.S3(hem + 0.04, tap), E.S3(1.0, tap), d(0.7));
     for (let k = 0; k < 4; k++) { const bp = E.S3(0.3 + k * 0.18, tap); b.px(Math.round(bp[0]), Math.round(bp[1]), col(A.chaleco ? '#c8c8d0' : '#f2f2ea')); }
@@ -731,6 +734,14 @@ function espalda(b, def, E) {
     const c0 = E.T(0.28, bk(0.28) - 2 * e), c1 = E.T(1.25, bk(0.98) - 1 * e);
     b.seg(c0[0], c0[1], c1[0], c1[1], 2.0 * e, 1.6 * e, mo); b.elipse(c0[0], c0[1], 6.2 * e, 5.0 * e, m); const c2 = E.T(0.5, bk(0.5) - 2 * e); b.elipse(c2[0], c2[1], 4.4 * e, 3.6 * e, m);
     b.disco(c2[0], c2[1] + 1, 1.4 * e, cu); b.seg(c1[0], c1[1], c1[0] + 1.5 * e, c1[1] - 3.5 * e, 2.2 * e, 2.0 * e, mo); }
+  else if (def.espalda === 'tambor') { // v13: tamboril de candombe (chico) colgado en diagonal: duelas de madera, aros y parche de cuero
+    const m = col('#9a5a2a'), mo = col('#6a3a1a'), ar = col('#c8c0a8'), pa = col('#e8d8b0'), co = col('#3a2416');
+    const a0 = E.T(0.3, bk(0.3) - 3 * e), a1 = E.T(1.02, bk(1.02) - 5 * e); const L = Math.hypot(a1[0] - a0[0], a1[1] - a0[1]) || 1, ux = (a1[0] - a0[0]) / L, uy = (a1[1] - a0[1]) / L;
+    const at = (k) => [a0[0] + ux * L * k, a0[1] + uy * L * k];
+    b.seg(a0[0], a0[1], a1[0], a1[1], 5.6 * e, 7.4 * e, m); b.seg(at(0.15)[0], at(0.15)[1], at(0.85)[0], at(0.85)[1], 1.8 * e, 2.4 * e, mo);
+    for (const k of [0.12, 0.5, 0.88]) { const q = at(k); b.seg(q[0] - uy * 3.0 * e * (1 + k * 0.3), q[1] + ux * 3.0 * e * (1 + k * 0.3), q[0] + uy * 3.0 * e * (1 + k * 0.3), q[1] - ux * 3.0 * e * (1 + k * 0.3), 1.1 * e, 1.1 * e, ar); }
+    b.elipse(a1[0], a1[1], 4.0 * e, 3.0 * e, ar); b.elipse(a1[0], a1[1], 3.3 * e, 2.4 * e, pa); b.disco(a1[0], a1[1], 0.9 * e, col('#d0c098'));
+    const s0 = E.T(1.06, bk(1.06) - 1), s1 = E.T(0.5, bk(0.5) - 1); b.linea(s0[0], s0[1], s1[0], s1[1], co); }
 }
 // ---------- COMPOSICIÓN ----------
 const tmp = new Map();

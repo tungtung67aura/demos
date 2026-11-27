@@ -20,7 +20,11 @@ const RANGO = { l: 1, lc: 1, la: 1, h: 2, hc: 2, ha: 2, firma: 2.5, agarre: 2.6,
 const NEUTRO = new Set(['quieto', 'camina', 'corre', 'agacha', 'bloqP', 'bloqAgP']);
 const cachePoses = new Map();
 export function posesLuchador(L) { let p = cachePoses.get(L.id); if (!p) { p = posesDe(L); cachePoses.set(L.id, p); } return p; }
-export function setLuchador(L, ropa = null) { return generar(L.cuerpo, 0, ropa, false, posesLuchador(L), L.id); }
+// v13: traje (cuerpo 'cuerpo~traje' armado de cero con otras prendas) y festejo (pose de victoria comprada en la tienda)
+const conFestejo = new Map();
+function lucFestejo(L, fe) { const k = L.id + '|' + fe; let x = conFestejo.get(k); if (!x) { x = Object.assign({}, L, { id: k, gana: fe }); conFestejo.set(k, x); } return x; }
+export function setLuchador(L, ropa = null, traje = null, festejo = null) { const Lx = festejo && festejo !== L.gana ? lucFestejo(L, festejo) : L; const cu = traje && DEFS[L.cuerpo + '~' + traje] ? L.cuerpo + '~' + traje : L.cuerpo;
+  return generar(cu, 0, ropa, false, posesLuchador(Lx), Lx.id); }
 
 // movimiento = plantilla (frame data por defecto) + lo propio del luchador
 function partir(s, n) { const out = []; let l = ''; for (const w of s.split(' ')) { if ((l + ' ' + w).trim().length > n && l) { out.push(l); l = w; } else l = (l + ' ' + w).trim(); } if (l) out.push(l); return out; }
@@ -41,8 +45,8 @@ function armarMov(L, k) {
 export class Luchador {
   constructor(L, lado, op = {}) {
     this.L = L; this.lado = lado; this.N = numeros(L); this.op = null; this.cpu = !!op.cpu; this.dif = op.dif || 2;
-    this.sp = setLuchador(L, op.ropa || null); this.def = this.sp.def; this.esc = this.def.escala; this.anchoC = 11 * this.esc * Math.min(1.5, this.def.ancho || 1);
-    this.hpMax = Math.round(this.N.hp * (op.hpMul || 1)); this.dmgMul = op.dmgMul || 1; this.jefe = !!op.jefe;
+    this.sp = setLuchador(L, op.ropa || null, op.traje || null, op.festejo || null); this.mej = op.mej || null; this.titulo = op.titulo || null; this.relator = op.relator || null; this.def = this.sp.def; this.esc = this.def.escala; this.anchoC = 11 * this.esc * Math.min(1.5, this.def.ancho || 1);
+    this.hpMax = Math.round(this.N.hp * (op.hpMul || 1) * (this.mej ? this.mej.hp : 1)); this.dmgMul = op.dmgMul || 1; this.jefe = !!op.jefe;
     this.movs = {}; for (const k of ['l', 'h', 'lc', 'hc', 'la', 'ha', 'firma', 's1', 's2', 'ult']) this.movs[k] = armarMov(L, k);
     this.movs.agarre = { k: 'agarre', anim: 'agarra', limb: 'mF', r: 10, ini: 0.06, act: 0.06, rec: 0.3, dmg: 0, tipo: 'agarreN' };
     this.ia = this.cpu ? new IA(this, this.dif) : null; this.rondas = 0; this.super = 0; this.reset(lado);
@@ -74,7 +78,7 @@ export class Pelea {
   }
   anunciar(s, c = '#ffd23a', dur = 1.2, esc = 3, y = 0.38) { this.anuncios.push({ s, c, t: 0, dur, esc, y }); }
   empezarRonda() {
-    this.ronda++; this.reloj = RELOJ; this.proy.length = 0; this.trampas.length = 0; for (const f of this.F) { const r = f.rondas, s = f.super; f.reset(f.lado); f.rondas = r; f.super = this.mods.superLleno ? 100 : s; }
+    this.ronda++; this.reloj = RELOJ; this.proy.length = 0; this.trampas.length = 0; for (const f of this.F) { const r = f.rondas, s = f.super; f.reset(f.lado); f.rondas = r; f.super = this.mods.superLleno ? 100 : Math.max(s, f.mej ? f.mej.ini : 0); }
     if (this.ronda === 1 && this.cfg.p1.hpIni) this.F[0].hp = this.F[0].hpRojo = Math.round(this.cfg.p1.hpIni);
     this.cam = ANCHO / 2; this.camPrev = this.cam; this.estado = 'ronda'; this.tE = 0; this.lento = 0; this.zoom = 1; this.koQuien = null;
     const fin = this.F[0].rondas === this.ganar - 1 && this.F[1].rondas === this.ganar - 1;
@@ -135,7 +139,7 @@ export class Pelea {
     if (f.est === 'dolor' || f.est === 'dolorAg' || f.est === 'bloq' || f.est === 'bloqAg') { f.stun -= dt; f.vx *= Math.pow(0.0008, dt);
       // contraataque de guardia (cuesta 50 de súper): especial + adelante durante el bloqueo
       // ESCAPE (universal): con 3+ golpes seguidos recibidos y 50 de súper, ESPECIAL te zafa del combo (empuja al rival, invulnerable un instante)
-      if ((f.est === 'dolor' || f.est === 'dolorAg') && I.s && f.super >= 50 && f.comboN >= 3 && !this.ult && f.stun < 50) { this.consumir(f, E, 's'); f.super -= 50; this.escape(f); return; }
+      const cZ = f.mej ? f.mej.zafa : 50; if ((f.est === 'dolor' || f.est === 'dolorAg') && I.s && f.super >= cZ && f.comboN >= 3 && !this.ult && f.stun < 50) { this.consumir(f, E, 's'); f.super -= cZ; this.escape(f); return; }
       if ((f.est === 'bloq' || f.est === 'bloqAg') && I.s && f.super >= 50 && I.dx * f.cara > 0.5) { this.consumir(f, E, 's'); f.super -= 50; this.contraGuardia(f); return; }
       if (f.stun <= 0) { if (f.est === 'dolor' || f.est === 'dolorAg') f.comboN = 0; f.est = 'quieto'; f.t = 0; } else return; } // v12.2: el combo termina al recuperarse (antes seguía contando y escalaba el daño de golpes sueltos)
     if (f.est === 'piso') { f.vx *= Math.pow(0.001, dt); if (f.t > (f.ko ? 99 : 0.55)) { f.est = 'levanta'; f.t = 0; f.invul = 0.45; sonar('pelea.levanta'); } return; }
@@ -235,7 +239,7 @@ export class Pelea {
       f.est = 'lanza'; f.t = 0; f.agarrado = null; if (atras) { op.x = f.x - f.cara * 20; f.cara = -f.cara; }
       const dmg = g.comando ? g.a.dmg : 110; this.impacto(f, op, { dmg, tumba: true, lanza: 300, kb: 150, hs: 0.4, noBloq: true, agarre: true, dir }, op.x, 60 * op.esc); sonar('pelea.lanza.cuerpo'); this.temblor = 0.2; }
   }
-  escape(f) { const op = f.op, dir = Math.sign(op.x - f.x) || f.cara; f.est = 'quieto'; f.t = 0; f.stun = 0; f.comboN = 0; f.invul = 0.4; f.vx = -dir * 120; f.juggle = 0;
+  escape(f) { const op = f.op, dir = Math.sign(op.x - f.x) || f.cara; f.est = 'quieto'; f.t = 0; f.stun = 0; f.comboN = 0; f.invul = 0.4 + (f.mej ? f.mej.zafaInv : 0); f.vx = -dir * 120; f.juggle = 0;
     if (op.est === 'ataque' || NEUTRO.has(op.est)) { op.est = 'dolor'; op.t = 0; op.stun = 0.3; op.atq = null; } op.vx = dir * 300; op.cadena = []; this.hitstop = 0.08;
     this.fx.aro(f.x, SUELO); this.fx.flotante(f.x, SUELO, 110, '¡ZAFÉ!', '#7aff7a'); sonar('pelea.contra'); vibrar(0.6, 120); }
   contraGuardia(f) { const op = f.op; f.est = 'ataque'; f.atq = Object.assign({}, f.movs.h, { k: 'contraG', dmg: 60, tumba: true, invul: 0.3, ini: 0.03, nombre: 'CONTRA' }); f.t = 0; f.conecto = false; f.hits = 0; f.invul = 0.3; f.stun = 0;
@@ -308,14 +312,14 @@ export class Pelea {
     const dir = a.dir || Math.sign(v.x - atk.x) || atk.cara; const mul = atk.dmgMul * (this.mods.dobleDanio ? 1.5 : 1) * (atk.buffT > 0 && atk.L.id === 'borracho' ? 1.15 : 1);
     if (this.bloquea(v, atk, a)) { // ---- bloqueado
       const ag = v.inp.dy > 0.5; v.est = ag ? 'bloqAg' : 'bloq'; v.t = 0; v.stun = a.bs || 0.14; v.vx = dir * (a.kb || 90) * 0.9 / v.N.peso; if (Math.abs(v.x - (dir > 0 ? ANCHO : 0)) < 40) atk.vx = -dir * 120;
-      const chip = a.especial || a.chip ? a.dmg * 0.12 * mul : 0; if (chip) this.danar(v, chip, atk); atk.conecto = true; v.super = Math.min(100, v.super + 4); atk.super = Math.min(100, atk.super + 2);
+      const chip = a.especial || a.chip ? a.dmg * 0.12 * mul : 0; if (chip) this.danar(v, chip, atk); atk.conecto = true; v.super = Math.min(100, v.super + 4 * (v.mej ? v.mej.sup : 1)); atk.super = Math.min(100, atk.super + 2 * (atk.mej ? atk.mej.sup : 1));
       this.fx.bloqueo(X, SUELO, Z); this.hitstop = 0.045; sonar('pelea.bloqueo'); if (v.hp <= 0) this.ko(v, atk); return; }
     // ---- golpe que entra
     const contra = v.est === 'ataque' && v.fase() === 'ini';
     const escala = Math.max(0.3, 1 - 0.11 * v.comboN); let dmg = a.dmg * mul * escala * (contra ? 1.25 : 1); if (v.armadura) dmg *= 0.7; if (v.jefe) dmg *= 1;
     this.danar(v, dmg, atk); v.comboN++; atk.comboVis = v.comboN; atk.comboT = 1.6; atk.conecto = true; if (a.k && !a.especial) atk.cadena.push(a.k === 'firma' ? 'f' : a.k[0]);
     if (atk === this.F[0]) { this.stats.golpes++; this.stats.maxCombo = Math.max(this.stats.maxCombo, v.comboN); }
-    atk.super = Math.min(100, atk.super + Math.min(14, dmg * 0.09) * (a.especial ? 0.5 : 1)); v.super = Math.min(100, v.super + Math.min(10, dmg * 0.05));
+    atk.super = Math.min(100, atk.super + Math.min(14, dmg * 0.09) * (a.especial ? 0.5 : 1) * (atk.mej ? atk.mej.sup : 1)); v.super = Math.min(100, v.super + Math.min(10, dmg * 0.05) * (v.mej ? v.mej.sup : 1));
     if (contra && !a.agarre) { this.fx.flotante(v.x, SUELO, 120 * v.esc, '¡CONTRAGOLPE!', '#ff5a3a'); sonar('pelea.contragolpe'); }
     v.blink = 0.07; v.atq = null; v.contraOn = false;
     const fuerte = dmg >= 80 || a.lanza || a.tumba; this.fx.chispa(X, SUELO, Z, fuerte); if (GORE.nivel && (fuerte || Math.random() < 0.4)) this.fx.vidrios(X, SUELO, Z, '#a8141a');
@@ -345,7 +349,7 @@ export class Pelea {
     this.anunciar('K.O.', '#ff3a2a', 1.8, 5, 0.42); sonar('pelea.ko'); this.temblor = 0.5; this.zoomObj = 1.15; this.zoomT = 1.2; this.esc.alentar(2); }
   tiempoFuera() { if (this.estado !== 'pelea') return; const [a, b] = this.F; const ka = a.hp / a.hpMax, kb = b.hp / b.hpMax; this.anunciar('¡SE ACABÓ EL TIEMPO!', '#ffd23a', 1.6, 2, 0.4); sonar('pelea.tiempo');
     this.estado = 'ko'; this.tE = 0; this.koQuien = Math.abs(ka - kb) < 0.001 ? 'empate' : ka > kb ? b : a; }
-  pasoKO() { if (this.tE < 1.6) return; const v = this.koQuien; if (this._finR) return; this._finR = true;
+  pasoKO() { if (this.tE < 1.6) return; const v = this.koQuien; if (this._finR) return; this._finR = true; if (v === this.F[1] && v.ko && this.F[0].relator) this.anunciar(this.F[0].relator, '#ffd23a', 2.0, 2, 0.3);
     if (v === 'empate') { for (const f of this.F) f.rondas++; this.anunciar('EMPATE', '#ffffff', 1.4, 3); }
     else { const g = v.op; g.rondas++; g.est = 'gana'; g.t = 0; g.vx = 0; if (!v.ko) { v.est = 'pierde'; v.t = 0; } sonar(g.cpu ? 'pelea.derrota' : 'pelea.victoria'); const fr = g.L.frases[Math.floor(Math.random() * g.L.frases.length)]; this.frase = { f: g, s: fr, t: 0 };
       if (g.hp >= g.hpMax) { this.anunciar('¡IMPECABLE!', '#7aff7a', 1.6, 3, 0.55); if (g === this.F[0]) this.stats.perfectos++; }
@@ -437,7 +441,7 @@ export class Pelea {
     if (this.estado === 'intro') { const k = Math.min(1, this.tE / 0.4); x.fillStyle = 'rgba(10,6,20,' + (0.55 * k) + ')'; x.fillRect(0, Math.round(H * 0.32), W, 76);
       const nMax = Math.max(10, Math.floor((W / 2 - 34) / 8)); const claro = (c) => !c || c === '#24242c' || c === '#3a3a44' ? '#ffd23a' : c;
       texto(x, a.L.nombre.length > nMax ? a.L.nombre.slice(0, nMax) : a.L.nombre, Math.round(W * 0.25), Math.round(H * 0.36), claro(a.L.color), 1, 'centro', CONTORNO); texto(x, b.L.nombre.length > nMax ? b.L.nombre.slice(0, nMax) : b.L.nombre, Math.round(W * 0.75), Math.round(H * 0.36), claro(b.L.color), 1, 'centro', CONTORNO);
-      texto(x, 'VS', W / 2, Math.round(H * 0.4), '#ff3a2a', 3, 'centro', CONTORNO, '#5a0a0a'); texto(x, this.esc.nombre, W / 2, Math.round(H * 0.32) + 82, '#e8e0f0', 1, 'centro', CONTORNO); partir('"' + a.L.frases[0] + '"', nMax).slice(0, 3).forEach((l, i) => texto(x, l, Math.round(W * 0.25), Math.round(H * 0.45) + i * 10, '#ffffff', 1, 'centro', CONTORNO));
+      if (a.titulo) texto(x, a.titulo.length > nMax ? a.titulo.slice(0, nMax) : a.titulo, Math.round(W * 0.25), Math.round(H * 0.36) + 10, '#ffd23a', 1, 'centro', CONTORNO); texto(x, 'VS', W / 2, Math.round(H * 0.4), '#ff3a2a', 3, 'centro', CONTORNO, '#5a0a0a'); texto(x, this.esc.nombre, W / 2, Math.round(H * 0.32) + 82, '#e8e0f0', 1, 'centro', CONTORNO); partir('"' + a.L.frases[0] + '"', nMax).slice(0, 3).forEach((l, i) => texto(x, l, Math.round(W * 0.25), Math.round(H * 0.45) + i * 10, '#ffffff', 1, 'centro', CONTORNO));
       partir('"' + b.L.frases[0] + '"', nMax).slice(0, 3).forEach((l, i) => texto(x, l, Math.round(W * 0.75), Math.round(H * 0.45) + 12 + i * 10, '#ffffff', 1, 'centro', CONTORNO));
       texto(x, 'PLENA MORTAL', W / 2, Math.round(H * 0.25) - 22, '#ff3a2a', 2, 'centro', CONTORNO, '#5a0a0a'); if (this.cfg.titulo) texto(x, this.cfg.titulo, W / 2, Math.round(H * 0.25), '#ffd23a', 1, 'centro'); }
   }

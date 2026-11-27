@@ -19,7 +19,7 @@ import { Arcade } from './pelea/arcade.js';
 import { DE_CAMPANA } from './pelea/luchadores.js';
 import { recordInfinito, PP } from './pelea/progreso-pelea.js';
 
-export const VERSION = 'bb-v12.2';
+export const VERSION = 'bb-v13';
 // sonidos de menú por ID (audio-ids.js): sin archivo, no suena (o suena el respaldo sintetizado si el ID lo tiene)
 const UI = { menu: 'ui.mover', dale: 'ui.ok', pausa: 'ui.pausa', item: 'ui.ropa', atras: 'ui.atras' };
 function sfx(k) { sonar(UI[k] || k); }
@@ -213,8 +213,8 @@ function menus(dt) {
     if (trucoListo() && (E.buf.pina > 0 || t)) { E.buf.pina = 0; E.buf.ok = 0; truco = []; const on = alternarDios(); avisoDios = { s: on ? 'MODO DIOS ACTIVADO' : 'MODO DIOS DESACTIVADO', t: 1.8 }; sonar(on ? 'evento.record' : 'ui.mover'); return; }
     if (ok() || t) { sfx('menu'); abrirArcade(); }
   } else if (pantalla === 'arcade') {
-    const atras = E.buf.atras > 0 || E.buf.pausa > 0; const esp = E.buf.especial > 0; const pz = E.buf.pausa > 0; E.buf.atras = 0; E.buf.especial = 0; if (arcade.vista !== 'pelea') E.buf.pausa = 0;
-    arcade.paso(dt, { n, ok: ok(), tap: t || null, atras, esp, pausa: pz, dt }); if (arcade.vista === 'pelea' && arcade.pausa) E.buf.pausa = 0;
+    const atras = E.buf.atras > 0 || E.buf.pausa > 0; const esp = E.buf.especial > 0; const pz = E.buf.pausa > 0; E.buf.atras = 0; E.buf.especial = 0; const alt = arcade.vista !== 'pelea' && (E.buf.super > 0 || E.buf.patada > 0); if (alt) { E.buf.super = 0; E.buf.patada = 0; } if (arcade.vista !== 'pelea') E.buf.pausa = 0;
+    arcade.paso(dt, { n, ok: ok(), tap: t || null, atras, esp, alt, pausa: pz, dt }); if (arcade.vista === 'pelea' && arcade.pausa) E.buf.pausa = 0;
     if (!arcade.vista && pantalla === 'arcade') { pantalla = 'titulo'; }
   } else if (pantalla === 'seleccion') {
     if (n.x) { elegido = (elegido + n.x + 3) % 3; sfx('menu'); }
