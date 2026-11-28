@@ -4,7 +4,7 @@ import { mezcla } from './datos.js';
 export const RAREZA = { c: { nombre: 'Común', color: '#c8c8c8' }, r: { nombre: 'Rara', color: '#4aa8ff' }, l: { nombre: 'Legendaria', color: '#ffb020' } };
 // FUEGO: de bala (los mods de impacto funcionan); PROY: tiran un proyectil (bengala, garrafa)
 const FUEGO = ['pistola', 'escopeta', 'metralleta', 'rifle', 'revolver', 'gomera', 'recortada', 'fal'], PROY = ['bengalera', 'lanzagarrafas'];
-const CUERPO = ['termo', 'bate', 'machete', 'sarten', 'espeto', 'cana'];
+const CUERPO = ['termo', 'bate', 'machete', 'sarten', 'espeto', 'cana', 'facon', 'llave', 'hockey', 'cadena', 'pala', 'hacha', 'remo', 'motosierra'];
 const NO_ESC = ['pistola', 'metralleta', 'rifle', 'revolver', 'fal'];
 const TODAS_FUEGO = FUEGO.concat(PROY);
 // f(s, n): modifica las estadísticas s (copia del arma) con n pilas del mod
@@ -53,6 +53,15 @@ export const MODS = [
   { id: 'largo', armas: CUERPO, nombre: 'Brazo largo', desc: 'Más alcance y un arco más ancho', r: 'c', max: 2, f: (s, n) => { s.alcance += 0.5 * n; s.arco += 0.12 * n; } },
   { id: 'llamas', armas: CUERPO, nombre: 'Prendido fuego', desc: 'Cada golpe prende fuego (22 por segundo)', r: 'r', max: 1, f: s => { s.fuego = 22; s.llamas = true; } },
   { id: 'electro', armas: CUERPO, nombre: 'Electrificado', desc: 'Cada golpe descarga un rayo a 2 zombis cercanos', r: 'l', max: 1, f: s => { s.cadena = 1; s.cadenaN = 2; s.electro = true; } },
+  // --- cuerpo a cuerpo nuevo (v9): uno propio para cada arma
+  { id: 'filo', armas: ['facon'], nombre: 'Filo de la abuela', desc: 'Cada golpe tiene 25% de ser crítico (triple daño)', r: 'r', max: 2, f: (s, n) => { s.critico = 0.25 * n; } },
+  { id: 'cromada', armas: ['llave'], nombre: 'Llave cromada', desc: '+50% de mareo y +25% de daño', r: 'c', max: 2, f: (s, n) => { s.aturde = (s.aturde || 0.45) * 1.5 ** n; s.dano *= 1.25 ** n; } },
+  { id: 'drag', armas: ['hockey'], nombre: 'Arrastrada olímpica', desc: '+60% de empuje y la carga sale 30% más rápido', r: 'c', max: 2, f: (s, n) => { s.empuje *= 1.6 ** n; s.cargaRapida = (s.cargaRapida || 1) * 0.7 ** n; } },
+  { id: 'eslabon', armas: ['cadena'], nombre: 'Eslabón extra', desc: '+1 m de alcance y +20% de daño', r: 'c', max: 2, f: (s, n) => { s.alcance += 1 * n; s.dano *= 1.2 ** n; } },
+  { id: 'albanil', armas: ['pala'], nombre: 'Mano de albañil', desc: 'El palazo cargado hace una onda 50% más grande', r: 'r', max: 1, f: s => { s.ondaMult = 1.5; } },
+  { id: 'lenador', armas: ['hacha'], nombre: 'Leñador de Tacuarembó', desc: 'Corta brazos siempre y +20% de daño', r: 'r', max: 1, f: s => { s.corta = 1; s.dano *= 1.2; } },
+  { id: 'regata', armas: ['remo'], nombre: 'Regata del Buceo', desc: 'Golpes 20% más rápidos y arco más ancho', r: 'c', max: 2, f: (s, n) => { s.cadencia *= 0.8 ** n; s.arco += 0.15 * n; } },
+  { id: 'nafta', armas: ['motosierra'], nombre: 'Nafta súper', desc: '+40% de daño por diente y corta más', r: 'r', max: 2, f: (s, n) => { s.dano *= 1.4 ** n; s.corta = (s.corta || 0.12) + 0.1 * n; } },
   // --- del jugador (siempre hay algo para elegir)
   { id: 'chivito', armas: ['*'], nombre: 'Chivito canadiense', desc: '+20 de vida máxima y te cura entero', r: 'c', max: 5 },
   { id: 'chaleco', armas: ['*'], nombre: 'Chaleco de feria', desc: '+50 de blindaje', r: 'c', max: 9 },

@@ -18,7 +18,16 @@ export const ARMAS = [
   { id: 'recortada', nombre: 'Recortada de dos caños', precio: 520, desc: 'Dos tiros y a recargar. De cerca, los da vuelta.', tipo: 'fuego', dano: 19, cadencia: 0.3, cargador: 2, reserva: 20, recarga: 1.7, alcance: 22, disp: 0.15, perdigones: 12, retroceso: 0.42, sonido: 'recortada', auto: false, empuje: 5, flash: 1.6 },
   { id: 'bengalera', nombre: 'Pistola de bengalas', precio: 600, desc: 'Prende fuego al que toque y deja el piso ardiendo.', tipo: 'fuego', dano: 40, cadencia: 0.8, cargador: 1, reserva: 10, recarga: 1.3, alcance: 40, disp: 0, perdigones: 1, retroceso: 0.2, sonido: 'bengala', auto: false, proyectil: 'bengala', radio: 2.4, sinVaina: true, flash: 1.3 },
   { id: 'fal', nombre: 'Fusil FAL', precio: 900, desc: 'Fusil de batalla. Pega fuerte, lejos y atraviesa a dos.', tipo: 'fuego', dano: 78, cadencia: 0.16, cargador: 20, reserva: 60, recarga: 2.1, alcance: 160, disp: 0.007, perdigones: 1, retroceso: 0.15, sonido: 'fal', auto: false, atraviesa: 2, empuje: 1.7, flash: 1.2 },
-  { id: 'lanzagarrafas', nombre: 'Lanzagarrafas', precio: 1100, desc: 'Tira una garrafa de supergás que revienta todo alrededor.', tipo: 'fuego', dano: 150, cadencia: 1.1, cargador: 1, reserva: 6, recarga: 1.9, alcance: 45, disp: 0, perdigones: 1, retroceso: 0.36, sonido: 'tubo', auto: false, proyectil: 'garrafa', radio: 3.8, sinVaina: true, flash: 1.5 }
+  { id: 'lanzagarrafas', nombre: 'Lanzagarrafas', precio: 1100, desc: 'Tira una garrafa de supergás que revienta todo alrededor.', tipo: 'fuego', dano: 150, cadencia: 1.1, cargador: 1, reserva: 6, recarga: 1.9, alcance: 45, disp: 0, perdigones: 1, retroceso: 0.36, sonido: 'tubo', auto: false, proyectil: 'garrafa', radio: 3.8, sinVaina: true, flash: 1.5 },
+  // v9: cuerpo a cuerpo nuevo. set = animaciones del combo (3 golpes), pesado = golpe cargado (mantener APUNTAR y soltar)
+  { id: 'facon', vista: [-0.03, 0.14, 0.1], nombre: 'Facón criollo', precio: 90, desc: 'Rapidísimo. Tajo, revés y puñalada. Cargado: estocada que degüella.', tipo: 'cuerpo', dano: 40, cadencia: 0.3, alcance: 2.2, empuje: 1.6, sonido: 'facon', arco: 0.45, corta: 0.3, set: ['horiz', 'rev', 'estoc'], pesado: { anim: 'estoc', dano: 3, empuje: 2, alcance: 0.5, degolla: true } },
+  { id: 'llave', vista: [-0.03, 0.13, 0.08], nombre: 'Llave inglesa', precio: 120, desc: 'Del taller de Don Washington. Cada golpe marea. Cargado: rompecocos.', tipo: 'cuerpo', dano: 46, cadencia: 0.46, alcance: 2.4, empuje: 7, sonido: 'llave', arco: 0.5, aturde: 0.45, metal: true, set: ['horiz', 'rev', 'vert'], pesado: { anim: 'vert', dano: 2.4, empuje: 1.6, aturde: 1.6 } },
+  { id: 'hockey', vista: [0, 0.05, 0], nombre: 'Palo de hockey', precio: 200, desc: 'De las Cimarronas del barrio. Largo y con efecto. Cargado: arrastrada que los vuela.', tipo: 'cuerpo', dano: 48, cadencia: 0.55, alcance: 3.0, empuje: 12, sonido: 'hockey', arco: 0.72, set: ['horiz', 'rev', 'horiz'], pesado: { anim: 'giro', dano: 2, empuje: 3, arco: 1.25, alcance: 0.4 } },
+  { id: 'cadena', vista: [-0.02, 0.12, 0.06], nombre: 'Cadena de candado', precio: 260, desc: 'Barre todo lo que tenés adelante. Cargado: molinete de 360°.', tipo: 'cuerpo', dano: 36, cadencia: 0.5, alcance: 3.6, empuje: 5, sonido: 'cadena', arco: 1.0, metal: true, set: ['horiz', 'rev', 'giro'], pesado: { anim: 'giro', dano: 1.9, empuje: 2, arco: 3.15, alcance: 0.3 } },
+  { id: 'pala', vista: [0, 0.02, 0], nombre: 'Pala de obra', precio: 300, desc: '¡PLANG! Empuja como nadie. Cargado: palazo al piso que tumba a todos alrededor.', tipo: 'cuerpo', dano: 66, cadencia: 0.72, alcance: 3.0, empuje: 14, sonido: 'pala', arco: 0.6, metal: true, set: ['horiz', 'vert', 'vert'], pesado: { anim: 'vert', dano: 2.2, empuje: 1.4, onda: 3.4 } },
+  { id: 'hacha', vista: [-0.01, 0.07, 0.03], nombre: 'Hacha de leña', precio: 380, desc: 'La de la parrilla del Tano. Corta brazos. Cargado: hachazo que decapita.', tipo: 'cuerpo', dano: 105, cadencia: 0.85, alcance: 2.7, empuje: 6, sonido: 'hacha', arco: 0.45, corta: 0.5, set: ['vert', 'horiz', 'vert'], pesado: { anim: 'vert', dano: 2.6, empuje: 1.5, degolla: true } },
+  { id: 'remo', vista: [0, 0.02, 0], nombre: 'Remo del Buceo', precio: 340, desc: 'El más largo. Barridas anchas que despejan. Cargado: palada de 270°.', tipo: 'cuerpo', dano: 56, cadencia: 0.7, alcance: 3.8, empuje: 16, sonido: 'remo', arco: 0.85, set: ['horiz', 'rev', 'giro'], pesado: { anim: 'giro', dano: 1.8, empuje: 2.4, arco: 2.4, alcance: 0.3 } },
+  { id: 'motosierra', vista: [0, 0, 0], nombre: 'Motosierra del tío', precio: 1200, desc: 'Mantené apretado y cortá. Desarma a cualquiera. Cargado: tajo que atraviesa a cuatro.', tipo: 'cuerpo', dano: 24, cadencia: 0.09, alcance: 2.5, empuje: 1.2, sonido: 'motosierra', arco: 0.38, corta: 0.12, continuo: true, set: ['sierra'], pesado: { anim: 'horiz', dano: 7, empuje: 3, alcance: 0.6, arco: 0.9, atraviesa: 4, degolla: true } }
 ];
 
 
@@ -70,10 +79,12 @@ const TX = (() => { const m = texMetal(), w = texMadera(), p = texPolimero(), t 
 
 const M = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.15, ...extra, metalness: Math.min(0.35, (extra.metalness ?? 0.15)) });
 const metal = M(0x9aa0ac, { metalness: 0.8, roughness: 0.38, map: TX.metal, bumpMap: TX.metalB, bumpScale: 0.6, roughnessMap: TX.metalB });
+const TRITIO = new THREE.MeshBasicMaterial({ color: 0x6dff7a }); // v9: punto de mira que brilla de noche (sin luz: básico)
 const metalClaro = M(0xd0d4dc, { metalness: 0.9, roughness: 0.22, map: TX.metal, bumpMap: TX.metalB, bumpScale: 0.4 });
 const madera = M(0x8a5028, { metalness: 0, roughness: 0.55, map: TX.madera, bumpMap: TX.maderaB, bumpScale: 0.8 }), maderaClara = M(0xe8b878, { metalness: 0, roughness: 0.6, map: TX.madera, bumpMap: TX.maderaB, bumpScale: 0.8 });
 const negro = M(0x4a4c54, { roughness: 0.62, map: TX.poli, bumpMap: TX.poliB, bumpScale: 0.6 }), oscuro = negro; // los detalles oscuros comparten material (sin draw calls extra)
 const piel = M(0xd8a888, { metalness: 0 }), manga = M(0x3a4a6a, { metalness: 0, map: TX.poli, bumpMap: TX.poliB, bumpScale: 0.5 });
+export const MATS_MANO = [piel, manga]; // v9: las skins no tocan la mano
 
 // UV a escala real: la textura se repite cada ~16 cm; en el metal, las caras laterales (±x) pueden llevar el grabado
 const KUV = 6;
@@ -142,6 +153,7 @@ function modelo(id) {
       g.add(cil(0.0105, 0.0105, 0.035, metal, 0, 0.034, -0.205, Math.PI / 2, 12), cil(0.0055, 0.0055, 0.037, oscuro, 0, 0.034, -0.205, Math.PI / 2, 8)); // caño asomado y boca
       g.add(caja(0.006, 0.01, 0.014, metal, 0, 0.064, -0.19), caja(0.026, 0.01, 0.012, metal, 0, 0.064, 0.036)); // miras
       g.add(caja(0.0115, 0.006, 0.004, oscuro, 0.0075, 0.065, 0.0425), caja(0.0115, 0.006, 0.004, oscuro, -0.0075, 0.065, 0.0425)); // muesca del alza
+      { const d = new THREE.Mesh(new THREE.BoxGeometry(0.0045, 0.0045, 0.002), TRITIO); d.position.set(0, 0.0645, -0.1825); g.add(d); g.userData.adsY = 0.0345; } // punto de tritio
       // armazón de polímero de perfil (z, y): riel, guardamonte con agujero, cola de castor y empuñadura a 18°
       g.add(perfil([[-0.2, 0.013], [0.042, 0.013], [0.058, 0.004], [0.056, -0.012], [0.08, -0.128], [0.074, -0.142], [0.014, -0.142], [0.006, -0.13], [-0.01, -0.044],
         [-0.07, -0.044], [-0.086, -0.03], [-0.082, -0.004], [-0.2, -0.004], [-0.206, 0.006]], [[[-0.064, -0.036], [-0.02, -0.034], [-0.016, -0.006], [-0.074, -0.006], [-0.076, -0.026]]], 0.042, negro, 0.003));
@@ -168,7 +180,12 @@ function modelo(id) {
       { const c = caja(0.04, 0.16, 0.06, metal, 0, -0.09, -0.12); c.rotation.x = 0.12; c.name = 'cargador'; g.add(c); }
       { const e = caja(0.05, 0.11, 0.05, negro, 0, -0.065, 0.05); e.rotation.x = -0.2; g.add(e); }
       g.add(caja(0.012, 0.012, 0.24, metal, 0.022, 0.0, 0.2), caja(0.012, 0.012, 0.24, metal, -0.022, 0.0, 0.2), caja(0.06, 0.07, 0.015, negro, 0, -0.01, 0.32)); // culata plegable de alambre
-      g.add(caja(0.02, 0.035, 0.02, metalClaro, 0, 0.085, -0.22), caja(0.03, 0.03, 0.02, metalClaro, 0, 0.08, 0.06)); // miras
+      // miras de verdad: guion con orejas protectoras y punto de tritio adelante, alza de dos orejas con muesca atrás (al apuntar se alinean en el centro)
+      g.add(caja(0.032, 0.012, 0.03, metalClaro, 0, 0.071, -0.22), caja(0.006, 0.026, 0.008, metalClaro, 0, 0.086, -0.22)); // base y poste del guion
+      g.add(caja(0.004, 0.03, 0.02, metalClaro, 0.014, 0.088, -0.22), caja(0.004, 0.03, 0.02, metalClaro, -0.014, 0.088, -0.22)); // orejas del guion
+      g.add(caja(0.034, 0.014, 0.022, metalClaro, 0, 0.072, 0.06), caja(0.011, 0.022, 0.01, metalClaro, 0.0115, 0.088, 0.06), caja(0.011, 0.022, 0.01, metalClaro, -0.0115, 0.088, 0.06)); // alza con muesca
+      { const d = new THREE.Mesh(new THREE.BoxGeometry(0.0078, 0.0078, 0.002), TRITIO); d.position.set(0, 0.0955, -0.2148); g.add(d); }
+      g.userData.adsY = 0.0655; // la punta del guion queda justo en el centro (animarArma baja 0.024 de más)
       g.add(caja(0.03, 0.012, 0.012, metalClaro, 0.04, 0.04, -0.02));                                            // manija de carga
       g.add(aro(0.026, 0.004, metal, 0, -0.03, -0.0));
       mano(g, 0, -0.08, 0.05); punta.set(0, 0.03, -0.49); break;

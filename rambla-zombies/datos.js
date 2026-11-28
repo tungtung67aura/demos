@@ -26,9 +26,11 @@ export const MEJORAS = {
   dano: { nombre: 'Daño', desc: '+20% de daño', base: 120, max: 3, cuerpo: true },
   cargador: { nombre: 'Cargador', desc: '+30% de balas por cargador', base: 100, max: 3, cuerpo: false },
   recarga: { nombre: 'Recarga', desc: '20% más rápida', base: 90, max: 3, cuerpo: false },
-  cadencia: { nombre: 'Cadencia', desc: '+15% más rápido', base: 130, max: 3, cuerpo: true }
+  cadencia: { nombre: 'Cadencia', desc: '+15% más rápido', base: 130, max: 3, cuerpo: true },
+  peso: { nombre: 'Golpe pesado', desc: 'Carga 18% más rápido y +30% de daño cargado', base: 110, max: 3, cuerpo: true, soloCuerpo: true },
+  alcance: { nombre: 'Alcance', desc: '+12% de alcance', base: 100, max: 3, cuerpo: true, soloCuerpo: true }
 };
-export const PRECIO_TIER = { pistola: 1, escopeta: 1.4, metralleta: 1.7, rifle: 2, termo: 0.8, bate: 1, machete: 1.2, sarten: 1.1, revolver: 1.6, gomera: 0.6, espeto: 1.1, cana: 1.2, recortada: 1.6, bengalera: 1.8, fal: 2.2, lanzagarrafas: 2.4 };
+export const PRECIO_TIER = { pistola: 1, escopeta: 1.4, metralleta: 1.7, rifle: 2, termo: 0.8, bate: 1, machete: 1.2, sarten: 1.1, revolver: 1.6, gomera: 0.6, espeto: 1.1, cana: 1.2, recortada: 1.6, bengalera: 1.8, fal: 2.2, lanzagarrafas: 2.4, facon: 0.7, llave: 0.9, hockey: 1.1, cadena: 1.2, pala: 1.3, hacha: 1.5, remo: 1.4, motosierra: 2.4 };
 export const precioMejora = (arma, clave, nivel) => Math.round(MEJORAS[clave].base * (PRECIO_TIER[arma] || 1) * (nivel + 1) / 10) * 10;
 
 export const EQUIPO = [
@@ -74,7 +76,7 @@ const CLAVE = 'rz-perfil';
 export function cargarPerfil() {
   let p = {};
   try { p = JSON.parse(localStorage.getItem(CLAVE) || '{}'); } catch (e) { p = {}; }
-  const r = Object.assign({ record: +localStorage.getItem('rz-record') || 0, mejorOleada: 0, bajas: 0, partidas: 0, victorias: 0, logros: {}, pesadilla: false, tipGiro: false, armasCamp: ['pistola', 'termo'], infArmas: ['pistola', 'termo'], inf: { mejorOleada: 0, record: 0, partidas: 0, bajas: 0 } }, p);
+  const r = Object.assign({ record: +localStorage.getItem('rz-record') || 0, mejorOleada: 0, bajas: 0, partidas: 0, victorias: 0, logros: {}, pesadilla: false, tipGiro: false, armasCamp: ['pistola', 'termo'], infArmas: ['pistola', 'termo'], historia: null, inf: { mejorOleada: 0, record: 0, partidas: 0, bajas: 0 } }, p);
   // perfiles de antes del Modo Infinito: las armas que ya se habían comprado no quedaron anotadas.
   // Se desbloquean según la mejor oleada alcanzada (lo que se podía pagar hasta ahí), una sola vez.
   if (!r.migrArmas) {
@@ -82,6 +84,16 @@ export function cargarPerfil() {
     if (r.partidas > 0) { const PRECIO = { bate: 100, sarten: 140, machete: 180, escopeta: 250, revolver: 380, metralleta: 450, rifle: 700 }; // (solo armas de antes de v8)
       for (const id in PRECIO) if (PRECIO[id] <= r.mejorOleada * 90 && !r.armasCamp.includes(id)) r.armasCamp.push(id); }
   }
+  // v9: modo historia (los perfiles de v8.3 no lo tienen: arranca de cero sin tocar nada más)
+  const H = { cap: 1, completados: [], armas: ['pistola', 'termo'], niveles: {}, pesos: 0, ventajas: [], terminada: false };
+  r.historia = Object.assign(H, r.historia && typeof r.historia === 'object' ? r.historia : {});
+  if (!Array.isArray(r.historia.armas) || !r.historia.armas.length) r.historia.armas = ['pistola', 'termo'];
+  if (!Array.isArray(r.historia.completados)) r.historia.completados = [];
+  r.historia.cap = Math.max(1, Math.min(8, +r.historia.cap || 1));
+  // v9: skins (equipada por arma) y contrarreloj; perfiles viejos arrancan con todo de fábrica
+  r.skins = Object.assign({ equip: {}, vistas: ['base'] }, r.skins && typeof r.skins === 'object' ? r.skins : {});
+  if (!r.skins.equip || typeof r.skins.equip !== 'object') r.skins.equip = {}; if (!Array.isArray(r.skins.vistas)) r.skins.vistas = ['base'];
+  r.contra = Object.assign({ mejor: 0, partidas: 0 }, r.contra && typeof r.contra === 'object' ? r.contra : {});
   return r;
 }
 export function guardarPerfil(p) { try { localStorage.setItem(CLAVE, JSON.stringify(p)); } catch (e) { } }

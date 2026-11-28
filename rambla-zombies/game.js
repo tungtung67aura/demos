@@ -2,14 +2,16 @@
 import * as THREE from 'https://esm.sh/three@0.160.0';
 import { crearMundo, local, aMundo, piso, NM, brilloTex, muestras, PUERTO_I0, unir } from './world.js';
 import { crearFisica, rayoCaja, sacarPunto, adentro, crearGrillaDin } from './fisica.js';
-import { ARMAS, crearModelos } from './armas.js';
-import { modeloArma } from './armas-modelos.js'; // arte v8: modelos texturizados (null = usa el de armas.js)
+import { ARMAS, crearModelos, MATS_MANO } from './armas.js';
+import { modeloArma, materialArmas, materialSkin, texturaPatron, brilloSkins, SKINS } from './armas-modelos.js'; // arte v8: modelos texturizados (null = usa el de armas.js)
 import { Horda, crearZombi, prepararZombi, animarZombi, TIPOS } from './zombis.js';
 import { iniciarAudio, sonido, volumen, musica } from './audio.js';
 import { crearEfectos } from './efectos.js';
 import { crearJefesFx, JEFES_INFO, ORDEN_JEFES } from './jefes.js';
 import { MOD, SINERGIAS, RAREZA, calcular, ofrecer, cantidadInf, jefeInf, vidaInf, eventoInf, mezclaInf, EVENTOS } from './infinito.js';
 import { MAPAS, ORDEN_MAPAS } from './mapas.js';
+import { crearMando, glifo, tipoMando, BT } from './mando.js';
+import { crearHistoria, CAPITULOS, ARMAS_HIST_INI } from './historia.js';
 import { OLEADAS_TOTAL, mezcla, cantidad, JEFES, MEJORAS, precioMejora, EQUIPO, VENTAJAS, PESOS, LOGROS, cargarPerfil, guardarPerfil } from './datos.js';
 
 const $ = id => document.getElementById(id);
@@ -18,7 +20,7 @@ if (movil) document.body.classList.add('es-movil');
 
 // ---------- Ajustes ----------
 const AJ = Object.assign({ fps: 0, calidad: movil ? 'media' : 'alta', sens: 1, contador: false, volumen: 0.7, musica: 0.5, invertir: false,
-  asistencia: true, autoFuego: false, vibrar: true, botones: 1, modo: 'normal' }, JSON.parse(localStorage.getItem('rz-ajustes') || '{}'));
+  asistencia: true, apuntarAlt: movil, autoFuego: false, vibrar: true, botones: 1, modo: 'normal' }, JSON.parse(localStorage.getItem('rz-ajustes') || '{}'));
 const CAL = {
   // rag: cuerpos simulados a la vez · cad: cadáveres en el piso · vidaCad: segundos antes de hundirse · charcos/gotas: sangre en el piso
   // decal: resolución de la textura de sangre por tramo de rambla (~20 m × 51 m)
@@ -71,7 +73,7 @@ function aplicarCalidad() {
 // Tamaño de la vista: el CSS manda (canvas fijo a 100vw x 100dvh) y el buffer se ajusta a lo que mide el canvas.
 // En iOS el 'resize' al girar el celular llega a veces con innerWidth viejo, así que se re-mide varias veces
 // y además se chequea en cada cuadro (leer clientWidth es barato).
-let aspecto = 1, vistaW = 0, vistaH = 0;
+let aspecto = 1, vistaW = 0, vistaH = 0, fovBase = 70, fovAct = 0;
 const lienzo = renderer.domElement;
 function medida() {
   const w = lienzo.clientWidth || innerWidth, h = lienzo.clientHeight || innerHeight;
@@ -84,7 +86,7 @@ function redimensionar(forzar) {
   renderer.setSize(w, h, false); // false: no tocar el CSS del canvas
   // campo visual horizontal ~90°, también en vertical (celular parado)
   camera.fov = Math.min(95, THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(45)) / aspecto)));
-  camera.fov = Math.max(camera.fov, 62);
+  camera.fov = Math.max(camera.fov, 62); fovBase = camera.fov; fovAct = 0;
   camera.aspect = aspecto; camera.updateProjectionMatrix();
   vmCam.aspect = aspecto; vmCam.updateProjectionMatrix();
   document.body.classList.toggle('apaisado', w > h && h < 560);
@@ -188,6 +190,14 @@ let modoPlay = false, cfgPlay = null; /* Modo Playground (sandbox) */
 const colaExpl = [];
 let armaSel = 'pistola', tiene = new Set(), cargador = {}, reserva = {}, niveles = {}, ventajas = new Set();
 let cdArma = 0, recargaT = 0, recargaTotal = 1, cambioT = 0, swingT = 0, swingHecho = true, disparando = false, autoDisparo = false;
+let modoContra = false, contraT = 0, contraOla = 0, armeriaVer = null; /* v9: contrarreloj y armería */
+let modoHist = false, mapaHist = null, hist = null, histCap = null, camEscV = null; /* v9: modo historia */
+const OBJ = { activo: false, x: 0, z: 0, r: 1, vida: 1, vidaMax: 1, caja: null, rot: 0, golpeT: 0 }, _od = { x: 0, z: 0 };
+let mandoActivo = false, mandoCorre = false, asistAng = 9, ayudaMandoT = 0, mandoMira = 0, imanT = 0, imanYaw = 0, imanPitch = 0, teleS = false, miraAds = false;
+let swingTot = 0.5, comboPaso = 0, comboHasta = 0, cargaT = 0, cargaLista = false, apuntando = false, adsK = 0, adsAntes = false, motoT = 0, fuerzaMelee = 1; /* v9: combos, golpe cargado y apuntar con la mira */
+const golpeAct = { anim: 'horiz', pesado: false, fin: false, frac: 0 };
+const GOLPE_SIMPLE = { anim: 'horiz', pesado: false, fin: false, frac: 0 };
+const PESADO_DEF = { anim: 'vert', dano: 2.2, empuje: 1.8 };
 let parada = 0, lenta = 0, camGolpeP = 0, camGolpeR = 0; // hit-stop, cámara lenta, patada de cámara
 let shake = 0, retroceso = 0, kick = 0, flashT = 0, hitT = 0, hitTipo = '', vineta = 0, flashDano = 0, swayX = 0, swayY = 0, lookDX = 0, lookDY = 0;
 let jefe = null, jefePendiente = null, jefeT = 0, comboN = 0, comboT = 0, finT = 0, tiendaT = 0;
@@ -209,6 +219,12 @@ const resMax = a0 => { const a = A(a0.id); return a.reserva === Infinity ? Infin
 const tRecarga = a => a.recarga * (1 - 0.2 * nv(a.id, 'recarga')) * (ventajas.has('manos') ? 0.7 : 1);
 const cadenciaDe = a => a.cadencia / (1 + 0.15 * nv(a.id, 'cadencia'));
 const empujeDe = a => (a.empuje || 0) * (a.tipo === 'cuerpo' && ventajas.has('garra') ? 1.35 : 1);
+const ZOOM = { pistola: 1.35, revolver: 1.45, escopeta: 1.25, recortada: 1.15, metralleta: 1.4, rifle: 3.4, fal: 1.9, gomera: 1.35, bengalera: 1.3, lanzagarrafas: 1.2 };
+const zoomDe = a => a.zoom || ZOOM[a.id] || 1.3, TELE = { rifle: 1 }; /* v9: con el rifle de caza se apunta por la mira telescópica */
+const CULATA = { id: 'culata', nombre: 'Culatazo', tipo: 'cuerpo', dano: 30, cadencia: 0.5, alcance: 2.3, empuje: 9, sonido: 'golpe', arco: 0.55 };
+let culataT = 0, culataHecho = true;
+const tCarga = a => 0.6 * (1 - 0.18 * nv(a.id, 'peso')) * (a.cargaRapida || 1); /* v9: tiempo del golpe cargado */
+const setDe = a => a.set || (a.estocada ? ['estoc'] : a.engancha ? ['horiz'] : ['horiz', 'rev', 'vert']);
 
 const _vm = new THREE.Vector3();
 function reiniciar() {
@@ -216,17 +232,17 @@ function reiniciar() {
   for (const z of zombis) poolZ.push(z); zombis = [];
   for (const p of poolPick) { p.t = 0; p.g.visible = false; }
   ef.limpiar(); jfx.limpiar(); fis.limpiar(); sVida.fill(0); sPos.fill(-999); parada = 0; lenta = 0;
-  MAPA = MAPAS[modoPlay ? cfgPlay.mapa : perfil.mapa] || MAPAS.rambla; if (!modoPlay && !mapaLibre(MAPA)) MAPA = MAPAS.rambla;
+  MAPA = MAPAS[mapaHist || (modoPlay ? cfgPlay.mapa : perfil.mapa)] || MAPAS.rambla; if (!modoPlay && !mapaHist && !mapaLibre(MAPA)) MAPA = MAPAS.rambla;
   LIM_I0 = MAPA.i0; LIM_I1 = MAPA.i1; mundo.setAtmo(MAPA.atmo, MAPA.id);
   camera.far = MAPA.atmo.lejos || 2200; camera.updateProjectionMatrix(); /* con niebla espesa no se dibuja lo que no se ve */
   aMundo(MAPA.ini, MAPA.iniD ?? 2, J.pos); J.pos.y = piso(MAPA.iniD ?? 2); eventoPuerto = false; GRITO[2] = -1; mundo.puerto.cerrar();
   J.yaw = 0; J.pitch = -0.03; if (MAPA.mirar) { aMundo(MAPA.mirar[0], MAPA.mirar[1], _vm); J.yaw = Math.atan2(-(_vm.x - J.pos.x), -(_vm.z - J.pos.z)); J.pitch = 0.05; } // de entrada, mirando a lo que identifica el mapa
   J.vidaMax = 100; J.vida = 100; J.blindaje = 0; J.lento = 0;
   oleada = 0; puntos = 0; pesos = 0; bajas = 0; porSalir = 0; descanso = 2.5; tiempo = 0; jefe = null; jefePendiente = null; tiendaT = 0; comboN = 0; comboT = 0;
-  tiene = new Set(modoPlay ? cfgPlay.armas : modoInf ? armasInf : ['pistola', 'termo']); dios = modoPlay && cfgPlay.invencible; niveles = {}; ventajas = new Set();
+  tiene = new Set(modoPlay ? cfgPlay.armas : modoInf ? armasInf : modoHist ? perfil.historia.armas : modoContra ? perfil.armasCamp : ['pistola', 'termo']); dios = modoPlay && cfgPlay.invencible; niveles = {}; ventajas = new Set();
   modsInf = {}; regenInf = 0; tiradasInf = 0; eventoInfAct = null; modsHecho = false; colaExpl.length = 0; scene.fog.density = MAPA.atmo.densidad; recalcInf();
   for (const a0 of ARMAS) if (a0.tipo === 'fuego') { const a = A(a0.id); cargador[a.id] = cargMax(a); reserva[a.id] = a.reserva === Infinity ? Infinity : a.cargador * 2; }
-  if (modoPlay && cfgPlay.municion) for (const a0 of ARMAS) if (a0.tipo === 'fuego') reserva[a0.id] = Infinity;
+  if ((modoPlay && cfgPlay.municion) || modoContra) for (const a0 of ARMAS) if (a0.tipo === 'fuego') reserva[a0.id] = Infinity;
   if (modoPlay) pesos = 99999;
   S = { disparos: 0, aciertos: 0, cabezas: 0, recibido: 0, gastado: 0, porArma: {}, olaSinDano: true, explosionMax: 0, inicio: performance.now(), jefes: 0, logrosNuevos: [] };
   armaSel = ''; elegirArma(tiene.has('pistola') ? 'pistola' : [...tiene][0], true); recargaT = 0; vineta = 0;
@@ -236,7 +252,7 @@ function reiniciar() {
 // ---------- Armas ----------
 function elegirArma(id, sinAnim) {
   if (!tiene.has(id) || (id === armaSel && !sinAnim)) return;
-  armaSel = id; recargaT = 0; swingT = 0; swingHecho = true;
+  armaSel = id; if (A(id).tipo === 'cuerpo') ultCuerpo = id; else ultFuego = id; recargaT = 0; swingT = 0; swingHecho = true; cargaT = 0; cargaLista = false; comboPaso = 0; culataT = 0;
   cambioT = sinAnim ? 0 : 0.3; cdArma = Math.max(cdArma, sinAnim ? 0 : 0.2);
   for (const a of ARMAS) modelos[a.id].visible = a.id === id;
   $('mira').className = A(id).tipo === 'fuego' ? 'fuego' : 'melee';
@@ -361,7 +377,7 @@ function disparar() {
   cargador[a.id]--; cdArma = cadenciaDe(a); S.disparos++; oir(J.pos.x, J.pos.z, (a.id === 'rifle' ? 70 : a.id === 'escopeta' ? 55 : 45) * (a.ruido || 1));
   const suerte = a.suerte && cargador[a.id] === 0; /* Infinito: la última del tambor */
   ojoJugador(_o, _f, _r, _u); // la bala sale antes de que el retroceso levante la mira
-  sonido[a.sonido](); flashT = 0.05; kick = 1; retroceso += a.retroceso; shake = Math.max(shake, a.retroceso * 0.8);
+  sonido[a.sonido](); flashT = 0.05; kick = 1 - 0.45 * adsK; retroceso += a.retroceso * (1 - 0.4 * adsK); shake = Math.max(shake, a.retroceso * 0.8 * (1 - 0.5 * adsK));
   { const fl = modelos[a.id].userData.flash; fl.scale.setScalar(fl.userData.e || (fl.userData.e = fl.scale.x)); fl.scale.multiplyScalar((0.8 + Math.random() * 0.45) * (a.flash ?? 1)); } // fogonazo distinto cada tiro
   if (a.proyectil) { dispararProyectil(a); return; }
   if (a.id !== 'revolver' && !a.sinVaina) ef.vaina(_o.x + _r.x * 0.25 + _f.x * 0.55, _o.y - 0.22, _o.z + _r.z * 0.25 + _f.z * 0.55, _r.x * 2.4 + _f.x * 0.4 + (Math.random() - .5) * 0.6, 1.1 + Math.random() * 0.6, _r.z * 2.4 + _f.z * 0.4 + (Math.random() - .5) * 0.6, a.id === 'escopeta');
@@ -369,7 +385,7 @@ function disparar() {
   danoAcum.clear();
   let acerto = false, rebotes = 0, maderas = 0, piedras = 0;
   for (let p = 0; p < a.perdigones; p++) {
-    const ang = Math.random() * Math.PI * 2, rad = a.disp * Math.sqrt(Math.random()) * (J.mov > 0.5 ? 1.5 : 1);
+    const ang = Math.random() * Math.PI * 2, rad = a.disp * Math.sqrt(Math.random()) * (J.mov > 0.5 && adsK < 0.5 ? 1.5 : 1) * (1 - 0.72 * adsK); /* v9: apuntando, la bala va donde mirás */
     _d.copy(_f).addScaledVector(_r, Math.cos(ang) * rad).addScaledVector(_u, Math.sin(ang) * rad).normalize();
     rayo(_o, _d, a.alcance, golpes, movil && AJ.asistencia ? 1.2 : 1);
     const ob = rayoObstaculos(_o, _d, a.alcance);
@@ -426,39 +442,74 @@ function dispararProyectil(a) {
   if (garrafa) vibrar(40);
   if (cargador[a.id] === 0 && reserva[a.id] > 0) setTimeout(() => { if (armaSel === a.id && estado === 'jugando') recargar(); }, 300);
 }
-function golpear() { // cuerpo a cuerpo: arranca el swing, el impacto llega al 40%
-  const a = A(armaSel);
-  cdArma = cadenciaDe(a); swingT = cdArma; swingHecho = false; sonido.swing();
+function golpear(pesado = false, frac = 1) { // cuerpo a cuerpo: arranca el swing, el impacto llega al 40% (v9: combo de 3 y golpe cargado)
+  const a = A(armaSel), cad = cadenciaDe(a);
+  if (pesado) {
+    golpeAct.anim = (a.pesado || PESADO_DEF).anim; golpeAct.pesado = true; golpeAct.fin = false; golpeAct.frac = frac;
+    swingTot = Math.max(0.42, Math.min(0.75, cad * 1.05)); cdArma = swingTot + 0.06; comboPaso = 0; sonido.swingPesado();
+  } else {
+    const set = setDe(a); if (tiempo > comboHasta) comboPaso = 0;
+    golpeAct.anim = set[comboPaso % set.length]; golpeAct.pesado = false; golpeAct.frac = 0; golpeAct.fin = comboPaso === 2 && set.length > 1;
+    swingTot = cad * (golpeAct.fin ? 1.15 : 1); cdArma = swingTot; comboPaso = (comboPaso + 1) % 3; comboHasta = tiempo + swingTot + 0.45; sonido.swing();
+  }
+  swingT = swingTot; swingHecho = false;
 }
-function impactoMelee() {
-  const a = A(armaSel); oir(J.pos.x, J.pos.z, 12);
+let interactuarFn = null; /* la historia engancha acá (E / botón de interactuar) */
+function interactuar() { if (interactuarFn) interactuarFn(); }
+function golpeRapido() { // v9: golpe rápido. Con un arma de fuego, culatazo; con una de cuerpo a cuerpo, golpe normal
+  if (estado !== 'jugando' || cambioT > 0) return;
+  const a = A(armaSel);
+  if (a.tipo === 'cuerpo') { if (cdArma <= 0 && cargaT <= 0 && !a.continuo) golpear(); return; }
+  if (culataT > 0 || recargaT > 0) return;
+  culataT = 0.5; culataHecho = false; cdArma = Math.max(cdArma, 0.5); sonido.swing();
+}
+function sierra(a) { // motosierra: mientras está apretado, un diente cada 0,09 s
+  cdArma = cadenciaDe(a); golpeAct.anim = 'sierra'; golpeAct.pesado = false; golpeAct.fin = false; sonido.motosierra(); impactoMelee();
+}
+function impactoMelee(aOtra) {
+  const a = aOtra || A(armaSel); oir(J.pos.x, J.pos.z, a.continuo ? 30 : 12);
   _f.set(-Math.sin(J.yaw), 0, -Math.cos(J.yaw));
+  const G = aOtra ? GOLPE_SIMPLE : golpeAct, P = G.pesado ? (a.pesado || PESADO_DEF) : null, fr = P ? 0.55 + 0.45 * G.frac : 1;
+  const multD = P ? P.dano * fr * (1 + 0.3 * nv(a.id, 'peso')) : G.fin ? 1.35 : 1, multE = P ? P.empuje * fr : G.fin ? 1.5 : 1;
+  const alc = a.alcance * (1 + 0.12 * nv(a.id, 'alcance')) + (P ? P.alcance || 0 : 0), arco = P && P.arco ? P.arco : a.arco + (G.fin && G.anim === 'giro' ? 0.45 : 0);
+  const atrav = P && P.atraviesa ? P.atraviesa : a.atraviesa, aturde = P && P.aturde ? P.aturde : a.aturde, corta = a.corta || a.id === 'machete';
   let alguno = false, nGolpes = 0;
-  const lista = a.atraviesa ? zombis.filter(z => z.vivo).sort((u, v) => u.g.position.distanceToSquared(J.pos) - v.g.position.distanceToSquared(J.pos)) : zombis; // el espeto: los más cercanos primero
+  const lista = atrav ? zombis.filter(z => z.vivo).sort((u, v) => u.g.position.distanceToSquared(J.pos) - v.g.position.distanceToSquared(J.pos)) : zombis; // el espeto: los más cercanos primero
   for (const z of lista) {
     if (!z.vivo) continue;
     const dx = z.g.position.x - J.pos.x, dz = z.g.position.z - J.pos.z, dist = Math.hypot(dx, dz);
-    if (dist > a.alcance + 0.35 * z.esc) continue;
-    if ((dx * _f.x + dz * _f.z) / (dist || 1) < Math.cos(a.arco + 0.25)) continue;
-    if (a.atraviesa && nGolpes++ >= a.atraviesa) break;
+    if (dist > alc + 0.35 * z.esc) continue;
+    if ((dx * _f.x + dz * _f.z) / (dist || 1) < Math.cos(arco + 0.25)) continue;
+    if (atrav && nGolpes++ >= atrav) break;
     _d.set(dx / (dist || 1), 0, dz / (dist || 1));
-    const cab = (J.pitch > 0.15 && a.id === 'machete') || (z.tipo === 'gateador' && a.id !== 'machete' && J.pitch < -0.3);
+    const cab = (J.pitch > 0.15 && corta) || (z.tipo === 'gateador' && !corta && J.pitch < -0.3) || !!(P && P.degolla);
     const parte = z.tipo === 'gateador' ? (J.pitch < -0.3 ? 0 : 1) : J.pitch > 0.15 ? 0 : J.pitch < -0.32 ? 2 : 1;
     if (parte === 0 && a.id !== 'machete') sonido.crujido();
     impacto = _imp.set(z.g.position.x - _d.x * 0.25 * z.esc, z.g.position.y + (parte === 0 ? 1.65 : parte === 2 ? 0.5 : 1.15) * z.esc, z.g.position.z - _d.z * 0.25 * z.esc);
-    herir(z, danoDe(a), cab, _d, empujeDe(a), true, a.id, parte); impacto = null;
+    const crit = a.critico && Math.random() < a.critico ? 3 : 1; if (crit > 1) flotante('¡CRÍTICO!');
+    fuerzaMelee = multE; herir(z, danoDe(a) * multD * crit, cab, _d, empujeDe(a) * multE, true, a.id, parte); impacto = null; fuerzaMelee = 1;
+    if (aturde && z.vivo && !z.T.jefe) { z.aturdido = Math.max(z.aturdido, aturde); z.prep = 0; }
     if (a.engancha && z.vivo && !z.T.jefe) { z.aturdido = Math.max(z.aturdido, 0.8); z.prep = 0; if (dist > 1.8) { z.kb.x -= _d.x * Math.min(9, (dist - 1.2) * 3.2); z.kb.z -= _d.z * Math.min(9, (dist - 1.2) * 3.2); } } // la caña: lo trae para vos
     if (modoInf) alPegar(z, a, _imp, false);
-    salpicar(z.g.position.x, z.g.position.y + 1.3 * z.esc, z.g.position.z, 12, 4, _d.x * 3, _d.z * 3);
+    salpicar(z.g.position.x, z.g.position.y + 1.3 * z.esc, z.g.position.z, P ? 22 : a.continuo ? 5 : 12, P ? 6 : 4, _d.x * 3, _d.z * 3);
+    if (a.continuo && Math.random() < 0.3) sonido.carne();
     alguno = true;
   }
-  if (alguno) {
-    sonido[a.sonido](); shake = Math.max(shake, 0.35); kick = 0.6; vibrar(30); S.aciertos++;
-    // golpe con peso: el juego se frena un instante y la cámara acompaña el impacto
-    const pesada = a.id === 'sarten' || a.id === 'bate';
-    parada = Math.max(parada, pesada ? 0.05 : 0.035);
-    camGolpeR += (pesada ? 0.055 : 0.035) * (Math.random() < 0.75 ? 1 : -1); camGolpeP -= pesada ? 0.03 : 0.018;
+  if (P && P.onda) { // palazo al piso: onda que tumba a los que estén alrededor (aunque estén atrás)
+    const R = P.onda * (a.ondaMult || 1); _imp.set(J.pos.x + _f.x * 1.6, J.pos.y + 0.05, J.pos.z + _f.z * 1.6); ef.golpeSuelo(_imp, R);
+    for (const z of zombis) { if (!z.vivo || z.T.jefe) continue; const dx = z.g.position.x - _imp.x, dz = z.g.position.z - _imp.z, d = Math.hypot(dx, dz); if (d > R) continue;
+      _d.set(dx / (d || 1), 0, dz / (d || 1)); fuerzaMelee = 1.6; herir(z, danoDe(a) * 0.6 * fr, false, _d, 9 * (1 - d / R) + 4, true, a.id, 2); fuerzaMelee = 1; if (z.vivo) { z.aturdido = Math.max(z.aturdido, 1.1); z.prep = 0; } alguno = true; }
+    shake = Math.max(shake, 1); sonido.pisoton && sonido.pisoton();
   }
+  if (alguno) {
+    sonido[a.sonido] ? sonido[a.sonido]() : sonido.golpe(); shake = Math.max(shake, P ? 0.75 : a.continuo ? 0.18 : 0.35); kick = P ? 1 : 0.6; vibrar(P ? 70 : a.continuo ? 12 : 30); S.aciertos++;
+    // golpe con peso: el juego se frena un instante y la cámara acompaña el impacto (más largo en el remate del combo y en el cargado)
+    const pesada = a.id === 'sarten' || a.id === 'bate' || a.id === 'pala' || a.id === 'hacha' || a.id === 'remo' || a.id === 'hockey';
+    parada = Math.max(parada, a.continuo ? 0.012 : P ? 0.07 + 0.04 * G.frac : G.fin ? 0.06 : pesada ? 0.05 : 0.035);
+    const k = P ? 2 : G.fin ? 1.4 : 1, lado = G.anim === 'rev' ? -1 : 1;
+    camGolpeR += (pesada ? 0.055 : 0.035) * k * lado * (a.continuo ? 0.2 : 1); camGolpeP -= (pesada ? 0.03 : 0.018) * k * (G.anim === 'vert' ? 1.8 : 1);
+    if (P) { lenta = Math.max(lenta, 0.12); }
+  } else if (P) shake = Math.max(shake, 0.25);
   S.disparos++;
 }
 
@@ -505,13 +556,15 @@ function herir(z, dano, cab, dir, empuje, melee, arma, parte = cab ? 0 : 1) {
   hitT = 0.12; hitTipo = cab ? 'cab' : '';
   if (!melee) cab ? sonido.cabeza() : sonido.carne();
   // desmembrar: escopetazo, rifle o machete pueden arrancar un brazo
-  if (!jefeZ && z.vida > 0 && (arma === 'machete' ? Math.random() < 0.4 : dano >= 60 && Math.random() < 0.35)) cortarBrazo(z, Math.random() < 0.5 ? 0 : 1, dir);
+  const bA = arma && melee ? A(arma) : null, cortaA = bA && bA.corta ? (arma === 'machete' ? 0.4 : bA.corta * (fuerzaMelee > 1.5 ? 2 : 1)) : arma === 'machete' ? 0.4 : 0;
+  if (!jefeZ && z.vida > 0 && (cortaA ? Math.random() < cortaA : dano >= 60 && Math.random() < 0.35)) cortarBrazo(z, Math.random() < 0.5 ? 0 : 1, dir);
   if (jefeZ) { hudJefe(); }
   if (z.vida <= 0) matar(z, cab, dir, melee, arma, false, parte);
 }
 function matar(z, cab, dir, melee, arma, porExplosion, parte = cab ? 0 : 1) {
   z.vivo = false; z.muerteT = 0; hitT = 0.25; hitTipo = 'mata'; z.quemaT = 0;
   if (modoInf && arma && statsInf[arma]) alMatar(z, statsInf[arma]);
+  if (modoContra && estado === 'jugando') { const b = T_BONO(z, cab, melee); contraT += b; flotante('+' + b.toFixed(1) + ' s'); }
   const fx = Math.sin(z.g.rotation.y), fz = Math.cos(z.g.rotation.y);
   z.caida = (fx * dir.x + fz * dir.z) > 0 ? -1 : 1;
   const T = z.T;
@@ -559,7 +612,7 @@ function matar(z, cab, dir, melee, arma, porExplosion, parte = cab ? 0 : 1) {
 
 // ---------- Cadáveres ----------
 // impulso de muerte por arma: [horizontal, vertical] en m/s
-const IMPULSO = { pistola: [2.4, 0.7], metralleta: [2.0, 0.5], escopeta: [7.5, 2.6], rifle: [1.6, 0.2], termo: [3.6, 1.1], bate: [5.2, 1.6], machete: [2.4, 0.6], sarten: [8.5, 3.4], revolver: [4.2, 1.2] };
+const IMPULSO = { pistola: [2.4, 0.7], metralleta: [2.0, 0.5], escopeta: [7.5, 2.6], rifle: [1.6, 0.2], termo: [3.6, 1.1], bate: [5.2, 1.6], machete: [2.4, 0.6], sarten: [8.5, 3.4], revolver: [4.2, 1.2], facon: [2.6, 0.6], llave: [4.4, 1.4], hockey: [6.0, 2.4], cadena: [4.8, 1.6], pala: [8.0, 3.0], hacha: [3.4, 0.9], remo: [7.2, 2.6], motosierra: [2.0, 0.4], espeto: [3.0, 0.8], cana: [3.2, 1.0] };
 let fuerzaExpl = 1;
 const _cHollin = new THREE.Color(0x0c0a08), _dc = new THREE.Vector3();
 function iniciarCadaver(z, dir, arma, parte, cab, expl) {
@@ -571,6 +624,7 @@ function iniciarCadaver(z, dir, arma, parte, cab, expl) {
     const d = Math.hypot(z.g.position.x - J.pos.x, z.g.position.z - J.pos.z), k = Math.max(0.45, 1.25 - d / 14) * (0.7 + 0.3 * Math.min(1, perdigonesN / 5)); h *= k; v *= k; }
   else if (arma === 'rifle' || (cab && arma !== 'sarten' && arma !== 'bate')) { modo = 'desplome'; h += 1; v = 0; } // el rifle y los tiros a la cabeza lo apagan en el lugar
   if (z.tipo === 'tanque') { h *= 0.55; v *= 0.5; }
+  if (fuerzaMelee !== 1 && modo !== 'jefe') { h *= fuerzaMelee; v *= Math.sqrt(fuerzaMelee); } /* v9: golpe cargado / remate: el cuerpo vuela más */
   h *= 0.85 + Math.random() * 0.3;
   const l = Math.hypot(dir.x, dir.z) || 1;
   fis.iniciar(z, dir.x / l, dir.z / l, h, v, parte, modo, modo === 'explosion' || modo === 'jefe' ? null : impacto);
@@ -738,25 +792,26 @@ function vestirArma(id) {
     if (s.explos) modCaja(g, 0.052, 0.012, 0.03, MM.rojo, 0, 0.042, p0.z * 0.4 - 0.035);
     if (s.auto && (id === 'pistola' || id === 'fal')) modCaja(g, 0.02, 0.05, 0.1, MM.negro, 0, -0.03, 0.08);
   } else {
-    const fino = id === 'espeto' || id === 'cana';
+    const fino = FINOS.has(id);
     if (s.llamas) modCil(g, fino ? 0.012 : 0.036, fino ? 0.012 : 0.036, 0.5, MM.naranja, 0, 0.4, 0, 0);
     if (s.electro) modCil(g, fino ? 0.012 : 0.04, fino ? 0.012 : 0.04, 0.46, MM.azul, 0, 0.38, 0, 0);
     if (s.vampiro) modCaja(g, 0.06, 0.03, 0.06, MM.rojo, 0, 0.08, 0);
   }
   // todo mod que no tiene pieza propia igual se ve: una franja del color de su rareza (gris común, azul rara, oro legendaria)
   const ms = modsInf[id]; if (ms) {
-    const fuego = BASE(id).tipo === 'fuego', fino = id === 'espeto' || id === 'cana'; let k = 0;
+    const fuego = BASE(id).tipo === 'fuego', fino = FINOS.has(id), yR = id === 'motosierra' ? 0.3 : id === 'pala' || id === 'remo' || id === 'hockey' ? 0.22 : 0.1; let k = 0;
     for (const mid in ms) {
       if (CON_PIEZA[mid] && CON_PIEZA[mid](fuego, id, m)) continue;
       const mat = MM[{ c: 'gris', r: 'azulR', l: 'oro' }[(MOD(mid) || {}).r] || 'gris'];
       for (let n = 0; n < ms[mid]; n++, k++) {
         if (fuego) { const rr = RADIO_ANILLO[id] || 0.024; modCil(g, rr, rr, 0.011, mat, p0.x, p0.y - (id === 'pistola' || id === 'revolver' ? 0.012 : 0), p0.z + 0.05 + 0.02 * k); } /* anillos en el caño, detrás de la boca */
-        else modCil(g, fino ? 0.013 : 0.027, fino ? 0.013 : 0.027, 0.014, mat, 0, 0.1 + 0.024 * k, 0, 0); /* anillos en el mango */
+        else { const rr = id === 'espeto' || id === 'cana' ? 0.013 : fino ? 0.021 : id === 'motosierra' ? 0.034 : 0.027; modCil(g, rr, rr, 0.014, mat, 0, yR + 0.024 * k, 0, 0); } /* anillos en el mango */
       }
     }
   }
   u.punta.set(p0.x, p0.y, tip); if (u.flash) u.flash.position.copy(u.punta);
 }
+const FINOS = new Set(['espeto', 'cana', 'facon', 'hockey']); /* mangos finos: anillos y llamas más chicos */
 const RADIO_ANILLO = { pistola: 0.031, revolver: 0.027, bengalera: 0.03, lanzagarrafas: 0.06, recortada: 0.034, escopeta: 0.03 };
 // mods que ya tienen su pieza o efecto propio en el arma
 const CON_PIEZA = { silen: f => f, choke: f => f, dragon: () => true, laser: f => f, gomlaser: f => f, tambor: f => f, estab: f => f, incend: f => f, cadena: f => f, explos: f => f,
@@ -931,7 +986,7 @@ function spawn(tipo, cerca) {
     let k = -1; for (let i = 0; i < zombis.length; i++) if (!zombis[i].vivo && (k < 0 || zombis[i].muerteT > zombis[k].muerteT)) k = i;
     if (k < 0) return null; z = zombis[k]; fis.alHundir(z); fis.soltar(z); zombis.splice(k, 1);
   }
-  prepararZombi(z, tipo || elegirTipo());
+  prepararZombi(z, tipo || elegirTipo()); z.alObj = false; z.atacaObj = false;
   if (z.T.jefe) initJefe(z);
   ubicar(z, cerca);
   if (z.tipo === 'gateador') z.sube = false;
@@ -1008,7 +1063,8 @@ function moverJugador(dt) {
   if (teclas.KeyW || teclas.ArrowUp) mz += 1; if (teclas.KeyS || teclas.ArrowDown) mz -= 1;
   if (teclas.KeyD || teclas.ArrowRight) mx += 1; if (teclas.KeyA || teclas.ArrowLeft) mx -= 1;
   const len = Math.hypot(mx, mz); if (len > 1) { mx /= len; mz /= len; }
-  let vel = (teclas.ShiftLeft || teclas.ShiftRight || len > 0.95 && movil ? 7.5 : 5.2) * (ventajas.has('mate') ? 1.15 : 1);
+  let vel = (teclas.ShiftLeft || teclas.ShiftRight || len > 0.95 && movil || mandoCorre && len > 0.3 ? 7.5 : 5.2) * (ventajas.has('mate') ? 1.15 : 1);
+  if (adsK > 0.05) vel = Math.min(vel, 5.2) * (1 - 0.42 * adsK); else if (cargaT > 0) vel *= 0.8; /* v9: apuntando o cargando, más despacio */
   if (J.lento > 0) { vel *= 0.55; J.lento -= dt; }
   const sy = Math.sin(J.yaw), cy = Math.cos(J.yaw);
   const vx = (cy * mx - sy * mz) * vel, vz = (-sy * mx - cy * mz) * vel;
@@ -1077,14 +1133,23 @@ function simular(dt) {
   if (regenInf && J.vida > 0 && J.vida < J.vidaMax) J.vida = Math.min(J.vidaMax, J.vida + regenInf * dt);
   moverJugador(dt);
   // oleadas
-  if (tiendaT > 0) { tiendaT -= dt; if (tiendaT <= 0) abrirTienda(); }
+  if (modoContra) { // v9: contrarreloj: horda sin pausa, más fuerte cada 25 s; cada baja suma tiempo
+    contraT -= dt; const ola = 1 + Math.floor(tiempo / 25); if (ola !== oleada) { oleada = ola; if (ola > 1) { mensaje('¡Más rápido!', 'Nivel ' + ola, true); sonido.oleada(); } }
+    if ((spawnT -= dt) <= 0) { let vivos = 0; for (const z of zombis) vivos += z.vivo; if (vivos < CAL[AJ.calidad].maxZ) spawn(); spawnT = Math.max(0.3, 1.1 - tiempo / 150) * (0.6 + Math.random() * 0.8); }
+    if (contraT <= 0) finContra();
+  }
+  else if (modoHist) { // v9: la historia maneja los objetivos; acá solo la cola de una oleada suelta
+    hist.sim(dt);
+    if (porSalir > 0 && (spawnT -= dt) <= 0) { let vivos = 0; for (const z of zombis) vivos += z.vivo; if (vivos < CAL[AJ.calidad].maxZ && spawn()) porSalir--; spawnT = 0.5 + Math.random() * 0.7; }
+  }
+  else if (tiendaT > 0) { tiendaT -= dt; if (tiendaT <= 0) abrirTienda(); }
   else if (descanso > 0) { descanso -= dt; if (descanso <= 0) empezarOleada(); }
   else if (porSalir > 0) {
     spawnT -= dt;
     let vivos = 0; for (const z of zombis) vivos += z.vivo;
     if (spawnT <= 0 && vivos < CAL[AJ.calidad].maxZ) { if (spawn()) porSalir--; spawnT = modoPlay ? cfgPlay.dur / cfgPlay.cantidad * (0.6 + Math.random() * 0.8) : Math.max(0.4, 1.9 - oleada * 0.14) * (0.6 + Math.random() * 0.8); }
   } else if (oleada > 0 && !jefePendiente && !zombis.some(z => z.vivo)) oleadaTerminada();
-  if (!eventoPuerto && porSalir > 2 && oleada >= 2) eventoContenedor();
+  if (!modoHist && !eventoPuerto && porSalir > 2 && oleada >= 2) eventoContenedor();
   if (jefePendiente && (jefeT -= dt) <= 0) { spawnJefe(jefePendiente); jefePendiente = null; }
   // armas
   cdArma -= dt; cambioT = Math.max(0, cambioT - dt);
@@ -1093,22 +1158,36 @@ function simular(dt) {
     recargaT -= dt;
     if (recargaT <= 0) { const n = Math.min(cargMax(a) - cargador[a.id], reserva[a.id]); cargador[a.id] += n; if (reserva[a.id] !== Infinity) reserva[a.id] -= n; hud(); }
   }
+  if (culataT > 0) { culataT -= dt; if (!culataHecho && culataT < 0.3) { culataHecho = true; impactoMelee(CULATA); } }
   if (swingT > 0) {
     swingT -= dt;
-    if (!swingHecho && swingT < cadenciaDe(a) * 0.6) { swingHecho = true; impactoMelee(); }
+    if (!swingHecho && swingT < swingTot * (golpeAct.pesado ? 0.68 : 0.6)) { swingHecho = true; impactoMelee(); }
   }
   // celular: ayuda de puntería (la mira se "pega" un poco al zombi) y tiro automático
-  if (movil && (AJ.asistencia || AJ.autoFuego)) asistir(dt, a);
+  if ((movil || mandoActivo) && (AJ.asistencia || AJ.autoFuego)) asistir(dt, a);
   const quiere = disparando || autoDisparo;
-  if (quiere && cdArma <= 0 && cambioT <= 0 && recargaT <= 0) {
-    if (a.tipo === 'fuego') disparar(); else golpear();
-    hud();
-  }
+  if (a.tipo === 'cuerpo') {
+    // v9: golpe pesado: mantener APUNTAR carga; al soltar (o al tirar con la carga lista) sale
+    if (apuntando && cambioT <= 0 && swingT <= 0) { cargaT += dt; if (!cargaLista && cargaT >= tCarga(a)) { cargaLista = true; sonido.cargaLista(); vibrar(25); } }
+    else if (cargaT > 0 && !apuntando) { if (cargaT >= 0.18 && swingT <= 0 && cambioT <= 0) golpear(true, Math.min(1, cargaT / tCarga(a))); cargaT = 0; cargaLista = false; }
+    if (cargaT > 0 && quiere && cargaLista) { golpear(true, 1); cargaT = 0; cargaLista = false; }
+    else if (quiere && cargaT <= 0 && cdArma <= 0 && cambioT <= 0) { if (a.continuo) sierra(a); else golpear(); hud(); }
+    if (a.continuo && (motoT -= dt) <= 0) { motoT = 0.32; if (!quiere) sonido.motoIdle(); }
+  } else if (quiere && cdArma <= 0 && cambioT <= 0 && recargaT <= 0 && culataT <= 0) { disparar(); hud(); }
   if (vineta > 0) vineta = Math.max(0, vineta - dt * 1.2);
   if (dios) J.vida = J.vidaMax;
   if (J.vida <= 0 && estado === 'jugando') finDelJuego();
 }
 const _ad = new THREE.Vector3();
+function imanAds() { // v9: al empezar a apuntar (celu o mando, con la ayuda prendida) la mira se va sola al zombi más cercano al centro
+  if (!(movil || mandoActivo) || !AJ.asistencia) return;
+  ojoJugador(_o, _f, _r, _u); let mejor = null, mejorAng = 0.2;
+  const a = A(armaSel);
+  for (const z of zombis) { if (!z.vivo || z.sube) continue; const h = z.T.hit[1]; _ad.set(z.g.position.x - _o.x, z.g.position.y + h[0] * z.esc - _o.y, z.g.position.z - _o.z);
+    const d = _ad.length(); if (d > a.alcance || d < 0.5) continue; const ang = Math.acos(Math.min(1, _ad.dot(_f) / d)); if (ang < mejorAng) { mejorAng = ang; mejor = z; } }
+  if (!mejor) return; const h = mejor.T.hit[1], dx = mejor.g.position.x - _o.x, dz = mejor.g.position.z - _o.z, dy = mejor.g.position.y + h[0] * mejor.esc - _o.y;
+  imanYaw = Math.atan2(-dx, -dz); imanPitch = Math.atan2(dy, Math.hypot(dx, dz)); imanT = 0.14;
+}
 function asistir(dt, a) {
   // busca el zombi más cercano a la mira dentro de un cono chico
   ojoJugador(_o, _f, _r, _u);
@@ -1122,7 +1201,8 @@ function asistir(dt, a) {
     const ang = Math.acos(Math.min(1, _ad.dot(_f) / d)) - Math.atan(h[1] * z.esc / d);
     if (ang < mejorAng) { mejorAng = ang; mejor = z; mejorDist = d; }
   }
-  if (mejor && AJ.asistencia && (disparando || mirarId !== null)) {
+  asistAng = mejor ? mejorAng : 9;
+  if (mejor && AJ.asistencia && (disparando || mirarId !== null || mandoMira > 0.15 || adsK > 0.5)) {
     const h = mejor.T.hit[1];
     const dx = mejor.g.position.x - _o.x, dz = mejor.g.position.z - _o.z, dy = mejor.g.position.y + h[0] * mejor.esc - _o.y;
     const yaw = Math.atan2(-dx, -dz), pitch = Math.atan2(dy, Math.hypot(dx, dz));
@@ -1230,8 +1310,14 @@ function decidir(z, p, dist, dx, dz) {
   // ¿oyó algo? (el ruido dura 0,4 s)
   if (tiempo - RUIDO[3] < 0.4 && z.tipo !== 'tanque') { const rx = RUIDO[0] - p.x, rz = RUIDO[1] - p.z; if (rx * rx + rz * rz < RUIDO[2] * RUIDO[2]) { if (z.alerta <= 0) z.velMult = Math.min(z.velMult, 0.6); z.alerta = 9; } }
   z.deambula = false; let tx, tz, mod = 1; if (dist > 13) z.slotOk = false;
+  let haciaObj = false; z.atacaObj = false;
+  if (z.alObj && OBJ.activo && dist > 4) { // v9 historia: va por el objetivo (parrilla, ómnibus, antena) salvo que tenga al jugador encima
+    const od = distObj(p.x, p.z);
+    if (od < 0.75) { z.atacaObj = true; z.dirX = _od.x; z.dirZ = _od.z; z.modV = 0; z.decT = 0.1; return; }
+    tx = _od.x; tz = _od.z; mod = od > 20 ? 1.35 : 1; haciaObj = true;
+  }
   const pocos = quedanOla <= 4 || modoPlay; // últimos de la oleada (o Playground): nadie deambula
-  if (dist > IA_ALERTA && dist < 60 && z.alerta <= 0 && !T.jefe && !pocos && tiempo - (z.deambDesde || 0) < 8) { /* deambula como mucho 8 s */ /* más de 60 m (mapa largo con el puerto): vuelven derecho */ // deambula: hacia un punto corrido del jugador, lento
+  if (haciaObj) { } else if (dist > IA_ALERTA && dist < 60 && z.alerta <= 0 && !T.jefe && !pocos && tiempo - (z.deambDesde || 0) < 8) { /* deambula como mucho 8 s */ /* más de 60 m (mapa largo con el puerto): vuelven derecho */ // deambula: hacia un punto corrido del jugador, lento
     const a = z.slot + tiempo * 0.05, ox = J.pos.x + Math.cos(a) * 14 - p.x, oz = J.pos.z + Math.sin(a) * 14 - p.z, ol = Math.hypot(ox, oz) || 1;
     tx = ox / ol; tz = oz / ol; mod = 0.55; z.deambula = true;
   } else if (dist > 10 || T.jefe) { // persigue: abanico (flanco) para no venir todos en fila
@@ -1280,9 +1366,21 @@ function decidir(z, p, dist, dx, dz) {
   // las decisiones se reparten: los cercanos piensan más seguido
   z.decT = dist < 12 ? 0.05 : dist < IA_ALERTA ? 0.12 : 0.3;
 }
+function distObj(x, z) { // distancia al borde del objetivo de la historia; deja en _od la dirección hacia él
+  let dx = OBJ.x - x, dz = OBJ.z - z;
+  if (OBJ.caja) { const c = Math.cos(OBJ.rot), s = Math.sin(OBJ.rot), lx = -dx * c + dz * s, lz = -dx * s - dz * c, qx = Math.max(-OBJ.caja[0], Math.min(OBJ.caja[0], lx)), qz = Math.max(-OBJ.caja[1], Math.min(OBJ.caja[1], lz));
+    const px = OBJ.x + qx * c + qz * s, pz = OBJ.z - qx * s + qz * c; dx = px - x; dz = pz - z; const d = Math.hypot(dx, dz) || 1e-3; _od.x = dx / d; _od.z = dz / d; return d; }
+  const d = Math.hypot(dx, dz) || 1e-3; _od.x = dx / d; _od.z = dz / d; return d - OBJ.r;
+}
+function pegarObj(cant, p) {
+  if (!OBJ.activo) return; OBJ.vida -= cant; sonido.golpe && sonido.golpe(0.5);
+  ef.impacto(_p.set(p.x + _od.x * 0.6, p.y + 1.2, p.z + _od.z * 0.6), -_od.x, -_od.z, true);
+  if (tiempo - OBJ.golpeT > 3) { OBJ.golpeT = tiempo; aviso(hist && hist.paso && hist.paso.t === 'escoltar' ? '¡Le están pegando al ómnibus!' : '¡Están rompiendo el objetivo!'); }
+}
 function golpeZombi(z, dist, dx, dz) {
   // resolvió la preparación: ¿todavía estás al alcance?
   z.ataque = 0.4;
+  if (z.atacaObj && OBJ.activo && !(dist < z.T.alcance + 0.55)) { pegarObj(z.T.dano * MODO().dano * 0.8, z.g.position); return; }
   if (dist < z.T.alcance + 0.55 && estado === 'jugando') {
     recibirDano(z.T.dano * MODO().dano, z.g.position.x, z.g.position.z);
     if (z.T.jefe) empujarJugador(dx / dist, dz / dist, 1.4);
@@ -1324,7 +1422,7 @@ function simZombis(dt) {
     if ((z.decT -= dt) <= 0 || z.dirX === undefined) decidir(z, p, dist, dx, dz);
     let tx = z.dirX, tz = z.dirZ; v *= z.modV;
     if (dist < 2.5 && !z.orbita) { tx = dx / dist; tz = dz / dist; } // pegado: directo (salvo que esté rodeando hacia su lugar)
-    let mira = Math.atan2(dx, dz);
+    let mira = Math.atan2(dx, dz); if (z.atacaObj) mira = Math.atan2(z.dirX, z.dirZ);
     z.golpeT -= dt; if (z.ataque > 0) z.ataque -= dt; if (z.aturdido > 0) z.aturdido -= dt;
     const alcance = T.alcance;
     // --- comportamiento por tipo
@@ -1377,7 +1475,7 @@ function simZombis(dt) {
     if (T.jefe && enJuego && z.t1 !== undefined) { const r = iaJefe(z, p, dt, dist, dx, dz); if (r === 'quieto') v = 0; else if (r) v *= r; if (z.cargaT > 0 && z.tipo === 'garrafero') { mira = Math.atan2(z.cdx, z.cdz); } }
     if (z.rugidoT !== undefined && T.jefe) { z.rugidoT -= dt; if (z.rugidoT <= 0) { z.rugidoT = 7 + Math.random() * 5; if (enJuego) sonido.rugido(z.tipo === 'cerro' ? 0.55 : 0.8); } }
     // --- preparación y ataque cuerpo a cuerpo
-    const cerca = dist < alcance + 0.2;
+    const cerca = dist < alcance + 0.2 || (z.atacaObj && OBJ.activo);
     if (cerca && enJuego && z.golpeT <= 0 && z.prep <= 0 && !z.sube && z.ataque <= 0 && z.aturdido <= 0 && z.tipo !== 'explosivo' && !(z.cargaT > 0)) {
       z.prep = z.prepTotal = T.prep * (MODO().dano > 1 ? 0.85 : 1); z.accion = z.tipo === 'cerro' ? 'pisoton' : 'golpe'; z.golpeT = 1.2 + Math.random() * 0.3;
       if (z.tipo === 'cerro') pisoAviso(p, 5.5, T.prep);
@@ -1642,6 +1740,9 @@ function agarrar(p) {
 // ---------- Almacén entre oleadas ----------
 let tab = 'armas';
 function abrirTienda() {
+  if (modoHist) { estado = 'tienda'; disparando = false; autoDisparo = false; recargaT = 0; if (document.pointerLockElement) document.exitPointerLock(); const sig = CAPITULOS[histCap.id] || histCap;
+    $('tienda-sub').textContent = `Modo Historia · Antes del capítulo ${sig.id}: ${sig.titulo}`; $('b-seguir-ola').textContent = `Capítulo ${sig.id} »`; pintarTienda(); mostrar('tienda'); capaJuego(false); musica.set(0.1, false, true); return; }
+  $('b-seguir-ola').textContent = 'Siguiente oleada »';
   if (modoInf && !modsHecho) { abrirMods(); return; }
   estado = 'tienda'; disparando = false; autoDisparo = false; recargaT = 0;
   if (document.pointerLockElement) document.exitPointerLock();
@@ -1653,6 +1754,7 @@ function abrirTienda() {
   musica.set(0.1, false, true);
 }
 function cerrarTienda() {
+  if (modoHist) { guardarHist(); const sig = CAPITULOS[histCap.id] || histCap; empezarCapitulo(sig); return; }
   ocultar('tienda'); estado = 'jugando'; descanso = 3; modsHecho = false; capaJuego(true); hud();
   if (!movil) pedirLock();
   mensaje('Oleada ' + (oleada + 1), 'Preparate…');
@@ -1682,7 +1784,7 @@ function pintarTienda() {
   const L = $('tienda-lista'); L.innerHTML = '';
   if (tab === 'armas') {
     for (const a0 of ARMAS) {
-      if (modoInf && !armasInf.includes(a0.id)) continue; const a = A(a0.id);
+      if (modoInf && !armasInf.includes(a0.id)) continue; if (modoHist && !tiene.has(a0.id)) continue; const a = A(a0.id);
       const t = tiene.has(a.id);
       const st = a.tipo === 'fuego' ? `<div class="stats-arma"><span>Daño ${a.dano}${a.perdigones > 1 ? '×' + a.perdigones : ''}</span><span>Cargador ${a.cargador}</span><span>${a.auto ? 'Automática' : 'Semi'}</span></div>`
         : `<div class="stats-arma"><span>Daño ${a.dano}</span><span>Empuje ${a.empuje}</span><span>Cuerpo a cuerpo</span></div>`;
@@ -1704,7 +1806,7 @@ function pintarTienda() {
       const d = document.createElement('div'); d.className = 'item';
       d.innerHTML = `<div class="cab"><b>${a.nombre}</b></div>`;
       for (const k in MEJORAS) {
-        const M = MEJORAS[k]; if (a.tipo === 'cuerpo' && !M.cuerpo) continue;
+        const M = MEJORAS[k]; if (a.tipo === 'cuerpo' && !M.cuerpo) continue; if (a.tipo !== 'cuerpo' && M.soloCuerpo) continue;
         if (a.reserva === Infinity && k === 'cargador' && false) continue;
         const n = nv(a.id, k), precio = precioMejora(a.id, k, n), max = n >= M.max;
         const f = document.createElement('div'); f.className = 'cab'; f.style.alignItems = 'center';
@@ -1783,6 +1885,8 @@ function cerrarPartida(gano) {
     (S.logrosNuevos.length ? '<br>Logros: ' + S.logrosNuevos.map(id => LOGROS.find(l => l.id === id)?.nombre).join(' · ') : '');
 }
 function finDelJuego() {
+  if (modoContra) { sonido.muerte(); finContra(); return; }
+  if (modoHist) { sonido.muerte(); vibrar([100, 50, 200]); falloHist('Te comieron, bo'); return; }
   estado = 'fin'; disparando = false; autoDisparo = false; sonido.muerte(); vibrar([100, 50, 200]);
   if (document.pointerLockElement) document.exitPointerLock();
   cerrarPartida(false);
@@ -1810,7 +1914,7 @@ function victoria() {
 const prevHud = {};
 function poner(id, prop, val) { const k = id + prop; if (prevHud[k] === val) return; prevHud[k] = val; const el = $(id); if (prop === 'text') el.textContent = val; else if (prop === 'w') el.style.width = val; else el[prop] = val; }
 function hud() {
-  poner('oleada', 'text', oleada ? modoPlay ? (cfgPlay.olas > 0 ? `Oleada ${oleada}/${cfgPlay.olas} · Playground` : `Oleada ${oleada} · Playground`) : modoInf ? `Oleada ${oleada} ♾` : (oleada === OLEADAS_TOTAL ? 'Última oleada' : `Oleada ${oleada}/${OLEADAS_TOTAL}`) : 'Preparate');
+  poner('oleada', 'text', modoContra ? `⏱ ${Math.max(0, contraT).toFixed(1)} s · Nivel ${oleada}` : modoHist && histCap ? `Cap. ${histCap.id} · ${histCap.titulo}` : oleada ? modoPlay ? (cfgPlay.olas > 0 ? `Oleada ${oleada}/${cfgPlay.olas} · Playground` : `Oleada ${oleada} · Playground`) : modoInf ? `Oleada ${oleada} ♾` : (oleada === OLEADAS_TOTAL ? 'Última oleada' : `Oleada ${oleada}/${OLEADAS_TOTAL}`) : 'Preparate');
   poner('puntos', 'text', String(puntos));
   $('pesos').querySelector('span').textContent = pesos;
   let vivos = 0; for (const z of zombis) vivos += z.vivo;
@@ -1831,7 +1935,7 @@ function armarBarra() {
   ARMAS.forEach(a => {
     if (!tiene.has(a.id)) return;
     const d = document.createElement('div'); d.dataset.id = a.id; i++;
-    d.innerHTML = `<b>${i <= 10 ? i % 10 : ''}</b>${a.nombre.split(' ')[0]}`;
+    const sk = skinDe(a.id); d.innerHTML = `<b>${i <= 10 ? i % 10 : ''}</b>${a.nombre.split(' ')[0]}${sk !== 'base' ? `<i class="sk" style="background:${SKINS.find(x => x.id === sk).color}"></i>` : ''}`;
     d.addEventListener('pointerdown', e => { e.stopPropagation(); elegirArma(a.id); });
     b.appendChild(d);
   });
@@ -1854,28 +1958,35 @@ function feed(txt, plata) {
 const canvas = renderer.domElement;
 addEventListener('keydown', e => {
   teclas[e.code] = true;
+  if (estado === 'escena') { if (e.code === 'Escape') hist.saltarEscena(); else if (e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyE') hist.seguirDialogo(); return; }
   if (e.code === 'Escape' && estado === 'pausa' && !document.pointerLockElement) { /* el Esc que sale del lock no reanuda */ }
   if (estado !== 'jugando') return;
   if (e.code === 'KeyR') recargar();
   if (e.code === 'KeyQ') ciclarArma(1);
+  if (e.code === 'KeyV') golpeRapido();
+  if (e.code === 'KeyE') interactuar();
   if (e.code === 'Escape' || e.code === 'KeyP') pausar();
   const n = e.key === '0' ? 10 : +e.key; if (n >= 1) { const L = ARMAS.filter(x => tiene.has(x.id)); if (n <= L.length) elegirArma(L[n - 1].id); } // la n-ésima de las que tenés
 });
 addEventListener('keyup', e => { teclas[e.code] = false; });
 addEventListener('blur', () => { for (const k in teclas) teclas[k] = false; disparando = false; if (estado === 'jugando') pausar(); });
 canvas.addEventListener('mousedown', e => {
+  if (estado === 'escena' && e.button === 0) { hist.seguirDialogo(); return; }
   if (estado !== 'jugando' || movil) return;
   if (!document.pointerLockElement) pedirLock();
   if (e.button === 0) disparando = true;
+  if (e.button === 2) apuntando = AJ.apuntarAlt ? !apuntando : true; // v9: clic derecho apunta (o carga el golpe pesado)
+  if (e.button === 1) { e.preventDefault(); golpeRapido(); }
 });
-addEventListener('mouseup', e => { if (e.button === 0) disparando = false; });
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+addEventListener('mouseup', e => { if (e.button === 0) disparando = false; if (e.button === 2 && (!AJ.apuntarAlt || A(armaSel).tipo === 'cuerpo')) apuntando = false; });
 addEventListener('mousemove', e => {
   if (!document.pointerLockElement || estado !== 'jugando') return;
   mirar(e.movementX * 0.0022, e.movementY * 0.0022);
 });
 addEventListener('wheel', e => { if (estado === 'jugando') ciclarArma(e.deltaY > 0 ? 1 : -1); }, { passive: true });
 function mirar(dx, dy) {
-  dx *= AJ.sens; dy *= AJ.sens * (AJ.invertir ? -1 : 1);
+  const zk = camera.fov / fovBase; dx *= AJ.sens * zk; dy *= AJ.sens * zk * (AJ.invertir ? -1 : 1); /* v9: con zoom, la sensibilidad baja en proporción */
   J.yaw -= dx; J.pitch = Math.max(-1.35, Math.min(1.35, J.pitch - dy)); lookDX += dx; lookDY += dy;
 }
 let teniaLock = false;
@@ -1886,6 +1997,48 @@ document.addEventListener('pointerlockchange', () => {
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden && estado === 'jugando') pausar(); });
 
+// ---------- Entrada: mando (v9) ----------
+const $ayM = { on: false };
+let ganchoDialogo = null; // lo pone historia.js mientras hay una escena con diálogo
+function alternarMelee() { // B: saca el arma cuerpo a cuerpo y vuelve a la de fuego
+  const a = A(armaSel), orden = [...tiene];
+  if (a.tipo === 'cuerpo') { const f = tiene.has(ultFuego) ? ultFuego : orden.find(i => A(i).tipo === 'fuego'); if (f) elegirArma(f); }
+  else { const c = tiene.has(ultCuerpo) ? ultCuerpo : orden.find(i => A(i).tipo === 'cuerpo'); if (c) elegirArma(c); else aviso('No tenés arma cuerpo a cuerpo'); }
+}
+let ultFuego = 'pistola', ultCuerpo = '';
+function pintarAyudaMando() {
+  const g = glifo, t = `${g(BT.RT)} Tirar ${g(BT.LT)} Apuntar ${g(BT.RB)} Golpe ${g(BT.X)} Recargar ${g(BT.Y)} Arma ${g(BT.B)} Cuerpo a cuerpo ${g(BT.LS)} Correr`;
+  $('ayuda-mando').innerHTML = t; $('pausa-mando').innerHTML = t; pintarControles();
+}
+const mando = window.__mando = crearMando({
+  enJuego: () => estado === 'jugando',
+  enMenu: () => !!document.querySelector('.pantalla:not(.oculto)'),
+  enDialogo: () => !!(ganchoDialogo && ganchoDialogo.en()),
+  dialogoSeguir: () => ganchoDialogo.seguir(), dialogoSaltar: () => ganchoDialogo.saltar(),
+  mover(x, y, l3) {
+    if (joyId !== null) return; joy.x = x; joy.y = y;
+    if (l3 && !this._l3) mandoCorre = !mandoCorre; this._l3 = l3; if (Math.hypot(x, y) < 0.25) mandoCorre = false;
+  },
+  mirar(dx, dy, m) {
+    mandoMira = m; if (!m) return;
+    if (AJ.asistencia && asistAng < 0.07) { dx *= 0.55; dy *= 0.55; } // fricción de la ayuda: el stick frena sobre un zombi
+    mirar(dx, dy);
+  },
+  fuego(v) { if (mirarId === null) disparando = v; },
+  apuntar(v) { if (v !== apuntando) apuntando = v; },
+  recargar() { recargar(); }, cambiar(d) { ciclarArma(d); }, golpe() { golpeRapido(); }, alternarMelee, interactuar() { interactuar(); }, pausa() { pausar(); },
+  atras(id) { if (id === 'pausa') seguir(); },
+  start() { const p = document.querySelector('.pantalla:not(.oculto)'); if (!p) return; if (p.id === 'pausa') seguir(); else if (p.id === 'tienda') $('b-seguir-ola').click(); },
+  pestana(d) { const p = document.querySelector('.pantalla:not(.oculto)'); const L = p ? [...p.querySelectorAll('.pestanas [data-tab], .pestanas [data-ctl]')] : []; if (!L.length) return; const i = L.findIndex(b => b.classList.contains('sel')); L[(i + d + L.length) % L.length].click(); },
+  activo(v) { mandoActivo = v; if (!v) { mandoMira = 0; mandoCorre = false; joy.x = joy.y = 0; } else ayudaMandoT = 14; },
+  conectado(si, tipo) {
+    if (si) { aviso(tipo === 'ps' ? 'Mando PlayStation conectado' : 'Mando conectado'); pintarAyudaMando(); }
+    else { aviso('Se desconectó el mando'); if (estado === 'jugando') pausar(); }
+  },
+  cambioTipo: () => pintarAyudaMando(),
+  sonidoFoco: () => sonido.foco && sonido.foco()
+});
+
 // ---------- Entrada: celular ----------
 let joyId = null, joyX0 = 0, joyY0 = 0, mirarId = null, mx0 = 0, my0 = 0;
 const base = $('joy-base'), palo = $('joy-palo');
@@ -1894,7 +2047,7 @@ sonda.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padd
 document.body.appendChild(sonda);
 function safeArea() { const s = getComputedStyle(sonda); return { t: parseFloat(s.paddingTop) || 0, r: parseFloat(s.paddingRight) || 0, b: parseFloat(s.paddingBottom) || 0, l: parseFloat(s.paddingLeft) || 0 }; }
 let resumeIgnore = 0;
-function enUI(el) { return el && el.closest && el.closest('#b-pausa, #b-fuego, #b-recarga, #b-cambiar, #barra-armas, #girar, .pantalla, button'); }
+function enUI(el) { return el && el.closest && el.closest('#b-pausa, #b-fuego, #b-recarga, #b-cambiar, #b-apuntar, #b-golpe, #barra-armas, #girar, .pantalla, button'); }
 function tocar(e) {
   if (estado !== 'jugando') return;
   if (enUI(e.target) && e.target.closest && e.target.closest('#b-pausa, .pantalla, #girar')) return;
@@ -1939,6 +2092,18 @@ addEventListener('touchmove', arrastrar, { passive: false });
 addEventListener('touchend', soltar); addEventListener('touchcancel', soltar);
 const tap = (id, fn) => $(id).addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); fn(); vibrar(8); tocar(e); }, { passive: false });
 tap('b-recarga', () => recargar());
+tap('b-golpe', () => golpeRapido());
+{ // v9: botón APUNTAR: tocar alterna la mira (o mantener); con arma cuerpo a cuerpo, mantener carga el golpe pesado
+  const b = $('b-apuntar'); let t0 = 0;
+  b.addEventListener('touchstart', e => {
+    e.preventDefault(); e.stopPropagation(); if (estado !== 'jugando') return; const t = e.changedTouches[0]; t0 = performance.now();
+    const melee = A(armaSel).tipo === 'cuerpo';
+    apuntando = !melee && AJ.apuntarAlt && apuntando ? false : true; b.classList.toggle('on', apuntando); vibrar(8);
+    if (mirarId === null) { mirarId = t.identifier; mx0 = t.clientX; my0 = t.clientY; }
+  }, { passive: false });
+  const fin = e => { e.preventDefault(); const melee = A(armaSel).tipo === 'cuerpo'; if (melee || !AJ.apuntarAlt || performance.now() - t0 > 300) apuntando = false; b.classList.toggle('on', apuntando); };
+  b.addEventListener('touchend', fin, { passive: false }); b.addEventListener('touchcancel', fin, { passive: false });
+}
 tap('b-cambiar', () => ciclarArma(1));
 (function () {
   const bp = $('b-pausa');
@@ -1965,12 +2130,15 @@ function capaJuego(si) {
   $('tactil').classList.toggle('oculto', !(si && movil));
   $('b-pausa').classList.toggle('oculto', !(si && movil));
 }
-const PANTALLAS = ['inicio', 'como', 'logros', 'pausa', 'tienda', 'fin', 'ajustes', 'infinito', 'mods', 'playground'];
+const PANTALLAS = ['inicio', 'armeria', 'historia', 'capitulo', 'controles', 'como', 'logros', 'pausa', 'tienda', 'fin', 'ajustes', 'infinito', 'mods', 'playground'];
 function mostrar(id) { PANTALLAS.forEach(p => $(p).classList.toggle('oculto', p !== id)); }
 function ocultar(id) { $(id).classList.add('oculto'); }
 function telon(fn) { $('telon').classList.add('on'); setTimeout(() => { fn(); $('telon').classList.remove('on'); }, 340); }
 let primeraVez = true;
-function jugar() {
+function jugar(contra = false) {
+  modoContra = contra; if (contra) { modoInf = false; modoPlay = false; contraT = 75; } contraOla = 0;
+  $('b-otra').textContent = 'Jugar otra vez';
+  if (modoHist) { modoHist = false; mapaHist = null; histCap = null; hist.limpiar(); }
   iniciarAudio(); setVolumen(); musica.iniciar();
   telon(() => {
     reiniciar(); estado = 'jugando';
@@ -1978,7 +2146,7 @@ function jugar() {
     capaJuego(true);
     $('jefe').classList.add('oculto');
     if (!movil) pedirLock();
-    if (modoPlay) mensaje('Playground', MAPA.nombre + ' · ' + cfgPlay.cantidad + ' zombis por oleada', false); else if (modoInf) mensaje('Modo Infinito', 'Hasta donde aguantes. Después de cada oleada, el taller', false); else mensaje(MAPA.id === 'rambla' ? 'Rambla: Zona Cero' : MAPA.nombre, AJ.modo === 'pesadilla' ? 'Modo Pesadilla. Que Dios te ayude' : 'Aguantá hasta que amanezca', false);
+    if (modoContra) mensaje('Contrarreloj', 'Cada zombi te suma segundos. ¡Dale que se acaba!', false); else if (modoPlay) mensaje('Playground', MAPA.nombre + ' · ' + cfgPlay.cantidad + ' zombis por oleada', false); else if (modoInf) mensaje('Modo Infinito', 'Hasta donde aguantes. Después de cada oleada, el taller', false); else mensaje(MAPA.id === 'rambla' ? 'Rambla: Zona Cero' : MAPA.nombre, AJ.modo === 'pesadilla' ? 'Modo Pesadilla. Que Dios te ayude' : 'Aguantá hasta que amanezca', false);
     revisarGiro();
   });
   if (movil && primeraVez && document.documentElement.requestFullscreen && !document.fullscreenElement && !matchMedia('(display-mode: standalone)').matches)
@@ -1986,7 +2154,7 @@ function jugar() {
   primeraVez = false;
 }
 function soltarControles() {
-  disparando = false; autoDisparo = false; joyId = null; mirarId = null; joy.x = joy.y = 0;
+  disparando = false; autoDisparo = false; apuntando = false; joyId = null; mirarId = null; joy.x = joy.y = 0; $('b-apuntar').classList.remove('on');
   palo.style.transform = ''; base.style.left = base.style.top = base.style.bottom = '';
   $('b-fuego').classList.remove('on');
 }
@@ -2005,7 +2173,7 @@ function seguir() {
 function aMenu() {
   if (modoInf && oleada > 1 && estado !== 'fin' && estado !== 'inicio') cerrarPartida(false); /* Infinito: salir también cuenta la marca */
   telon(() => {
-    estado = 'inicio'; modoPlay = false; PANTALLAS.forEach(ocultar); mostrar('inicio'); pintarMapas();
+    estado = 'inicio'; modoPlay = false; modoContra = false; revisarSkins(); if (modoHist) { modoHist = false; mapaHist = null; histCap = null; hist.limpiar(); camEscV = null; } PANTALLAS.forEach(ocultar); mostrar('inicio'); pintarMapas();
     capaJuego(false); $('girar').classList.add('oculto');
     reiniciar(); poblarMenu(); mostrarRecord(); musica.pausa(false); musica.set(0, false, true);
   });
@@ -2099,8 +2267,43 @@ function pintarInfinito() {
   $('inf-record').textContent = I.partidas ? `Tu mejor: oleada ${I.mejorOleada} · ${I.record} puntos · ${I.partidas} partidas` : 'Todavía no jugaste el Infinito';
   $('b-inf-jugar').textContent = `¡A la rambla! (${armasInf.length} arma${armasInf.length > 1 ? 's' : ''})`;
 }
-function pintarInfinito2() { const keep = armasInf.slice(); perfil.infArmas = keep; pintarInfinito(); } clic('b-otra', jugar); clic('b-seguir', seguir); clic('b-salir', aMenu); clic('b-menu', aMenu);
+function pintarInfinito2() { const keep = armasInf.slice(); perfil.infArmas = keep; pintarInfinito(); } clic('b-otra', () => modoHist && histCap ? empezarCapitulo(histCap) : jugar(modoContra)); clic('b-seguir', seguir); clic('b-salir', aMenu); clic('b-menu', aMenu);
+
+// ---------- Pantalla de controles (v9) ----------
+let ctlTab = 'mando', controlesDesde = 'inicio';
+function svgMando(t) {
+  const N = t === 'ps' ? ['✕', '○', '□', '△', 'L1', 'R1', 'L2', 'R2'] : ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT'];
+  const C = t === 'ps' ? ['#7fb2ff', '#ff6b6b', '#ff8fd0', '#5fe0a8'] : ['#5fd35f', '#ff5a4f', '#4fa3ff', '#ffd23f'];
+  const cara = [[392, 168], [424, 136], [360, 136], [392, 104]];
+  const et = (x, y, x2, y2, txt, an = 'start') => `<line x1="${x}" y1="${y}" x2="${x2}" y2="${y2}" class="ctl-l"/><text x="${x2 + (an === 'start' ? 6 : -6)}" y="${y2 + 5}" text-anchor="${an}" class="ctl-t">${txt}</text>`;
+  return `<svg class="ctl-svg" viewBox="-180 -20 880 330" role="img" aria-label="Mando">
+  <path class="ctl-cuerpo" d="M150 60 Q260 40 370 60 Q450 64 480 120 Q520 210 500 250 Q480 290 440 272 Q400 250 370 210 L150 210 Q120 250 80 272 Q40 290 20 250 Q0 210 40 120 Q70 64 150 60 Z"/>
+  <rect x="120" y="44" width="70" height="18" rx="8" class="ctl-gat"/><rect x="330" y="44" width="70" height="18" rx="8" class="ctl-gat"/>
+  <text x="155" y="58" class="ctl-g" text-anchor="middle">${N[4]}</text><text x="365" y="58" class="ctl-g" text-anchor="middle">${N[5]}</text>
+  <circle cx="128" cy="136" r="26" class="ctl-stick"/><circle cx="318" cy="196" r="24" class="ctl-stick"/>
+  <path d="M188 176 h18 v-18 h16 v18 h18 v16 h-18 v18 h-16 v-18 h-18 z" class="ctl-cruz"/>
+  ${cara.map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="15" fill="${C[i]}" class="ctl-bt"/><text x="${x}" y="${y + 6}" text-anchor="middle" class="ctl-bl">${N[i]}</text>`).join('')}
+  <rect x="236" y="104" width="18" height="10" rx="5" class="ctl-gat"/><rect x="268" y="104" width="18" height="10" rx="5" class="ctl-gat"/>
+  ${et(150, 44, 60, 0, `${N[6]} Apuntar / cargar golpe`, 'end')}${et(370, 44, 460, 0, `${N[7]} Tirar / pegar`)}
+  ${et(120, 52, 20, 30, `${N[4]} Arma anterior`, 'end')}${et(400, 52, 500, 30, `${N[5]} Golpe rápido`)}
+  ${et(104, 136, 0, 120, 'Moverse · clic: correr', 'end')}${et(214, 210, 150, 300, 'Cruceta: cambiar arma', 'end')}
+  ${et(342, 196, 420, 300, 'Mirar')}${et(407, 168, 540, 190, `${N[0]} Usar / diálogo`)}
+  ${et(439, 136, 540, 150, `${N[1]} Cuerpo a cuerpo / fuego`)}${et(392, 89, 540, 70, `${N[3]} Arma siguiente`)}${et(345, 136, 300, 20, `${N[2]} Recargar`)}
+  ${et(277, 104, 280, 250, '')}<text x="280" y="268" class="ctl-t" text-anchor="middle">${t === 'ps' ? 'Options' : 'Menu'}: pausa</text>
+  </svg>`;
+}
+function pintarControles() {
+  const c = $('ctl-cuerpo'); if (!c) return; const t = tipoMando();
+  document.querySelectorAll('[data-ctl]').forEach(b => b.classList.toggle('sel', b.dataset.ctl === ctlTab));
+  if (ctlTab === 'mando') c.innerHTML = svgMando(t) + `<p class="nota">${mandoActivo ? 'Mando detectado: ' + (t === 'ps' ? 'PlayStation' : 'Xbox / MFi') + '.' : 'Conectá un mando (USB o Bluetooth) y apretá cualquier botón. En iPhone andan los de Xbox, PlayStation y MFi.'} En los menús: cruceta para moverte, ${glifo(BT.A)} elegir, ${glifo(BT.B)} volver, ${glifo(BT.LB)} ${glifo(BT.RB)} pestañas. La ayuda de puntería (Ajustes) también frena la mira sobre los zombis.</p>`;
+  else if (ctlTab === 'pc') c.innerHTML = `<div class="ctl-lista">${[['W A S D', 'Moverse'], ['Shift', 'Correr'], ['Mouse', 'Mirar'], ['Clic', 'Tirar / pegar'], ['Clic derecho', 'Apuntar con la mira · cargar golpe pesado'], ['V · clic ruedita', 'Golpe rápido / culatazo'], ['R', 'Recargar'], ['1–8 · Q · ruedita', 'Cambiar arma'], ['E', 'Usar (modo historia)'], ['Esc · P', 'Pausa']].map(([k, v]) => `<div><kbd>${k}</kbd><span>${v}</span></div>`).join('')}</div><p class="nota">En Ajustes podés elegir si la mira se mantiene apretando o se alterna con un clic.</p>`;
+  else c.innerHTML = `<div class="ctl-lista">${[['Mitad izquierda', 'Joystick: moverse (al fondo, corrés)'], ['Mitad derecha', 'Arrastrá para mirar'], ['Botón grande', 'Tirar / pegar (arrastralo para mirar)'], ['Mira', 'Apuntar · con cuerpo a cuerpo, mantené para cargar'], ['Puño', 'Golpe rápido / culatazo'], ['Flechas', 'Cambiar arma'], ['Círculo', 'Recargar']].map(([k, v]) => `<div><kbd>${k}</kbd><span>${v}</span></div>`).join('')}</div>`;
+}
+document.querySelectorAll('[data-ctl]').forEach(b => b.addEventListener('click', () => { sonido.clic(); ctlTab = b.dataset.ctl; pintarControles(); }));
+pintarAyudaMando();
 let volverA = 'inicio';
+clic('b-controles', () => { volverA = 'inicio'; ctlTab = mandoActivo || !movil ? (mandoActivo ? 'mando' : 'pc') : 'tactil'; pintarControles(); mostrar('controles'); });
+clic('b-controles2', () => { volverA = 'pausa'; ctlTab = mandoActivo ? 'mando' : movil ? 'tactil' : 'pc'; pintarControles(); mostrar('controles'); });
 clic('b-como', () => { volverA = 'inicio'; mostrar('como'); }); clic('b-como2', () => { volverA = 'pausa'; mostrar('como'); });
 clic('b-logros', () => { volverA = 'inicio'; pintarLogros(); mostrar('logros'); });
 document.querySelectorAll('.volver').forEach(b => b.addEventListener('click', () => { sonido.clic(); mostrar(volverA); }));
@@ -2127,9 +2330,11 @@ function pintarAjustes() {
   $('aj-vol').value = AJ.volumen; $('aj-mus').value = AJ.musica; $('aj-bt').value = AJ.botones; $('aj-bt-v').textContent = Math.round(AJ.botones * 100) + '%';
   $('aj-fps').checked = AJ.contador; $('aj-inv').checked = AJ.invertir; $('aj-asist').checked = AJ.asistencia; $('aj-auto').checked = AJ.autoFuego; $('aj-vib').checked = AJ.vibrar;
   $('contador').classList.toggle('oculto', !AJ.contador);
+  document.querySelectorAll('[data-ads]').forEach(b => b.classList.toggle('sel', +b.dataset.ads === (AJ.apuntarAlt ? 1 : 0)));
   document.documentElement.style.setProperty('--bt', AJ.botones);
 }
 document.querySelectorAll('[data-fps]').forEach(b => b.onclick = () => { AJ.fps = +b.dataset.fps; guardarAjustes(); pintarAjustes(); sonido.clic(); });
+document.querySelectorAll('[data-ads]').forEach(b => b.onclick = () => { AJ.apuntarAlt = b.dataset.ads === '1'; guardarAjustes(); pintarAjustes(); sonido.clic(); });
 document.querySelectorAll('[data-cal]').forEach(b => b.onclick = () => { AJ.calidad = b.dataset.cal; guardarAjustes(); aplicarCalidad(); pintarAjustes(); sonido.clic(); });
 $('aj-sens').oninput = e => { AJ.sens = +e.target.value; guardarAjustes(); pintarAjustes(); };
 $('aj-vol').oninput = e => { AJ.volumen = +e.target.value; guardarAjustes(); setVolumen(); };
@@ -2144,7 +2349,68 @@ function poblarMenu() {
 }
 
 // ---------- Arma en primera persona: bob, sway, retroceso, swing ----------
+// v9: poses de los golpes cuerpo a cuerpo (p: 0..1, el impacto cae al 40 %). MP: desplazamiento y giro (rx/rz null = no tocar)
+const MP = { px: 0, py: 0, pz: 0, rx: null, ry: 0, rz: null };
+let brilloArma = 0;
+const matArmas = materialArmas();
+function poseMelee(anim, p, amp) {
+  MP.px = MP.py = MP.pz = MP.ry = 0; MP.rx = MP.rz = null; let s, e;
+  if (anim === 'estoc') { s = p < 0.25 ? -p / 0.25 * 0.4 : p < 0.45 ? -0.4 + (p - 0.25) / 0.2 * 1.4 : 1 - (p - 0.45) / 0.55; MP.pz = -s * 0.32 * amp; MP.py = s * 0.03; MP.px = -s * 0.06; MP.rx = -1.1 - Math.max(0, s) * 0.15; MP.rz = 0.25; return; }
+  if (anim === 'sierra') return;
+  if (anim === 'vert') { // de arriba para abajo
+    if (p < 0.3) { s = p / 0.3; MP.rx = -0.45 + s * 0.95 * amp; MP.rz = 0.35 - s * 0.25; MP.py = s * 0.13; MP.pz = s * 0.05; MP.px = -s * 0.08; }
+    else if (p < 0.5) { s = (p - 0.3) / 0.2; MP.rx = 0.5 * amp - s * (2.1 * amp); MP.rz = 0.1; MP.py = 0.13 - s * 0.3; MP.pz = 0.05 - s * 0.16; MP.px = -0.08; }
+    else { s = (p - 0.5) / 0.5; e = 1 - (1 - s) * (1 - s); MP.rx = (0.5 - 2.1) * amp + e * ((2.1 - 0.5) * amp - 0.45); MP.rz = 0.1 + e * 0.25; MP.py = -0.17 * (1 - e); MP.pz = -0.11 * (1 - e); MP.px = -0.08 * (1 - e); }
+    return;
+  }
+  if (anim === 'rev') { // revés: de izquierda a derecha
+    if (p < 0.3) { s = p / 0.3; MP.rz = 0.35 + s * 1.0; MP.rx = -0.45 + s * 0.2; MP.px = -s * 0.3; MP.py = s * 0.05; MP.ry = s * 0.3; }
+    else if (p < 0.5) { s = (p - 0.3) / 0.2; MP.rz = 1.35 - s * 2.3 * amp; MP.rx = -0.25 - s * 1.0; MP.px = -0.3 + s * 0.46; MP.py = 0.05 - s * 0.14; MP.ry = 0.3 - s * 0.6; }
+    else { s = (p - 0.5) / 0.5; e = 1 - (1 - s) * (1 - s); MP.rz = 1.35 - 2.3 * amp + e * (2.3 * amp - 1.0); MP.rx = -1.25 + e * 0.8; MP.px = 0.16 * (1 - e); MP.py = -0.09 * (1 - e); MP.ry = -0.3 * (1 - e); }
+    return;
+  }
+  const g = anim === 'giro' ? 1.45 : 1; // horizontal (el de siempre); el giro barre más ancho
+  if (p < 0.3) { s = p / 0.3; MP.rz = 0.35 - s * 0.95 * g; MP.rx = -0.45 + s * 0.25; MP.px = s * 0.08 * g; MP.py = s * 0.06; MP.ry = -s * 0.25 * (g - 1) * 2; }
+  else if (p < 0.5) { s = (p - 0.3) / 0.2; MP.rz = 0.35 - 0.95 * g + s * (2.1 * g * amp); MP.rx = -0.2 - s * 1.2; MP.px = 0.08 * g - s * 0.42 * g; MP.py = 0.06 - s * 0.16; MP.ry = (-0.25 + s * 0.8) * (g - 1) * 2; }
+  else { s = (p - 0.5) / 0.5; e = 1 - (1 - s) * (1 - s); const r0 = 0.35 - 0.95 * g + 2.1 * g * amp; MP.rz = r0 - e * (r0 - 0.35); MP.rx = -1.4 + e * 0.95; MP.px = -0.34 * g * (1 - e); MP.py = -0.1 * (1 - e); MP.ry = 0.55 * (g - 1) * 2 * (1 - e); }
+}
 const BASE_F = new THREE.Vector3(0.19, -0.17, -0.52), BASE_M = new THREE.Vector3(0.3, -0.42, -0.62);
+
+// v9: estela del golpe: una cinta aditiva que sigue la punta del arma cuerpo a cuerpo (1 draw call, solo mientras se pega)
+const ESTELA_N = 14, estela = (() => {
+  const pos = new Float32Array(ESTELA_N * 2 * 3), alfa = new Float32Array(ESTELA_N * 2), idx = [];
+  for (let i = 0; i < ESTELA_N - 1; i++) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('alfa', new THREE.BufferAttribute(alfa, 1)); geo.setIndex(idx);
+  const mat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, uniforms: { col: { value: new THREE.Color(1, 0.92, 0.75) } },
+    vertexShader: 'attribute float alfa; varying float vA; void main(){ vA = alfa; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: 'uniform vec3 col; varying float vA; void main(){ gl_FragColor = vec4(col * vA, vA); }' });
+  const m = new THREE.Mesh(geo, mat); m.frustumCulled = false; m.renderOrder = 5; m.visible = false; vmScene.add(m);
+  return { m, pos, alfa, n: 0, puntas: new Map() };
+})();
+const _ep = new THREE.Vector3(), _eb = new THREE.Vector3();
+function puntaDe(id) { // punta y medio del arma en coordenadas del modelo (se calcula una vez)
+  let r = estela.puntas.get(id); if (r) return r;
+  const m = modelos[id], bx = new THREE.Box3(), v = new THREE.Vector3(), inv = new THREE.Matrix4(); m.updateMatrixWorld(true); inv.copy(m.matrixWorld).invert();
+  m.traverse(o => { if (!o.isMesh || !o.userData.mat0 || MATS_MANO.includes(o.userData.mat0)) return; const P = o.geometry.attributes.position, M4 = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld);
+    for (let q = 0; q < P.count; q++) bx.expandByPoint(v.fromBufferAttribute(P, q).applyMatrix4(M4)); });
+  const c = bx.getCenter(new THREE.Vector3()); r = { t: new THREE.Vector3(c.x, bx.max.y, c.z), b: new THREE.Vector3(c.x, bx.max.y * 0.45 + bx.min.y * 0.55, c.z) };
+  estela.puntas.set(id, r); return r;
+}
+function cuadroEstela(dt) {
+  const a = A(armaSel), activa = a.tipo === 'cuerpo' && swingT > 0 && !a.continuo && estado === 'jugando' && AJ.calidad !== 'baja';
+  const E = estela, P = E.pos, L = E.alfa;
+  if (activa) {
+    const pt = puntaDe(a.id), m = modelos[a.id]; soporte.updateMatrixWorld(true);
+    _ep.copy(pt.t).applyMatrix4(m.matrixWorld); _eb.copy(pt.b).applyMatrix4(m.matrixWorld);
+    P.copyWithin(6, 0, (ESTELA_N - 1) * 6); L.copyWithin(2, 0, (ESTELA_N - 1) * 2);
+    P[0] = _ep.x; P[1] = _ep.y; P[2] = _ep.z; P[3] = _eb.x; P[4] = _eb.y; P[5] = _eb.z;
+    if (E.n === 0) for (let i = 1; i < ESTELA_N; i++) { P.copyWithin(i * 6, 0, 6); }
+    E.n++; const p = 1 - swingT / swingTot, f = Math.sin(Math.min(1, p * 1.25) * Math.PI) * (golpeAct.pesado ? 0.75 : 0.5);
+    L[0] = f; L[1] = 0; E.m.material.uniforms.col.value.setRGB(golpeAct.pesado ? 1 : 0.95, golpeAct.pesado ? 0.62 : 0.9, golpeAct.pesado ? 0.3 : 0.8);
+  } else { E.n = 0; L[0] = 0; L.copyWithin(2, 0, (ESTELA_N - 1) * 2); }
+  let hay = false; for (let i = 0; i < ESTELA_N; i++) { L[i * 2] *= 1 - i / ESTELA_N * 0.12; if (L[i * 2] > 0.01) hay = true; }
+  E.m.visible = hay; if (hay) { E.m.geometry.attributes.position.needsUpdate = true; E.m.geometry.attributes.alfa.needsUpdate = true; }
+}
 function animarArma(dt) {
   const a = A(armaSel), m = modelos[a.id];
   const k = Math.min(1, aspecto / 1.3) * 0.55 + 0.45; // en vertical, el arma más al centro
@@ -2152,9 +2418,9 @@ function animarArma(dt) {
   swayX += (-lookDX * 0.9 - swayX) * Math.min(1, dt * 10); swayY += (lookDY * 0.9 - swayY) * Math.min(1, dt * 10);
   swayX = Math.max(-0.08, Math.min(0.08, swayX)); swayY = Math.max(-0.06, Math.min(0.06, swayY));
   lookDX = 0; lookDY = 0;
-  const bobX = Math.cos(J.bob) * 0.012 * J.mov, bobY = -Math.abs(Math.sin(J.bob)) * 0.016 * J.mov + Math.sin(tiempo * 1.6) * 0.003;
+  const bk = 1 - 0.8 * adsK, bobX = Math.cos(J.bob) * 0.012 * J.mov * bk, bobY = (-Math.abs(Math.sin(J.bob)) * 0.016 * J.mov + Math.sin(tiempo * 1.6) * 0.003) * bk;
   kick *= Math.exp(-dt * 14);
-  let px = b.x * k + bobX + swayX, py = b.y + bobY + swayY, pz = b.z, rx = 0, ry = a.id === 'pistola' || a.id === 'revolver' ? 0.16 : 0, rz = 0; // las cortas, giradas hacia el centro: se ve el costado y no solo la cola
+  let px = b.x * k + bobX + swayX * (1 - 0.6 * adsK), py = b.y + bobY + swayY * (1 - 0.6 * adsK), pz = b.z, rx = 0, ry = a.id === 'pistola' || a.id === 'revolver' ? 0.16 : 0, rz = 0; // las cortas, giradas hacia el centro: se ve el costado y no solo la cola
   if (a.tipo === 'fuego') {
     pz += kick * 0.07; rx += kick * (a.retroceso * 1.6 + 0.08); py += kick * 0.015;
     const car = m.userData.car || (m.userData.car = m.getObjectByName('cargador') || null), tam = m.userData.tam || (m.userData.tam = m.getObjectByName('tambor') || null);
@@ -2175,22 +2441,47 @@ function animarArma(dt) {
   } else {
     rx = -0.45; rz = 0.35;
     if (a.estocada) { rx = -1.1; rz = 0.25; py += 0.1; px -= 0.04; } // el espeto se lleva apuntando para adelante
-    if (swingT > 0 && a.estocada) { const p = 1 - swingT / cadenciaDe(a), s = p < 0.25 ? -p / 0.25 * 0.4 : p < 0.45 ? -0.4 + (p - 0.25) / 0.2 * 1.4 : 1 - (p - 0.45) / 0.55; pz -= s * 0.32; py += s * 0.03; px -= s * 0.06; }
-    else if (swingT > 0) {
-      const p = 1 - swingT / cadenciaDe(a); // 0..1
-      let s;
-      if (p < 0.3) { s = p / 0.3; rz = 0.35 - s * 0.95; rx = -0.45 + s * 0.25; px += s * 0.08; py += s * 0.06; }         // carga
-      else if (p < 0.5) { s = (p - 0.3) / 0.2; rz = -0.6 + s * 2.1; rx = -0.2 - s * 1.2; px += 0.08 - s * 0.42; py += 0.06 - s * 0.16; } // golpe
-      else { s = (p - 0.5) / 0.5; const e = 1 - (1 - s) * (1 - s); rz = 1.5 - e * 1.15; rx = -1.4 + e * 0.95; px += -0.34 * (1 - e); py += -0.1 * (1 - e); }
+    if (a.continuo) { rx = -1.12; rz = 0.42; ry += 0.38; py += 0.08; px -= 0.1; pz += 0.1; } // la motosierra, de frente y cruzada para que se vea la espada
+    if (a.vista) { px += a.vista[0]; py += a.vista[1]; pz += a.vista[2]; }
+    const PA = a.pesado || PESADO_DEF;
+    if (swingT > 0) {
+      let p = 1 - swingT / swingTot; // 0..1
+      if (golpeAct.pesado) p = 0.3 + p * 0.7; // el cargado arranca ya armado: directo al golpe
+      poseMelee(golpeAct.anim, p, golpeAct.pesado ? 1.25 : golpeAct.fin ? 1.12 : 1);
+      px += MP.px; py += MP.py; pz += MP.pz; rx = MP.rx === null ? rx : MP.rx; ry += MP.ry; rz = MP.rz === null ? rz : MP.rz;
+    } else if (cargaT > 0) { // armando el golpe pesado: se lleva el arma atrás y tiembla cuando está lista
+      const k = Math.min(1, cargaT / tCarga(a)), e = 1 - (1 - k) * (1 - k), tr = cargaLista ? Math.sin(tiempo * 70) * 0.006 : 0;
+      if (PA.anim === 'vert') { rx += 0.95 * e; py += 0.12 * e; pz += 0.05 * e; }
+      else if (PA.anim === 'estoc') { pz += 0.14 * e; py -= 0.02 * e; }
+      else { rz -= 0.7 * e; px += 0.18 * e; ry -= 0.55 * e; py += 0.02 * e; pz += 0.06 * e; }
+      px += tr; py += tr;
     }
+    if (a.continuo && (disparando || autoDisparo) && estado === 'jugando') { px += (Math.random() - .5) * 0.008; py += (Math.random() - .5) * 0.008; pz -= 0.04; }
     const tz = m.userData.tz !== undefined ? m.userData.tz : (m.userData.tz = m.getObjectByName('tanza') || null);
-    if (tz) { const p = swingT > 0 ? 1 - swingT / cadenciaDe(a) : 1; tz.scale.y = 1 + Math.sin(Math.min(1, p / 0.6) * Math.PI) * 2.5; } // la tanza de la caña se estira con el latigazo
+    if (tz) { const p = swingT > 0 ? 1 - swingT / swingTot : 1; tz.scale.y = 1 + Math.sin(Math.min(1, p / 0.6) * Math.PI) * 2.5; } // la tanza de la caña se estira con el latigazo
+    const cp = m.userData.cp !== undefined ? m.userData.cp : (m.userData.cp = m.getObjectByName('cadenaP') || null);
+    if (cp) { const p = swingT > 0 ? 1 - swingT / swingTot : 1, w = Math.sin(Math.min(1, p / 0.7) * Math.PI); cp.rotation.x = -w * 0.5 + Math.sin(tiempo * 2.3) * 0.04; cp.rotation.z = (golpeAct.anim === 'rev' ? -1 : 1) * w * 0.7 + swayX * 2; }
+    const cs = m.userData.cs !== undefined ? m.userData.cs : (m.userData.cs = m.getObjectByName('cadenaS') || null);
+    if (cs) cs.position.y = (disparando || autoDisparo) && estado === 'jugando' ? (tiempo * 1.6) % 0.027 : 0; // la cadena corre
+    const brillo = cargaT > 0 ? Math.min(1, cargaT / tCarga(a)) * (cargaLista ? 0.85 + Math.sin(tiempo * 20) * 0.15 : 0.6) : 0;
+    if (brillo !== brilloArma) { brilloArma = brillo; brilloSkins(brillo * 0.2, brillo * 0.07, 0); }
     pz -= kick * 0.05;
+  }
+  if (culataT > 0) { const p = 1 - culataT / 0.5, s = Math.sin(Math.min(1, p / 0.6) * Math.PI); pz -= s * 0.16; px -= s * 0.1; rx += s * 0.5; rz -= s * 0.55; ry += s * 0.4; py += s * 0.04; }
+  if (adsK > 0.001 && a.tipo === 'fuego') { // v9: apuntar con la mira: el arma sube al ojo y la mira queda en el centro
+    const u = m.userData; if (u.adsY === undefined) { // altura de la línea de mira: lo más alto del arma por arriba del caño (sin la mano ni la culata)
+      let my = -1; const v = new THREE.Vector3(), inv = new THREE.Matrix4(); m.updateMatrixWorld(true); inv.copy(m.matrixWorld).invert();
+      m.traverse(o => { if (!o.isMesh || !o.geometry || !o.geometry.attributes.position) return; const P = o.geometry.attributes.position, M4 = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld);
+        for (let q = 0; q < P.count; q++) { v.fromBufferAttribute(P, q).applyMatrix4(M4); if (v.z < 0.06 && v.z > -0.9 && Math.abs(v.x) < 0.03 && v.y > my && v.y < 0.2) my = v.y; } });
+      u.adsY = my > -1 ? my : 0.06; }
+    const e = adsK * adsK * (3 - 2 * adsK), sc = aspecto < 0.8 ? 0.62 : 0.8;
+    px += (0 - px) * e; py += (-(u.adsY * sc) - 0.024 - py) * e; pz += (-0.37 - pz) * e; ry *= 1 - e; rz *= 1 - e; rx *= 1 - 0.55 * e;
   }
   if (cambioT > 0) { const q = cambioT / 0.3, s = Math.sin(q * Math.PI); py -= s * 0.35; rx -= s * 0.6; rz += (q > 0.5 ? 1 : -1) * s * 0.25; } // baja una, sube la otra con un giro
   const vert = aspecto < 0.8; soporte.scale.setScalar(vert ? 0.62 : 0.8);
   soporte.position.set(px, py - (vert ? 0.03 : 0), pz); soporte.rotation.set(rx, ry, rz);
   vmFlashLuz.intensity = flashT > 0 ? 6 : 0;
+  cuadroEstela(dt);
 }
 
 // ---------- Bucle principal con limitador de FPS ----------
@@ -2262,9 +2553,13 @@ function cuadro(ahora, sinRender) {
   if (lienzo.clientWidth !== vistaW || lienzo.clientHeight !== vistaH) redimensionar();
   const c0 = performance.now();
   let dt = Math.min(0.25, (ahora - ultimo) / 1000); ultimo = ahora;
+  mando.poll(dt);
+  if (modoHist) hist.cuadro(dt);
+  if (modoContra && estado === 'jugando') { poner('oleada', 'text', `⏱ ${Math.max(0, contraT).toFixed(1)} s · Nivel ${oleada}`); $('oleada').classList.toggle('apuro', contraT < 10); }
+  if (armeriaVer) previewArmeria(ahora / 1000);
   let pasos = 0, alfa = 1;
   if (parada > 0) { parada -= dt; acum = PASO * 0.999; } // hit-stop: el mundo se frena unos milisegundos (se ve el último paso)
-  else if (estado === 'jugando' || estado === 'fin' || estado === 'inicio') {
+  else if (estado === 'jugando' || estado === 'fin' || estado === 'inicio' || estado === 'escena') {
     if (lenta > 0) { lenta -= dt; acum += dt * (lenta > 0.25 ? 0.3 : 0.3 + (0.25 - lenta) / 0.25 * 0.7); } else
     acum += dt;
     while (acum >= PASO && pasos < MAX_PASOS) { simular(PASO); acum -= PASO; pasos++; }
@@ -2283,7 +2578,17 @@ function cuadro(ahora, sinRender) {
   }
   cuadroN++;
   // timers visuales
+  if (ayudaMandoT > 0 || $ayM.on) { ayudaMandoT -= estado === 'jugando' ? dt : 0; const on = mandoActivo && estado === 'jugando' && ayudaMandoT > 0; if (on !== $ayM.on) { $ayM.on = on; $('ayuda-mando').classList.toggle('on', on); } }
   flashT -= dt; hitT -= dt; shake *= Math.exp(-dt * 7); camGolpeP *= Math.exp(-dt * 13); camGolpeR *= Math.exp(-dt * 13); retroceso *= Math.exp(-dt * 9); flashDano = Math.max(0, flashDano - dt);
+  { // v9: apuntar con la mira (zoom, mira telescópica del rifle, imán de la ayuda de puntería)
+    const a = A(armaSel), quiereAds = apuntando && a.tipo === 'fuego' && recargaT <= 0 && cambioT <= 0 && culataT <= 0 && estado === 'jugando';
+    adsK += ((quiereAds ? 1 : 0) - adsK) * Math.min(1, dt * (quiereAds ? 13 : 16)); if (adsK < 0.002) adsK = 0;
+    if (quiereAds && !adsAntes) { sonido.apuntar(); imanAds(); } adsAntes = quiereAds;
+    if (imanT > 0) { imanT -= dt; const k = Math.min(1, dt * 16); let d = imanYaw - J.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); J.yaw += d * k; J.pitch += (imanPitch - J.pitch) * k; }
+    const fz = fovBase / (1 + (zoomDe(a) - 1) * adsK); if (Math.abs(fz - fovAct) > 0.005) { fovAct = fz; camera.fov = fz; camera.updateProjectionMatrix(); }
+    const tele = !!TELE[a.id] && adsK > 0.82; if (tele !== teleS) { teleS = tele; $('tele').classList.toggle('on', tele); soporte.visible = !tele; }
+    const ma = adsK > 0.5; if (ma !== miraAds) { miraAds = ma; mira.classList.toggle('ads', ma); }
+  }
   if (mensajeT > 0) { mensajeT -= dt; if (mensajeT <= 0) $('mensaje').classList.remove('on'); }
   if (avisoT > 0) { avisoT -= dt; if (avisoT <= 0) $('aviso').style.opacity = 0; }
   if (estado === 'jugando' || estado === 'pausa' || estado === 'fin') {
@@ -2318,6 +2623,7 @@ function cuadro(ahora, sinRender) {
   let cx = J.pos.x, cy = J.pos.y, cz = J.pos.z;
   if (J.px !== undefined && (cx - J.px) ** 2 + (cz - J.pz) ** 2 < 4) { cx = J.px + (cx - J.px) * alfa; cy = J.py + (cy - J.py) * alfa; cz = J.pz + (cz - J.pz) * alfa; }
   camera.position.set(cx, cy + 1.65 + Math.sin(J.bob * 2) * 0.03 * J.mov, cz);
+  if (camEscV) { camera.position.copy(camEscV.pos); camera.rotation.set(camEscV.pitch, camEscV.yaw, 0); } else
   camera.rotation.set(J.pitch + retroceso * 0.5 + camGolpeP + (Math.random() - .5) * shake * 0.05, J.yaw + camGolpeR * 0.4 + (Math.random() - .5) * shake * 0.05, camGolpeR + (Math.random() - .5) * shake * 0.03);
   luzJugador.intensity = flashT > 0 ? 40 : 3.5;
   fis.posarTodos(alfa);
@@ -2336,7 +2642,7 @@ function cuadro(ahora, sinRender) {
   renderer.render(scene, camera);
   const info = renderer.info.render, calls = info.calls, tris = info.triangles;
   renderer.clearDepth();
-  if (estado === 'jugando' || estado === 'pausa' || estado === 'tienda') renderer.render(vmScene, vmCam);
+  if (((estado === 'jugando' || estado === 'pausa' || estado === 'tienda') && !camEscV) || armeriaVer) renderer.render(vmScene, vmCam);
   medidas.ultCalls = calls + (estado === 'inicio' || estado === 'fin' ? 0 : renderer.info.render.calls); medidas.ultTris = tris + renderer.info.render.triangles;
   medidas.cuadros++; medidas.msCPU += performance.now() - c0;
   if (ahora - medidas.t0 > 500) {
@@ -2345,6 +2651,170 @@ function cuadro(ahora, sinRender) {
     medidas.cuadros = 0; medidas.msCPU = 0; medidas.t0 = ahora;
   }
 }
+
+// ---------- v9: Modo Historia (integración) ----------
+const MAPA_NOM = { rambla: 'Rambla Sur', puerto: 'Puerto del Buceo', pocitos: 'Pocitos', faro: 'Punta Carretas' };
+function guardarHist() {
+  const h = perfil.historia; h.armas = [...tiene]; h.niveles = JSON.parse(JSON.stringify(niveles)); h.pesos = pesos; h.ventajas = [...ventajas]; guardarPerfil(perfil);
+}
+function empezarCapitulo(c) {
+  iniciarAudio(); setVolumen(); musica.iniciar();
+  telon(() => {
+    modoHist = true; modoInf = false; modoPlay = false; mapaHist = c.mapa; histCap = c; camEscV = null; hist.limpiar();
+    reiniciar();
+    const h = perfil.historia; niveles = JSON.parse(JSON.stringify(h.niveles || {})); pesos = h.pesos || 0; ventajas = new Set(h.ventajas || []);
+    if (ventajas.has('aguante')) { J.vidaMax = 125; J.vida = 125; }
+    for (const a0 of ARMAS) if (a0.tipo === 'fuego') { const a = A(a0.id); cargador[a.id] = cargMax(a); reserva[a.id] = resMax(a) === Infinity ? Infinity : Math.round(resMax(a) * 0.6); }
+    armaSel = ''; elegirArma([...tiene].find(i => A(i).tipo === 'fuego') || 'pistola', true); armarBarra();
+    aMundo(c.ini[0], c.ini[1], J.pos); J.pos.y = piso(c.ini[1]); J.px = J.pos.x; J.pz = J.pos.z;
+    estado = 'jugando'; PANTALLAS.forEach(ocultar); capaJuego(true); $('jefe').classList.add('oculto'); $('fin').classList.remove('victoria');
+    musica.pausa(false); musica.set(0.4, false, true);
+    if (!movil) pedirLock();
+    hist.empezar(c); hud();
+  });
+}
+function falloHist(motivo) {
+  estado = 'fin'; disparando = false; autoDisparo = false; hist.limpiar(); camEscV = null;
+  if (document.pointerLockElement) document.exitPointerLock();
+  $('fin').classList.remove('victoria'); $('fin-titulo').textContent = 'Capítulo perdido';
+  $('fin-sub').innerHTML = `${motivo}. <b>Capítulo ${histCap.id}: ${histCap.titulo}</b>. Lo que compraste en el almacén se guarda.`;
+  $('fin-stats').innerHTML = [[bajas, 'zombis'], [S.cabezas, 'a la cabeza'], [Math.round(S.recibido), 'daño recibido']].map(([b, t]) => `<div><b>${b}</b><small>${t}</small></div>`).join('');
+  $('fin-logros').innerHTML = ''; $('b-otra').textContent = 'Reintentar capítulo';
+  $('jefe').classList.add('oculto'); musica.set(0, false, true);
+  setTimeout(() => { mostrar('fin'); capaJuego(false); }, 1400);
+}
+function capituloListo(c) {
+  const h = perfil.historia;
+  for (const id of c.premio) tiene.add(id);
+  pesos += c.pesos; if (!h.completados.includes(c.id)) h.completados.push(c.id);
+  h.cap = Math.max(h.cap, Math.min(CAPITULOS.length, c.id + 1)); if (c.final) h.terminada = true;
+  for (const id of c.premio) if (!perfil.armasCamp.includes(id)) perfil.armasCamp.push(id); // quedan para el Infinito también
+  guardarHist();
+  estado = 'fin'; disparando = false; autoDisparo = false; if (document.pointerLockElement) document.exitPointerLock();
+  capaJuego(false); $('jefe').classList.add('oculto');
+  const seg = Math.round((performance.now() - S.inicio) / 1000);
+  $('cap-titulo').textContent = c.final ? 'FIN · Se terminó la noche' : `Capítulo ${c.id} superado`;
+  $('cap-sub').innerHTML = c.final ? 'Montevideo sobrevivió. El Tano, La Negra, Don Washington y la doctora también. Y vos, bo.<br><small>Rambla: Zona Cero v9 · hecho a mano en Montevideo</small>' : `<b>${c.titulo}</b> · ${MAPA_NOM[c.mapa]}`;
+  $('cap-premios').innerHTML = c.premio.map(id => { const a = BASE(id); return `<div class="premio"><small>Nueva arma</small><b>${a.nombre}</b><span>${a.desc || ''}</span></div>`; }).join('') + (c.pesos ? `<div class="premio plata"><small>Premio</small><b>+$${c.pesos}</b><span>para el almacén</span></div>` : '');
+  $('cap-stats').innerHTML = [[bajas, 'zombis'], [S.cabezas, 'a la cabeza'], [`${Math.floor(seg / 60)}:${String(seg % 60).padStart(2, '0')}`, 'tiempo']].map(([b, t]) => `<div><b>${b}</b><small>${t}</small></div>`).join('');
+  $('b-cap-seguir').textContent = c.final ? 'Volver al menú' : 'Almacén y seguir »'; $('b-cap-menu').classList.toggle('oculto', !!c.final);
+  sonido.victoria(); mundo.fuegos(c.final ? 8 : 3);
+  setTimeout(() => mostrar('capitulo'), 600);
+}
+clic('b-cap-seguir', () => { if (histCap && histCap.final) { aMenu(); return; } abrirTienda(); });
+clic('b-cap-menu', aMenu);
+function pintarHistoria() {
+  const h = perfil.historia, L = $('hist-caps'); L.innerHTML = '';
+  for (const c of CAPITULOS) {
+    const hecho = h.completados.includes(c.id), libre = c.id <= h.cap, b = document.createElement('button');
+    b.className = 'cap' + (hecho ? ' hecho' : '') + (c.id === h.cap && !h.terminada ? ' sig' : ''); b.disabled = !libre;
+    b.innerHTML = `<i>${c.id}</i><b>${libre ? c.titulo : '???'}</b><small>${libre ? MAPA_NOM[c.mapa] : 'Bloqueado'}${hecho ? ' · ✓' : ''}</small>`;
+    b.addEventListener('click', () => { sonido.clic(); empezarCapitulo(c); });
+    L.appendChild(b);
+  }
+  const sig = CAPITULOS[Math.min(CAPITULOS.length, h.cap) - 1];
+  $('b-hist-seguir').textContent = h.terminada ? 'Jugar el final otra vez' : h.completados.length ? `Continuar · Cap. ${sig.id}` : 'Empezar la historia';
+  $('hist-armas').textContent = `Mochila: ${h.armas.map(id => BASE(id) ? BASE(id).nombre : id).join(', ')} · $${h.pesos || 0}`;
+}
+clic('b-historia', () => { volverA = 'inicio'; pintarHistoria(); mostrar('historia'); });
+clic('b-hist-seguir', () => { const h = perfil.historia; empezarCapitulo(CAPITULOS[Math.min(CAPITULOS.length, h.cap) - 1]); });
+$('hist-usar').addEventListener('click', e => { e.stopPropagation(); interactuar(); });
+$('hist-usar').addEventListener('touchstart', e => { e.stopPropagation(); e.preventDefault(); interactuar(); }, { passive: false });
+$('dialogo').addEventListener('click', e => { e.stopPropagation(); hist.seguirDialogo(); });
+$('dialogo').addEventListener('touchstart', e => { e.stopPropagation(); e.preventDefault(); hist.seguirDialogo(); }, { passive: false });
+$('dlg-saltar').addEventListener('click', e => { e.stopPropagation(); hist.saltarEscena(); });
+$('dlg-saltar').addEventListener('touchstart', e => { e.stopPropagation(); e.preventDefault(); hist.saltarEscena(); }, { passive: false });
+hist = crearHistoria({
+  scene, OBJ, aMundo, piso, libre, muestra: i => muestras[Math.max(0, Math.min(NM, Math.round(i)))], J,
+  zombis: () => zombis, vivos: () => { let v = 0; for (const z of zombis) v += z.vivo; return v; }, quedan: () => { let v = porSalir; for (const z of zombis) v += z.vivo; return v; }, maxZ: () => CAL[AJ.calidad].maxZ,
+  oleada: n => { oleada = n; }, cola: n => { porSalir = n; spawnT = 0.4; },
+  spawnHist(alObj) { const z = spawn(); if (z) { z.alObj = !!alObj; z.alerta = 9; } return z; },
+  jefe: tipo => spawnJefe(tipo), jefeZ: () => jefe,
+  limpiarHorda(todos) { for (const z of zombis) if (z.vivo && !z.T.jefe && (todos || z.alObj)) { z.vida = 0; _d.set(Math.random() - .5, 0, Math.random() - .5).normalize(); matar(z, false, _d, false, 'bate', false, 1); } porSalir = 0; },
+  mensaje, aviso, sonido: n => sonido[n] && sonido[n](), llama: (x, y, z) => ef.llama(x, y, z),
+  estado: e => { estado = e; if (e !== 'jugando') { disparando = false; apuntando = false; } }, capa: si => capaJuego(si), reanudar: () => { acum = 0; resumeIgnore = performance.now() + 200; },
+  camEsc: c => { camEscV = c ? { pos: (camEscV && camEscV.pos || new THREE.Vector3()).copy(c.pos), yaw: c.yaw, pitch: c.pitch } : null; },
+  interactuar: fn => { interactuarFn = fn; }, tecla: () => mandoActivo ? glifo(BT.A) : movil ? '👆' : '<kbd>E</kbd>',
+  autoDialogo: () => true, amanecer: () => { mundo.setAlba(1); camVictoria = false; },
+  fallo: falloHist, capituloListo
+});
+ganchoDialogo = { en: () => !!hist.escena, seguir: () => hist.seguirDialogo(), saltar: () => hist.saltarEscena() };
+
+// ---------- v9: skins de armas ----------
+const SKIN_REQ = {
+  base: () => true, celeste: () => perfil.historia.completados.includes(1), aurinegro: () => (perfil.bajas || 0) >= 500, tricolor: () => (perfil.inf.mejorOleada || 0) >= 10,
+  candombe: () => perfil.historia.completados.includes(4), carnaval: () => Object.keys(perfil.logros || {}).length >= 8, monte: () => (perfil.contra.mejor || 0) >= 60,
+  oxidada: () => (perfil.victorias || 0) >= 1, oro: () => !!perfil.historia.terminada
+};
+const skinLibre = id => !!(SKIN_REQ[id] && SKIN_REQ[id]());
+const skinDe = id => { const s = perfil.skins.equip[id]; return s && skinLibre(s) ? s : 'base'; };
+const _matLeg = new Map();
+function matLegacy(m0, sk) { // armas con modelo de armas.js: se tiñe y se le pone el dibujo de la skin (cacheado por material y skin)
+  const k = m0.uuid + sk; let m = _matLeg.get(k); if (m) return m;
+  m = m0.clone(); m.map = texturaPatron(sk); m.color.set(0xffffff); if (sk === 'oro') { m.metalness = 0.85; m.roughness = 0.3; }
+  _matLeg.set(k, m); return m;
+}
+for (const a of ARMAS) modelos[a.id].traverse(o => { if (o.isMesh) o.userData.mat0 = o.material; }); // material original de cada pieza (los anillos de mods no)
+function aplicarSkin(id) {
+  const sk = skinDe(id), art = materialArmas();
+  modelos[id].traverse(o => {
+    const m0 = o.userData && o.userData.mat0; if (!o.isMesh || !m0) return;
+    if (m0 === art) o.material = materialSkin(sk);
+    else if (!MATS_MANO.includes(m0) && m0.isMeshStandardMaterial && !m0.transparent) o.material = sk === 'base' ? m0 : matLegacy(m0, sk);
+  });
+}
+for (const a of ARMAS) if (skinDe(a.id) !== 'base') aplicarSkin(a.id);
+function revisarSkins() { // aviso de skins nuevas
+  const v = perfil.skins.vistas; let nueva = null;
+  for (const s of SKINS) if (skinLibre(s.id) && !v.includes(s.id)) { v.push(s.id); if (s.id !== 'base') nueva = s; }
+  if (nueva) { guardarPerfil(perfil); setTimeout(() => aviso('Skin nueva en la Armería: ' + nueva.nombre), 900); }
+}
+function pintarArmeria() {
+  const L = $('arm-armas'); L.innerHTML = '';
+  const mias = new Set([...perfil.armasCamp, ...perfil.historia.armas]);
+  if (!armeriaVer || !mias.has(armeriaVer)) armeriaVer = [...mias][0] || 'pistola';
+  for (const a of ARMAS) {
+    const b = document.createElement('button'), sk = SKINS.find(s => s.id === skinDe(a.id)); b.disabled = !mias.has(a.id);
+    b.className = 'arm-arma' + (a.id === armeriaVer ? ' sel' : ''); b.innerHTML = `<i style="background:${sk.color}"></i>${mias.has(a.id) ? a.nombre : '🔒 ' + a.nombre}`;
+    b.addEventListener('click', () => { sonido.clic(); armeriaVer = a.id; pintarArmeria(); }); L.appendChild(b);
+  }
+  const G = $('arm-skins'); G.innerHTML = ''; const actual = skinDe(armeriaVer);
+  for (const s of SKINS) {
+    const libre = skinLibre(s.id), b = document.createElement('button'); b.disabled = !libre;
+    b.className = 'arm-skin' + (s.id === actual ? ' sel' : '') + (libre ? '' : ' bloq');
+    b.innerHTML = `<span class="muestra" style="background-image:url(${texturaPatron(s.id === 'base' ? 'base' : s.id).userData.lienzo.toDataURL('image/jpeg', 0.7)})"></span><b>${s.nombre}</b><small>${libre ? s.desc : '🔒 ' + s.req}</small>`;
+    b.addEventListener('click', () => { sonido.clic(); perfil.skins.equip[armeriaVer] = s.id; guardarPerfil(perfil); aplicarSkin(armeriaVer); pintarArmeria(); armarBarra(); });
+    G.appendChild(b);
+  }
+  $('arm-titulo').textContent = BASE(armeriaVer).nombre;
+  $('arm-cuenta').textContent = `${SKINS.filter(s => skinLibre(s.id)).length} de ${SKINS.length} skins desbloqueadas`;
+}
+function previewArmeria(t) { // el arma de verdad, en 3D, girando a la derecha del menú (misma escena del arma en primera persona)
+  if (estado !== 'inicio' || $('armeria').classList.contains('oculto')) { cerrarPreview(); return; }
+  for (const a of ARMAS) modelos[a.id].visible = a.id === armeriaVer;
+  const m = modelos[armeriaVer], cuerpo = BASE(armeriaVer).tipo === 'cuerpo', ancho = aspecto > 1;
+  if (!m.userData.p0) { m.userData.p0 = m.position.clone(); m.userData.r0 = m.rotation.clone(); }
+  soporte.position.set(0, 0, 0); soporte.rotation.set(0, 0, 0);
+  m.position.set(ancho ? 0.36 : 0, ancho ? (cuerpo ? -0.3 : -0.02) : -0.3, cuerpo ? -1.05 : -0.8);
+  m.rotation.set(0.25 + Math.sin(t * 0.7) * 0.08, t * 0.8 + (cuerpo ? 0 : 1.57), cuerpo ? 0.1 : 0);
+}
+function cerrarPreview() { if (!armeriaVer) return; armeriaVer = null; for (const a of ARMAS) { const m = modelos[a.id]; m.visible = a.id === armaSel; if (m.userData.p0) { m.position.copy(m.userData.p0); m.rotation.copy(m.userData.r0); m.userData.p0 = null; } } }
+clic('b-armeria', () => { volverA = 'inicio'; armeriaVer = null; pintarArmeria(); mostrar('armeria'); });
+// ---------- v9: Contrarreloj ----------
+function T_BONO(z, cab, melee) { return (z.T.jefe ? 10 : z.tipo === 'tanque' ? 4 : 1.2) + (cab ? 1 : 0) + (melee ? 0.8 : 0); }
+function finContra() {
+  estado = 'fin'; disparando = false; autoDisparo = false; if (document.pointerLockElement) document.exitPointerLock();
+  const C = perfil.contra, nuevo = bajas > (C.mejor || 0); C.partidas = (C.partidas || 0) + 1; if (nuevo) C.mejor = bajas; perfil.bajas += bajas; guardarPerfil(perfil);
+  sonido.victoria(); mundo.fuegos(4); mensaje('¡TIEMPO!', `${bajas} zombis en ${Math.round(tiempo)} segundos`, true);
+  $('fin').classList.add('victoria'); $('fin-titulo').textContent = '¡Tiempo!';
+  $('fin-sub').innerHTML = `Contrarreloj en ${MAPA.nombre}: <b>${bajas}</b> zombis en ${Math.round(tiempo)} s, nivel ${oleada}.`;
+  const pre = S.disparos ? Math.round(S.aciertos / S.disparos * 100) : 0;
+  $('fin-stats').innerHTML = [[bajas, 'zombis'], [S.cabezas, 'a la cabeza'], [pre + '%', 'puntería'], [Math.round(tiempo) + ' s', 'aguantaste']].map(([b, t]) => `<div><b>${b}</b><small>${t}</small></div>`).join('');
+  $('fin-logros').innerHTML = nuevo ? '<div class="nuevo">¡Récord nuevo!</div>' : `Récord: ${C.mejor} zombis`;
+  $('b-otra').textContent = 'Otra vez'; musica.set(0, false, true);
+  setTimeout(() => { mostrar('fin'); capaJuego(false); }, 1600);
+}
+clic('b-contra', () => { modoPlay = false; if (modoInf) { modoInf = false; recalcInf(); } jugar(true); });
 renderer.info.autoReset = true;
 aplicarCalidad(); pintarAjustes(); setVolumen();
 reiniciar(); estado = 'inicio'; poblarMenu(); mostrarRecord();
@@ -2380,7 +2850,9 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') { /* actuali
 }
 
 // ganchos para las pruebas automáticas
-window.__rz = { get escena() { return scene; },
+window.__rz = { get modelos() { return modelos; }, get estela() { return { v: estela.m.visible, n: estela.n, a0: estela.alfa[0], a6: estela.alfa[6], p: [...estela.pos.slice(0, 6)], cal: AJ.calidad, sw: swingT }; }, get contra() { return { modoContra, contraT, oleada, bajas, estado }; }, set contraT(v) { contraT = v; }, skinDe, skinLibre, aplicarSkin, revisarSkins, get armeriaVer() { return armeriaVer; }, get dbgT() { return { parada, acum, lenta, ultimo, estado, modoHist }; }, get escena() { return scene; }, get perfil() { return perfil; }, get hist() { return hist; }, get OBJ() { return OBJ; }, empezarCap(n) { empezarCapitulo(CAPITULOS[n - 1]); }, get perfilH() { return perfil.historia; }, get camEsc() { return camEscV; },
+  /* v9 */ get culata() { return culataT; }, set mira(v) { apuntando = !!v; }, get mira() { return apuntando; }, get ads() { return adsK; }, get carga() { return { t: cargaT, lista: cargaLista }; }, get golpe() { return { ...golpeAct, paso: comboPaso, swingT, swingTot }; },
+  ponerNivel(id, k, n) { (niveles[id] || (niveles[id] = {}))[k] = n; }, get fov() { return camera.fov; },
   get estado() { return estado; }, get oleada() { return oleada; }, set oleada(v) { oleada = v; }, get puntos() { return puntos; }, get bajas() { return bajas; },
   get pesos() { return pesos; }, set pesos(v) { pesos = v; hud(); }, get jefe() { return jefe && { tipo: jefe.tipo, vida: jefe.vida, max: jefe.vidaMax }; },
   get vida() { return J.vida; }, set vida(v) { J.vida = v; }, get dios() { return dios; }, set dios(v) { dios = v; }, get arma() { return armaSel; }, get desbloq() { return [...tiene]; },
@@ -2527,6 +2999,8 @@ window.__rz = { get escena() { return scene; },
         pts, minLibre, peorI, peorD, esc: z.esc, dentro, finito: finito && isFinite(g.x + g.y + g.z), g: [g.x, g.y, g.z] };
     });
   },
+  matarVivos(conJefe) { let n = 0; for (const z of zombis.slice()) if (z.vivo && (conJefe || !z.T.jefe)) { _f.set(z.g.position.x - J.pos.x, 0, z.g.position.z - J.pos.z).normalize(); herir(z, 1e7, false, _f, 2, false, 'pistola', 1); n++; } return n; },
+  get zAlObj() { return zombis.filter(z => z.vivo && z.alObj).length; }, get zAtacan() { return zombis.filter(z => z.vivo && z.atacaObj).length; },
   // trae un zombi de 'tipo' a 'dist' adelante y lo mata con 'arma' pegándole en 'parte' (0 cabeza, 1 torso, 2 piernas)
   matarCon(arma, parte = 1, tipo = 'normal', dist = 4) {
     const z = spawn(tipo, true); if (!z) return null; z.sube = false;

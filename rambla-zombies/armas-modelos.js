@@ -73,6 +73,59 @@ export function materialArmas() {
   return MAT;
 }
 
+// ---------------------------------------------------------------- v9: skins ----------------------------------------------------------------
+// Variantes de pintura para cualquier arma (de fuego o cuerpo a cuerpo). Se repinta una copia del atlas una sola vez por skin
+// (solo las celdas del arma: la mano y la manga quedan igual) y se cachea el material: cambiar de skin no recompila shaders ni cuesta FPS.
+export const SKINS = [
+  { id: 'base', nombre: 'De fábrica', desc: 'Como vino de la caja.', color: '#8a8e94' },
+  { id: 'celeste', nombre: 'Celeste', desc: 'Celeste y blanco, con el sol de mayo grabado.', color: '#5fb2e6', req: 'Modo Historia: capítulo 1' },
+  { id: 'aurinegro', nombre: 'Aurinegra', desc: 'Franjas amarillas y negras, de tribuna.', color: '#f2c200', req: '500 zombis en total' },
+  { id: 'tricolor', nombre: 'Tricolor', desc: 'Blanco, azul y una franja roja. De tribuna también.', color: '#2a4ea8', req: 'Infinito: oleada 10' },
+  { id: 'candombe', nombre: 'Candombe', desc: 'Pintada como un tambor de Barrio Sur: chico, repique y piano.', color: '#d8402a', req: 'Modo Historia: capítulo 4' },
+  { id: 'carnaval', nombre: 'Carnaval', desc: 'Lentejuelas, papel picado y brillo de tablado.', color: '#c040d0', req: '8 logros' },
+  { id: 'monte', nombre: 'Monte criollo', desc: 'Camuflaje de eucaliptos y pasto seco.', color: '#5a6a38', req: 'Contrarreloj: 60 zombis' },
+  { id: 'oxidada', nombre: 'Apocalíptica', desc: 'Óxido, sangre seca y cinta de embalar.', color: '#8a4a22', req: 'Ganá la campaña' },
+  { id: 'oro', nombre: 'Oro de la Ciudad Vieja', desc: 'Toda dorada. Para el que terminó la noche.', color: '#e8b830', req: 'Terminá el Modo Historia' }
+];
+const CUERPO_ARMA = [0, 1, 2, 3, 4, 5, 8, 9, 10, 13, 14, 15, 16, 17, 18, 19]; // celdas que se repintan (no: piel 6, manga 7, chorizo 11, bizcocho 12)
+const METALES = new Set([0, 1, 13, 14, 19]);
+function tenir(c, col, modo = 'color', a = 1) { c.globalCompositeOperation = modo; c.globalAlpha = a; c.fillStyle = col; c.fillRect(0, 0, CEL, CEL); c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1; }
+const PINTA_SKIN = {
+  celeste(c, r) { tenir(c, '#5fb2e6', 'color', 0.95); tenir(c, '#9ad0f2', 'soft-light', 0.6); if (!METALES.has(r)) for (let i = 0; i < 5; i++) { c.fillStyle = 'rgba(250,250,255,0.85)'; c.fillRect(0, i * 52 + 14, CEL, 20); }
+    else { c.strokeStyle = 'rgba(255,214,80,0.8)'; c.lineWidth = 3; c.beginPath(); c.arc(128, 128, 30, 0, 6.3); c.stroke(); for (let k = 0; k < 16; k++) { const a = k / 16 * 6.283; c.beginPath(); c.moveTo(128 + Math.cos(a) * 36, 128 + Math.sin(a) * 36); c.lineTo(128 + Math.cos(a) * (k % 2 ? 50 : 58), 128 + Math.sin(a) * (k % 2 ? 50 : 58)); c.stroke(); } } },
+  aurinegro(c) { tenir(c, '#1a1a1a', 'multiply', 0.7); for (let x = 0; x < CEL; x += 64) { c.fillStyle = 'rgba(245,196,0,0.92)'; c.fillRect(x, 0, 32, CEL); } tenir(c, '#000', 'source-over', 0); puntos(c, 900, 0, 60, 0.25); },
+  tricolor(c) { tenir(c, '#f2f2f0', 'color', 0.9); tenir(c, '#ffffff', 'soft-light', 0.5); c.fillStyle = 'rgba(30,60,160,0.92)'; c.fillRect(0, 0, CEL, 96); c.fillRect(0, 160, CEL, 96); c.fillStyle = 'rgba(200,24,30,0.95)'; c.fillRect(0, 112, CEL, 32); },
+  candombe(c) { tenir(c, '#5a2a14', 'multiply', 0.55); const C = ['#d8402a', '#f2c200', '#2a8a4a', '#f2f0e8'];
+    for (let y = 0; y < CEL; y += 64) for (let x = 0; x < CEL; x += 32) { c.fillStyle = C[((x + y) / 32 | 0) % 4]; c.globalAlpha = 0.9; c.beginPath(); c.moveTo(x, y + 64); c.lineTo(x + 16, y + 30); c.lineTo(x + 32, y + 64); c.fill(); }
+    c.globalAlpha = 1; c.fillStyle = 'rgba(240,230,200,0.95)'; for (let k = 0; k < 4; k++) { const x = 40 + k * 60, y = 22; c.beginPath(); c.arc(x, y, 12, 0.6, 5.7); c.arc(x + 5, y, 9, 5.7, 0.6, true); c.fill(); } },
+  carnaval(c) { tenir(c, '#5a1a6a', 'color', 0.85); const C = ['#ff4a8a', '#ffd040', '#40e0ff', '#7aff6a', '#ffffff', '#ff8a20'];
+    for (let i = 0; i < 420; i++) { c.fillStyle = C[i % 6]; c.globalAlpha = 0.85; const x = rnd() * CEL, y = rnd() * CEL; if (i % 3) { c.beginPath(); c.arc(x, y, 2 + rnd() * 3, 0, 6.3); c.fill(); } else { c.save(); c.translate(x, y); c.rotate(rnd() * 3); c.fillRect(-5, -2, 10, 4); c.restore(); } } c.globalAlpha = 1; },
+  monte(c) { tenir(c, '#6a7a42', 'color', 0.95); const C = ['#3a4422', '#8a8a52', '#4e5a2c', '#2a2a1a']; for (let i = 0; i < 46; i++) { c.fillStyle = C[i % 4]; c.globalAlpha = 0.85; c.beginPath(); const x = rnd() * CEL, y = rnd() * CEL; c.ellipse(x, y, 14 + rnd() * 30, 6 + rnd() * 14, rnd() * 3, 0, 6.3); c.fill(); } c.globalAlpha = 1; },
+  oxidada(c, r) { tenir(c, '#7a3a14', 'color', 0.75); for (let i = 0; i < 70; i++) { const x = rnd() * CEL, y = rnd() * CEL, g = c.createRadialGradient(x, y, 0, x, y, 8 + rnd() * 26); g.addColorStop(0, 'rgba(150,60,15,0.75)'); g.addColorStop(1, 'rgba(90,30,8,0)'); c.fillStyle = g; c.fillRect(x - 40, y - 40, 80, 80); }
+    for (let i = 0; i < 9; i++) { c.fillStyle = 'rgba(90,6,4,0.55)'; c.beginPath(); c.ellipse(rnd() * CEL, rnd() * CEL, 4 + rnd() * 12, 3 + rnd() * 8, rnd() * 3, 0, 6.3); c.fill(); }
+    if (r === 4 || r === 9) { c.fillStyle = 'rgba(170,150,110,0.9)'; c.fillRect(0, 100, CEL, 46); } puntos(c, 1500, 20, 90, 0.3); },
+  oro(c, r) { tenir(c, '#e8b830', 'color', 1); tenir(c, '#ffe080', 'soft-light', 0.7); tenir(c, '#b08010', 'multiply', 0.25); if (!METALES.has(r)) { c.strokeStyle = 'rgba(120,80,10,0.55)'; c.lineWidth = 2; for (let y = 20; y < CEL; y += 40) { c.beginPath(); for (let x = 0; x <= CEL; x += 8) c.lineTo(x, y + Math.sin(x * 0.08) * 8); c.stroke(); } } }
+};
+const MATS_SKIN = {}, PATRON = {};
+export function texturaPatron(id) { // para los modelos viejos (armas.js) y las muestras del selector: una celda de 256 con el dibujo de la skin
+  if (PATRON[id]) return PATRON[id];
+  const cv = document.createElement('canvas'); cv.width = cv.height = CEL; const c = cv.getContext('2d'); c.fillStyle = '#9a9ea6'; c.fillRect(0, 0, CEL, CEL); puntos(c, 1500, 90, 200, 0.2);
+  sem = 4242; if (PINTA_SKIN[id]) PINTA_SKIN[id](c, 4);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; t.userData.lienzo = cv;
+  return (PATRON[id] = t);
+}
+export function brilloSkins(r, g, b) { materialArmas().emissive.setRGB(r, g, b); for (const k in MATS_SKIN) MATS_SKIN[k].emissive.setRGB(r, g, b); }
+export function materialSkin(id) {
+  if (!id || id === 'base' || !PINTA_SKIN[id]) return materialArmas();
+  if (MATS_SKIN[id]) return MATS_SKIN[id];
+  const T = texturasArmas(), cv = document.createElement('canvas'); cv.width = T.lienzo.width; cv.height = T.lienzo.height;
+  const c = cv.getContext('2d'); c.drawImage(T.lienzo, 0, 0);
+  for (const r of CUERPO_ARMA) { sem = 991 + r * 37; const x = (r % N) * CEL, y = Math.floor(r / N) * CEL; c.save(); c.translate(x, y); c.beginPath(); c.rect(0, 0, CEL, CEL); c.clip(); PINTA_SKIN[id](c, r); c.restore(); }
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  const m = materialArmas().clone(); m.map = t; if (id === 'oro') { m.metalness = 1; m.roughness = 0.75; }
+  return (MATS_SKIN[id] = m);
+}
+
 // ---------------------------------------------------------------- piezas ---------------------------------------------------------------
 const K = 2.4; // celdas por metro: una celda cubre ~42 cm
 // lleva el uv (0..1 de la pieza) a un pedazo de la celda del material; su/sv = tamaño real (m) de la cara en u y v
@@ -276,6 +329,88 @@ function construir(id, conMano) {
       g.add(cil(R.cinta, 0.0235, 0.0225, 0.2, 0, 0.03, 0, 0, 0, 0, 12), cil(R.maderaCl, 0.032, 0.032, 0.02, 0, -0.075, 0, 0, 0, 0, 12));
       for (let k = 0; k < 8; k++) { const a = k * 2.4, y = 0.62 + (k % 4) * 0.05; g.add(cil(R.acero, 0.003, 0.003, 0.05, Math.cos(a) * 0.05, y, Math.sin(a) * 0.05, Math.PI / 2, 0, 0, 5)); g.children[g.children.length - 1].rotation.set(0, -a, Math.PI / 2); g.add(cil(R.acero, 0.006, 0.006, 0.004, Math.cos(a) * 0.026 + Math.cos(a) * 0.0, y, Math.sin(a) * 0.026, 0, 0, 0, 6)); g.children[g.children.length - 1].visible = false; }
       if (conMano) mano(g, 0, -0.02, 0.03);
+      break;
+    }
+    // ---------------------------------------------------------------- v9: cuerpo a cuerpo nuevo (a lo largo de +Y, mango en el origen)
+    case 'facon': { // facón criollo: mango de asta con virolas y anillos de alpaca, gavilán en S y hoja con contrafilo
+      g.add(cil(R.hueso, 0.0155, 0.0185, 0.12, 0, 0, 0, 0, 0, 0, 12));
+      g.add(cil(R.cromo, 0.02, 0.02, 0.018, 0, 0.068, 0, 0, 0, 0, 12), cil(R.cromo, 0.0205, 0.017, 0.02, 0, -0.068, 0, 0, 0, 0, 12), esfera(R.cromo, 0.016, 0, -0.085, 0, 1, 0.7, 1, 10));
+      for (let k = 0; k < 3; k++) g.add(aro(R.laton, 0.0172 - k * 0.0006, 0.0024, 0, -0.035 + k * 0.035, 0, Math.PI / 2, 0, 0, Math.PI * 2, 12));
+      g.add(caja(R.cromo, 0.011, 0.011, 0.1, 0, 0.083, -0.004), esfera(R.cromo, 0.0085, 0, 0.088, -0.056, 1, 1, 1, 8), esfera(R.cromo, 0.0085, 0, 0.078, 0.048, 1, 1, 1, 8)); // gavilán en S
+      g.add(perfil(R.acero, [[0.011, 0.09], [0.012, 0.3], [0.004, 0.35], [-0.006, 0.385], [-0.02, 0.345], [-0.023, 0.09]], 0.0055, 0.0014)); // hoja: lomo atrás, filo adelante (-z)
+      g.add(caja(R.cromo, 0.0058, 0.23, 0.0035, 0, 0.215, -0.0215), caja(R.grabado, 0.0057, 0.05, 0.016, 0, 0.13, -0.004, 0, 0, 0, true)); // filo vivo y calco grabado
+      if (conMano) mano(g, 0, -0.02, 0.03);
+      break;
+    }
+    case 'llave': { // llave inglesa cromada con quijada fija, quijada móvil, tornillo sinfín y cinta en el mango
+      g.add(caja(R.cinta, 0.019, 0.15, 0.034, 0, 0, 0), caja(R.cromo, 0.012, 0.2, 0.028, 0, 0.11, 0), aro(R.cromo, 0.012, 0.004, 0, -0.085, 0, 0, Math.PI / 2, 0, Math.PI * 2, 10));
+      g.add(caja(R.cromo, 0.018, 0.05, 0.085, 0, 0.23, -0.01)); // cabeza
+      g.add(caja(R.cromo, 0.016, 0.06, 0.024, 0, 0.283, -0.04), caja(R.cromo, 0.016, 0.014, 0.03, 0, 0.31, -0.03)); // quijada fija
+      g.add(caja(R.acero, 0.015, 0.042, 0.022, 0, 0.27, 0.017)); // quijada móvil
+      g.add(cil(R.grabado, 0.0095, 0.0095, 0.03, 0, 0.226, 0.016, Math.PI / 2, 0, 0, 10)); // sinfín
+      for (let k = 0; k < 5; k++) g.add(caja(R.metal, 0.0125, 0.003, 0.03, 0, 0.13 + k * 0.012, 0)); // estrías del mango
+      if (conMano) mano(g, 0, -0.02, 0.03);
+      break;
+    }
+    case 'hockey': { // palo de hockey celeste y blanco con la cabeza curva, cinta de agarre y cinta de refuerzo
+      g.add(cil(R.cinta, 0.0175, 0.0175, 0.24, 0, 0.0, 0, 0, 0, 0, 12), cil(R.poli, 0.02, 0.02, 0.012, 0, -0.125, 0, 0, 0, 0, 12));
+      { const p = new THREE.CylinderGeometry(0.0165, 0.018, 0.66, 12); uvLargo(p, R.celeste, 0.11, 0.66); g.add(malla(p, 0, 0.45, 0)); }
+      { const m = aro(R.celeste, 0.045, 0.018, 0, 0.78, -0.045, 0, -Math.PI / 2, 0, Math.PI, 12); m.scale.set(1, 1, 0.75); g.add(m); }
+      g.add(caja(R.celeste, 0.026, 0.08, 0.034, 0, 0.75, -0.09), esfera(R.celeste, 0.017, 0, 0.71, -0.09, 0.8, 1, 1, 10)); // punta (toe)
+      for (const y of [0.55, 0.62]) g.add(cil(R.cinta, 0.0185, 0.0185, 0.018, 0, y, 0, 0, 0, 0, 12));
+      if (conMano) mano(g, 0, -0.02, 0.03);
+      break;
+    }
+    case 'cadena': { // cadena gruesa con eslabones, empuñadura de cinta y un candado de bronce en la punta
+      g.add(cil(R.cinta, 0.022, 0.022, 0.14, 0, 0, 0, 0, 0, 0, 12), cil(R.cromo, 0.024, 0.024, 0.012, 0, 0.075, 0, 0, 0, 0, 12));
+      const c = pieza('cadenaP', 0, 0.08, 0);
+      // eslabones grandes y abiertos (se leen como cadena aun de reojo), con una curva suave como si colgara por el peso
+      let y = 0.02, ang = 0;
+      for (let k = 0; k < 9; k++) { const m = aro(R.cromo, 0.022, 0.0065, Math.sin(ang) * y * 0.5, y, -Math.sin(ang) * y * 0.35, ang, k % 2 ? Math.PI / 2 : 0, 0, Math.PI * 2, 12); m.scale.set(1, 1.6, 1); c.add(m); y += 0.052; ang += 0.045; }
+      // candado de bronce grande con arco cromado y ojo de llave
+      c.add(caja(R.laton, 0.075, 0.068, 0.03, 0.03, y + 0.05, -0.02), aro(R.cromo, 0.024, 0.006, 0.03, y + 0.086, -0.02, 0, 0, 0, Math.PI, 12), cil(R.metal, 0.007, 0.007, 0.034, 0.03, y + 0.045, -0.02, Math.PI / 2, 0, 0, 8));
+      g.add(c);
+      if (conMano) mano(g, 0, -0.02, 0.03);
+      break;
+    }
+    case 'pala': { // pala de obra: mango de madera con agarre en D, cubo de acero y la hoja gastada con cemento
+      g.add(cil(R.poli, 0.012, 0.012, 0.09, 0, -0.1, 0, 0, 0, Math.PI / 2, 8), cil(R.poli, 0.009, 0.009, 0.07, -0.04, -0.07, 0, 0, 0, 0.5, 8), cil(R.poli, 0.009, 0.009, 0.07, 0.04, -0.07, 0, 0, 0, -0.5, 8)); // agarre en D
+      { const p = new THREE.CylinderGeometry(0.018, 0.02, 0.72, 12); uvLargo(p, R.maderaCl, 0.12, 0.72); g.add(malla(p, 0, 0.32, 0)); }
+      g.add(cil(R.metal, 0.023, 0.03, 0.13, 0, 0.71, 0, 0, 0, 0, 12), cil(R.acero, 0.005, 0.005, 0.05, 0, 0.7, 0, 0, Math.PI / 2, Math.PI / 2, 6));
+      g.add(seccion(R.acero, [[-0.105, 0.77], [0.105, 0.77], [0.11, 0.96], [0.06, 1.02], [0, 1.04], [-0.06, 1.02], [-0.11, 0.96]], 0.007, 0.0035, 0.002)); // hoja
+      g.add(caja(R.hueso, 0.12, 0.05, 0.008, 0.02, 0.8, 0.0), caja(R.metal, 0.012, 0.2, 0.012, 0, 0.88, -0.004)); // cemento seco y nervio
+      if (conMano) mano(g, 0, 0.0, 0.03);
+      break;
+    }
+    case 'hacha': { // hacha de leña: cabo curvo de madera clara, ojo con cuña, hoja con el filo vivo y la cabeza de golpe
+      { const p = new THREE.CylinderGeometry(0.017, 0.021, 0.64, 12); uvLargo(p, R.maderaCl, 0.12, 0.64); g.add(malla(p, 0, 0.27, 0.004)); }
+      g.add(esfera(R.maderaCl, 0.024, 0, -0.055, 0.008, 1, 0.8, 1.2, 10), cil(R.cuero, 0.022, 0.022, 0.12, 0, 0.0, 0.004, 0, 0, 0, 12));
+      g.add(caja(R.metal, 0.034, 0.075, 0.05, 0, 0.58, 0.004), caja(R.metal, 0.03, 0.05, 0.03, 0, 0.58, 0.042)); // ojo y cabeza de golpe
+      g.add(perfil(R.metal, [[-0.018, 0.548], [-0.075, 0.52], [-0.118, 0.5], [-0.128, 0.58], [-0.118, 0.66], [-0.075, 0.64], [-0.018, 0.612]], 0.014, 0.003));
+      g.add(caja(R.cromo, 0.0145, 0.15, 0.008, 0, 0.58, -0.123), caja(R.madera, 0.006, 0.012, 0.03, 0, 0.62, 0.004)); // filo vivo y cuña
+      if (conMano) mano(g, 0, -0.02, 0.03);
+      break;
+    }
+    case 'remo': { // remo de bote del Buceo: pala celeste y blanca, cinta de refuerzo, puño gastado
+      { const p = new THREE.CylinderGeometry(0.019, 0.021, 1.0, 12); uvLargo(p, R.maderaCl, 0.13, 1.0); g.add(malla(p, 0, 0.42, 0)); }
+      g.add(cil(R.madera, 0.023, 0.023, 0.16, 0, 0, 0, 0, 0, 0, 12), esfera(R.madera, 0.023, 0, -0.08, 0, 1, 0.6, 1, 10));
+      g.add(seccion(R.celeste, [[-0.025, 0.9], [0.025, 0.9], [0.075, 1.0], [0.08, 1.33], [0.05, 1.37], [-0.05, 1.37], [-0.08, 1.33], [-0.075, 1.0]], 0.012, 0.006, 0.003));
+      g.add(cil(R.cinta, 0.021, 0.021, 0.03, 0, 0.72, 0, 0, 0, 0, 12), cil(R.cuero, 0.022, 0.022, 0.07, 0, 0.6, 0, 0, 0, 0, 12)); // cinta y forro de la chumacera
+      if (conMano) mano(g, 0, -0.02, 0.03);
+      break;
+    }
+    case 'motosierra': { // motosierra: cuerpo naranja, manija de arriba, aletas del motor, espada cromada y la cadena (pieza animada)
+      g.add(caja(R.poli, 0.032, 0.11, 0.034, 0, 0, 0)); // manija de atrás (la mano)
+      g.add(caja(R.naranja, 0.1, 0.2, 0.13, 0, 0.15, 0.03), caja(R.poli, 0.102, 0.08, 0.04, 0, 0.12, -0.04));
+      for (let k = 0; k < 5; k++) g.add(caja(R.metal, 0.104, 0.008, 0.06, 0, 0.1 + k * 0.022, 0.06)); // aletas
+      g.add(aro(R.poli, 0.065, 0.011, 0, 0.19, 0.1, 0, Math.PI / 2, Math.PI / 2, Math.PI, 12)); // manija de arriba
+      g.add(cil(R.poli, 0.012, 0.012, 0.03, 0.06, 0.13, 0.05, 0, 0, Math.PI / 2, 8), caja(R.grabado, 0.101, 0.06, 0.07, 0, 0.17, 0.03, 0, 0, 0, true)); // tirador y chapa grabada
+      g.add(caja(R.cromo, 0.008, 0.44, 0.05, 0, 0.47, 0.0), cil(R.cromo, 0.025, 0.025, 0.008, 0, 0.69, 0, 0, 0, Math.PI / 2, 12)); // espada
+      const c = pieza('cadenaS', 0, 0, 0);
+      c.add(caja(R.metal, 0.011, 0.46, 0.058, 0, 0.47, 0.0));
+      for (let k = 0; k < 16; k++) { const y = 0.27 + k * 0.027; c.add(caja(R.acero, 0.012, 0.01, 0.012, 0, y, 0.033), caja(R.acero, 0.012, 0.01, 0.012, 0, y + 0.013, -0.033)); }
+      g.add(c);
+      if (conMano) mano(g, 0, -0.01, 0.02);
       break;
     }
     default: return null;

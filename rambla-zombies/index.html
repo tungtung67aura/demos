@@ -26,6 +26,8 @@
     <symbol id="i-fuego" viewBox="0 0 48 48"><circle cx="24" cy="24" r="15" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="24" r="4" fill="currentColor"/><path d="M24 3v10M24 35v10M3 24h10M35 24h10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
     <symbol id="i-recarga" viewBox="0 0 48 48"><path d="M38 17a15 15 0 1 0 2 12" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M40 6v12H28" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-cambiar" viewBox="0 0 48 48"><path d="M8 16h28l-7-7M40 32H12l7 7" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-mira" viewBox="0 0 48 48"><circle cx="24" cy="24" r="16" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="24" cy="24" r="7" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M24 2v12M24 34v12M2 24h12M34 24h12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><circle cx="24" cy="24" r="2" fill="currentColor"/></symbol>
+    <symbol id="i-golpe" viewBox="0 0 48 48"><path d="M14 20c0-3 2-5 4-5s3 1 3 1c0-3 2-4 4-4s3 1 3 2c1-1 2-2 4-2 2 0 4 2 4 4v2c1-1 2-1 3-1 2 0 3 2 3 4v6c0 7-5 13-13 13h-3c-7 0-12-5-12-12z" fill="currentColor"/><path d="M6 10l6 4M4 20h6M8 30l5-3" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
     <symbol id="i-pausa" viewBox="0 0 48 48"><rect x="13" y="10" width="7" height="28" rx="2" fill="currentColor"/><rect x="28" y="10" width="7" height="28" rx="2" fill="currentColor"/></symbol>
     <symbol id="i-peso" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20" fill="#e8b830" stroke="#8a5a10" stroke-width="3"/><text x="24" y="33" font-size="26" text-anchor="middle" font-family="Bangers,sans-serif" fill="#6a3a00">$</text></symbol>
     <symbol id="i-calavera" viewBox="0 0 48 48"><path d="M24 5C13 5 7 13 7 21c0 6 3 9 5 11v7h6v-4h4v4h4v-4h4v4h6v-7c2-2 5-5 5-11 0-8-6-16-17-16z" fill="currentColor"/><circle cx="17" cy="22" r="5" fill="#000"/><circle cx="31" cy="22" r="5" fill="#000"/><path d="M24 27l-3 5h6z" fill="#000"/></symbol>
@@ -55,8 +57,10 @@
   <div id="mensaje"></div>
   <div id="jefe-intro"><div class="ji-franja"></div><div id="ji-nombre"></div><div id="ji-epiteto"></div><div id="ji-tip"></div></div>
   <div id="aviso"></div>
+  <div id="ayuda-mando" class="ayuda-mando"></div>
   <div id="feed"></div>
 </div>
+<div id="tele"><i></i></div>
 <div id="vineta"></div>
 <div id="flash-dano"></div>
 <div id="tactil" class="oculto">
@@ -64,6 +68,8 @@
   <button id="b-fuego" aria-label="Tirar"><svg><use href="#i-fuego"/></svg></button>
   <button id="b-recarga" aria-label="Recargar"><svg><use href="#i-recarga"/></svg></button>
   <button id="b-cambiar" aria-label="Cambiar arma"><svg><use href="#i-cambiar"/></svg></button>
+  <button id="b-apuntar" aria-label="Apuntar"><svg><use href="#i-mira"/></svg></button>
+  <button id="b-golpe" aria-label="Golpe rápido"><svg><use href="#i-golpe"/></svg></button>
 </div>
 <button id="b-pausa" class="oculto" aria-label="Pausa"><svg><use href="#i-pausa"/></svg></button>
 <div id="girar" class="oculto">Girá el celu para ver más rambla <button id="b-girar-ok">ok</button></div>
@@ -78,6 +84,8 @@
   <p class="sub">Montevideo, 3 de la mañana. Del río salen muertos y de los edificios también.<br>Aguantá diez oleadas hasta que amanezca, bo.</p>
   <div class="menu">
     <button id="b-jugar" class="pri">¡Dale, a matar zombis!</button>
+    <button id="b-historia" class="sec hist">📻 Modo Historia</button>
+    <button id="b-contra" class="sec contra">⏱ Contrarreloj</button>
     <button id="b-infinito" class="sec inf">♾ Modo Infinito</button>
     <button id="b-play" class="sec play">🧪 Playground</button>
     <div id="mapas-sel" class="opc mapas-sel"></div>
@@ -86,10 +94,56 @@
       <button id="b-como" class="sec">Cómo se juega</button>
       <button id="b-logros" class="sec">Logros</button>
       <button id="b-ajustes" class="sec">Ajustes</button>
+      <button id="b-controles" class="sec">Controles</button>
+      <button id="b-armeria" class="sec">Armería</button>
     </div>
   </div>
   <div id="record"></div>
-  <div class="pie">v8 · hecho a mano en Montevideo</div>
+  <div class="pie">v9 · hecho a mano en Montevideo</div>
+</div>
+
+<div id="armeria" class="pantalla oculto">
+  <div class="arm-caja">
+    <h2>Armería</h2>
+    <p id="arm-cuenta" class="nota"></p>
+    <div id="arm-armas"></div>
+    <h3 id="arm-titulo"></h3>
+    <div id="arm-skins"></div>
+    <div class="menu"><button class="sec volver">Volver</button></div>
+  </div>
+</div>
+
+<div id="historia" class="pantalla panel oculto">
+  <h2>Modo Historia</h2>
+  <p class="sub hist-sub">«La Noche de la Rambla». Ocho capítulos, de las tres de la mañana hasta que sale el sol.</p>
+  <div id="hist-caps"></div>
+  <p id="hist-armas" class="nota"></p>
+  <div class="menu"><button id="b-hist-seguir" class="pri">Empezar la historia</button><button class="sec volver">Volver</button></div>
+</div>
+
+<div id="capitulo" class="pantalla oculto">
+  <h2 id="cap-titulo">Capítulo superado</h2>
+  <p id="cap-sub"></p>
+  <div id="cap-premios"></div>
+  <div id="cap-stats" class="stats"></div>
+  <div class="menu"><button id="b-cap-seguir" class="pri">Almacén y seguir »</button><button id="b-cap-menu" class="sec">Menú</button></div>
+</div>
+
+<div id="franjas"><i></i><i></i></div>
+<div id="dialogo">
+  <div id="dlg-retrato"></div>
+  <div class="dlg-cuerpo"><div class="dlg-cab"><b id="dlg-nombre"></b><small id="dlg-rol"></small><span id="dlg-pasos"></span></div><p id="dlg-texto"></p>
+  <div class="dlg-pie"><span class="dlg-seguir">Seguir ▸</span><button id="dlg-saltar" data-foco>Saltar escena</button></div></div>
+</div>
+<div id="hist-obj"><b id="ho-titulo"></b><small id="ho-sub"></small><div id="ho-barra"><div id="ho-rel"></div></div></div>
+<div id="hist-flecha"><svg viewBox="0 0 40 40"><path d="M20 3 L34 30 L20 23 L6 30 Z"/></svg><span></span></div>
+<button id="hist-usar" class="oculto"></button>
+
+<div id="controles" class="pantalla panel oculto">
+  <h2>Controles</h2>
+  <div class="ctl-pestanas pestanas"><button data-ctl="mando" class="sel">Mando</button><button data-ctl="pc">Teclado y mouse</button><button data-ctl="tactil">Táctil</button></div>
+  <div id="ctl-cuerpo"></div>
+  <button class="volver">Volver</button>
 </div>
 
 <div id="como" class="pantalla panel oculto">
@@ -97,15 +151,18 @@
   <div class="cols">
     <div class="pc"><h3>En la compu</h3><ul>
       <li><kbd>W A S D</kbd> moverse · <kbd>Shift</kbd> correr</li>
-      <li><kbd>Mouse</kbd> apuntar · <kbd>Clic</kbd> tirar o pegar</li>
+      <li><kbd>Mouse</kbd> mirar · <kbd>Clic</kbd> tirar o pegar</li>
+      <li><kbd>Clic derecho</kbd> apuntar con la mira · con cuerpo a cuerpo, mantenelo para cargar un golpe pesado</li>
+      <li><kbd>V</kbd> o <kbd>ruedita</kbd> (clic) golpe rápido / culatazo · <kbd>E</kbd> usar</li>
       <li><kbd>R</kbd> recargar · <kbd>1</kbd>–<kbd>8</kbd>, <kbd>Q</kbd> o ruedita: cambiar arma</li>
       <li><kbd>Esc</kbd> o <kbd>P</kbd> pausa</li></ul></div>
     <div class="movil"><h3>En el celu</h3><ul>
       <li>Mitad izquierda: el joystick aparece donde apoyes el dedo</li>
       <li>Mitad derecha: arrastrá para mirar</li>
-      <li>Botón grande: tirar (podés arrastrarlo para apuntar)</li>
+      <li>Botón grande: tirar (podés arrastrarlo para apuntar) · Mira: apuntar o cargar golpe · Puño: golpe rápido</li>
       <li>Flechas: cambiar arma · Círculo: recargar</li>
-      <li>En Ajustes: ayuda de puntería y tiro automático</li></ul></div>
+      <li>En Ajustes: ayuda de puntería y tiro automático</li></ul>
+      <h3>Con mando</h3><ul><li>Xbox, PlayStation o MFi: enchufalo o conectalo por Bluetooth y apretá cualquier botón. Todo en <b>Controles</b>.</li></ul></div>
     <div><h3>La noche</h3><ul>
       <li>Diez oleadas y siete jefes: <b>Don Anzuelo</b> (3), el <b>Patovica del Cordón</b> (5), el <b>Garrafero</b> (6), el <b>Bengala</b> (7), el <b>Lubolo Mayor</b> (8), <b>Don Tablado</b> (9) y el <b>Zombi del Cerro</b> (10).</li>
       <li>Los jefes avisan antes de atacar: una línea, un círculo, un cono o una onda en el piso. Leela y salí a tiempo.</li>
@@ -131,8 +188,10 @@
     <button id="b-seguir" class="pri">Seguir</button>
     <button id="b-ajustes2" class="sec">Ajustes</button>
     <button id="b-como2" class="sec">Cómo se juega</button>
+    <button id="b-controles2" class="sec">Controles</button>
     <button id="b-salir" class="sec">Abandonar</button>
   </div>
+  <div id="pausa-mando" class="ayuda-mando"></div>
 </div>
 
 <div id="tienda" class="pantalla panel oculto">
@@ -201,12 +260,13 @@
     <div class="fila"><label>Calidad</label><div class="opc">
       <button data-cal="baja">Baja</button><button data-cal="media">Media</button><button data-cal="alta">Alta</button></div></div>
     <div class="fila"><label>Sensibilidad <span id="aj-sens-v"></span></label><input id="aj-sens" type="range" min="0.3" max="2.5" step="0.05"></div>
+    <div class="fila"><label>Apuntar con la mira</label><div class="opc"><button data-ads="0">Mantener</button><button data-ads="1">Alternar</button></div></div>
     <div class="fila"><label>Volumen general</label><input id="aj-vol" type="range" min="0" max="1" step="0.05"></div>
     <div class="fila"><label>Música</label><input id="aj-mus" type="range" min="0" max="1" step="0.05"></div>
     <div class="fila movil"><label>Tamaño de los botones <span id="aj-bt-v"></span></label><input id="aj-bt" type="range" min="0.75" max="1.4" step="0.05"></div>
     <div class="fila checks">
       <label><input id="aj-inv" type="checkbox"> Invertir eje vertical</label>
-      <label class="movil"><input id="aj-asist" type="checkbox"> Ayuda de puntería</label>
+      <label><input id="aj-asist" type="checkbox"> Ayuda de puntería (celu y mando)</label>
       <label class="movil"><input id="aj-auto" type="checkbox"> Tiro automático al apuntar</label>
       <label class="movil"><input id="aj-vib" type="checkbox"> Vibración</label>
       <label><input id="aj-fps" type="checkbox"> Contador de FPS</label>
@@ -214,7 +274,7 @@
   </div>
   <p id="aviso-60" class="aviso60 oculto">Tu navegador está dando como máximo 60 fps. En iPhone: <b>Ajustes › Apps › Safari › Avanzado › Feature Flags</b> y desactivá <b>«Prefer Page Rendering Updates near 60fps»</b>. El <b>Modo de bajo consumo</b> también lo traba en 60.</p>
   <p class="nota">El juego corre igual de rápido a cualquier FPS. En el celu, «Agregar a inicio» lo abre a pantalla completa y funciona sin internet.</p>
-  <button id="b-cerrar-aj" class="pri">Listo</button>
+  <button id="b-cerrar-aj" data-volver class="pri">Listo</button>
 </div>
 <div id="contador" class="oculto"></div>
 <div id="telon"></div>
